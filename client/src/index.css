@@ -1,0 +1,133 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply box-border;
+  }
+
+  body {
+    @apply font-sans text-base text-gray-900 bg-gray-50 antialiased;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Senior-friendly touch targets - minimum 44px */
+  button, a, input, select {
+    min-height: 44px;
+  }
+
+  /* High contrast for better readability */
+  ::selection {
+    @apply bg-primary-600 text-white;
+  }
+}
+
+@layer components {
+  /* Primary Button - Large and clear */
+  .btn-primary {
+    @apply bg-primary-600 text-white px-6 py-3 rounded-lg font-semibold text-lg
+           hover:bg-primary-700 active:bg-primary-800 transition-colors
+           disabled:bg-gray-300 disabled:cursor-not-allowed
+           focus:outline-none focus:ring-4 focus:ring-primary-300
+           min-h-[48px] shadow-sm;
+  }
+
+  /* Secondary Button */
+  .btn-secondary {
+    @apply bg-white text-primary-700 border-2 border-primary-600 px-6 py-3 rounded-lg
+           font-semibold text-lg hover:bg-primary-50 active:bg-primary-100
+           transition-colors disabled:border-gray-300 disabled:text-gray-400
+           disabled:cursor-not-allowed focus:outline-none focus:ring-4 focus:ring-primary-300
+           min-h-[48px] shadow-sm;
+  }
+
+  /* Danger Button */
+  .btn-danger {
+    @apply bg-red-600 text-white px-6 py-3 rounded-lg font-semibold text-lg
+           hover:bg-red-700 active:bg-red-800 transition-colors
+           focus:outline-none focus:ring-4 focus:ring-red-300
+           min-h-[48px] shadow-sm;
+  }
+
+  /* Card container */
+  .card {
+    @apply bg-white rounded-xl shadow-md p-6 border border-gray-200;
+  }
+
+  /* Input fields - Large and clear */
+  .input {
+    @apply w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg
+           focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-200
+           disabled:bg-gray-100 disabled:cursor-not-allowed
+           transition-colors min-h-[48px];
+  }
+
+  /* Select dropdown */
+  .select {
+    @apply w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg
+           focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-200
+           bg-white appearance-none cursor-pointer min-h-[48px];
+  }
+
+  /* Badge */
+  .badge {
+    @apply inline-block px-3 py-1 rounded-full text-sm font-semibold;
+  }
+
+  .badge-pending {
+    @apply bg-yellow-100 text-yellow-800;
+  }
+
+  .badge-completed {
+    @apply bg-green-100 text-green-800;
+  }
+
+  .badge-cancelled {
+    @apply bg-red-100 text-red-800;
+  }
+
+  /* Page heading */
+  .page-title {
+    @apply text-3xl md:text-4xl font-display font-bold text-gray-900 mb-2;
+  }
+
+  /* Section heading */
+  .section-title {
+    @apply text-2xl md:text-3xl font-display font-semibold text-gray-800 mb-4;
+  }
+}
+
+/* Loading spinner */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar for webkit browsers */
+::-webkit-scrollbar {
+  width: 12px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-100;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-400 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-500;
+}
