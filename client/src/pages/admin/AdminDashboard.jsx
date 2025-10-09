@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../config/api';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
@@ -14,8 +14,8 @@ const AdminDashboard = () => {
   const fetchDashboardData = async () => {
     try {
       const [statsRes, ordersRes] = await Promise.all([
-        axios.get('/api/orders/stats'),
-        axios.get('/api/orders/all', { params: { limit: 5 } })
+        api.get('/api/orders/stats'),
+        api.get('/api/orders/all', { params: { limit: 5 } })
       ]);
 
       setStats(statsRes.data);

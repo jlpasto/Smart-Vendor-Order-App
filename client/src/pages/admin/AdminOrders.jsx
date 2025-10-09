@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../../config/api';
 
 const AdminOrders = () => {
   const [orders, setOrders] = useState([]);
@@ -29,7 +29,7 @@ const AdminOrders = () => {
       if (filters.startDate) params.startDate = filters.startDate;
       if (filters.endDate) params.endDate = filters.endDate;
 
-      const response = await axios.get('/api/orders/all', { params });
+      const response = await api.get('/api/orders/all', { params });
       setOrders(response.data);
       setLoading(false);
     } catch (error) {
@@ -40,7 +40,7 @@ const AdminOrders = () => {
 
   const fetchVendors = async () => {
     try {
-      const response = await axios.get('/api/products/filters/vendors');
+      const response = await api.get('/api/products/filters/vendors');
       setVendors(response.data);
     } catch (error) {
       console.error('Error fetching vendors:', error);
@@ -77,7 +77,7 @@ const AdminOrders = () => {
 
     setUpdating(true);
     try {
-      await axios.patch(`/api/orders/${editingOrder.id}/status`, {
+      await api.patch(`/api/orders/${editingOrder.id}/status`, {
         status: newStatus,
         notes: adminNotes
       });

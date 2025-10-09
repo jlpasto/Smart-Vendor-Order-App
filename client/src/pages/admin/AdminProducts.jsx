@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../../config/api';
 
 const AdminProducts = () => {
   const [products, setProducts] = useState([]);
@@ -15,7 +15,7 @@ const AdminProducts = () => {
 
   const fetchProducts = async () => {
     try {
-      const response = await axios.get('/api/products');
+      const response = await api.get('/api/products');
       setProducts(response.data);
       setLoading(false);
     } catch (error) {
@@ -68,11 +68,11 @@ const AdminProducts = () => {
     try {
       if (editingProduct) {
         // Update existing product
-        await axios.put(`/api/products/${editingProduct.id}`, formData);
+        await api.put(`/api/products/${editingProduct.id}`, formData);
         alert('Product updated successfully!');
       } else {
         // Create new product
-        await axios.post('/api/products', formData);
+        await api.post('/api/products', formData);
         alert('Product created successfully!');
       }
       closeModal();
@@ -87,7 +87,7 @@ const AdminProducts = () => {
   const handleDelete = async (productId, productName) => {
     if (window.confirm(`Are you sure you want to delete "${productName}"? This action cannot be undone.`)) {
       try {
-        await axios.delete(`/api/products/${productId}`);
+        await api.delete(`/api/products/${productId}`);
         alert('Product deleted successfully!');
         fetchProducts();
       } catch (error) {

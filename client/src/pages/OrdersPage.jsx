@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../config/api';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
@@ -22,7 +22,7 @@ const OrdersPage = () => {
       if (startDate) params.startDate = startDate;
       if (endDate) params.endDate = endDate;
 
-      const response = await axios.get('/api/orders/my-batches', { params });
+      const response = await api.get('/api/orders/my-batches', { params });
       setBatches(response.data);
       setLoading(false);
     } catch (err) {
@@ -37,7 +37,7 @@ const OrdersPage = () => {
     }
 
     try {
-      const response = await axios.get(`/api/orders/batch/${batchNumber}`);
+      const response = await api.get(`/api/orders/batch/${batchNumber}`);
       setBatchOrders({ ...batchOrders, [batchNumber]: response.data });
     } catch (err) {
       console.error('Error fetching batch details:', err);

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import axios from 'axios';
+import api from '../config/api';
 
 const CartPage = () => {
   const { cart, removeFromCart, updateQuantity, clearCart, getCartTotal } = useCart();
@@ -35,7 +35,7 @@ const CartPage = () => {
       setError('');
 
       try {
-        const response = await axios.post('/api/orders/submit', {
+        const response = await api.post('/api/orders/submit', {
           items: cart
         });
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../config/api';
 import { useCart } from '../context/CartContext';
 
 const ProductsPage = () => {
@@ -37,7 +37,7 @@ const ProductsPage = () => {
 
   const fetchProducts = async () => {
     try {
-      const response = await axios.get('/api/products');
+      const response = await api.get('/api/products');
       setProducts(response.data);
       setFilteredProducts(response.data);
       setLoading(false);
@@ -50,9 +50,9 @@ const ProductsPage = () => {
   const fetchFilterOptions = async () => {
     try {
       const [vendorsRes, statesRes, categoriesRes] = await Promise.all([
-        axios.get('/api/products/filters/vendors'),
-        axios.get('/api/products/filters/states'),
-        axios.get('/api/products/filters/categories')
+        api.get('/api/products/filters/vendors'),
+        api.get('/api/products/filters/states'),
+        api.get('/api/products/filters/categories')
       ]);
       setVendors(vendorsRes.data);
       setStates(statesRes.data);
