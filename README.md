@@ -11,9 +11,17 @@
 
 ## 📚 Documentation
 
+### Start Here:
+- **[DOCS_INDEX.md](DOCS_INDEX.md)** - 📖 **Complete documentation index** (find anything!)
 - **[QUICK_START.md](QUICK_START.md)** - Get running in 5 minutes! ⚡
+- **[NEXT_STEPS.md](NEXT_STEPS.md)** - ⭐ **What to do next** (after setup)
+
+### Reference Guides:
 - **[SETUP.md](SETUP.md)** - Complete setup guide with troubleshooting
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - 🚀 **Deploy to production** (3 options)
 - **[FEATURES.md](FEATURES.md)** - Full feature documentation
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Common issues & fixes
+- **[PROJECT_SUMMARY.md](PROJECT_SUMMARY.md)** - Project status & overview
 - **[.env.example](.env.example)** - Environment variables reference
 
 ---
