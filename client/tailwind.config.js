@@ -8,16 +8,22 @@ export default {
     extend: {
       colors: {
         primary: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
+          50: '#f0f9f9',
+          100: '#e0f2f3',
+          200: '#c1e5e6',
+          300: '#99d2d4',
+          400: '#6ab8bb',
+          500: '#377b82',  // Main brand color
+          600: '#2d6268',
+          700: '#244f53',
+          800: '#1b3b3e',
+          900: '#035257',  // Darkest brand color
+        },
+        cream: '#f7f5ef',  // Light cream color for backgrounds
+        brand: {
+          dark: '#035257',
+          main: '#377b82',
+          light: '#f7f5ef'
         }
       },
       fontFamily: {

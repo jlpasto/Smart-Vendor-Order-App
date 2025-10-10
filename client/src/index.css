@@ -8,7 +8,7 @@
   }
 
   body {
-    @apply font-sans text-base text-gray-900 bg-gray-50 antialiased;
+    @apply font-sans text-base text-gray-900 bg-cream antialiased;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
