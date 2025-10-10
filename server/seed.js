@@ -43,6 +43,7 @@ const seedDatabase = async () => {
         stock_level: 500,
         product_image: 'https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=400',
         popular: true,
+        seasonal: false,
         new: false,
         category: 'Snacks'
       },
@@ -61,6 +62,7 @@ const seedDatabase = async () => {
         stock_level: 1000,
         product_image: 'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=400',
         popular: true,
+        seasonal: false,
         new: true,
         category: 'Beverages'
       },
@@ -79,6 +81,7 @@ const seedDatabase = async () => {
         stock_level: 200,
         product_image: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400',
         popular: false,
+        seasonal: true,  // Mark as seasonal
         new: true,
         category: 'Grains'
       },
@@ -97,6 +100,7 @@ const seedDatabase = async () => {
         stock_level: 300,
         product_image: 'https://images.unsplash.com/photo-1511381939415-e44015466834?w=400',
         popular: true,
+        seasonal: true,  // Seasonal chocolate
         new: false,
         category: 'Confectionery'
       },
@@ -115,6 +119,7 @@ const seedDatabase = async () => {
         stock_level: 400,
         product_image: 'https://images.unsplash.com/photo-1599599810769-bcde5a160d32?w=400',
         popular: true,
+        seasonal: false,
         new: false,
         category: 'Nuts'
       },
@@ -133,6 +138,7 @@ const seedDatabase = async () => {
         stock_level: 600,
         product_image: 'https://images.unsplash.com/photo-1551462147-37abc224bce4?w=400',
         popular: false,
+        seasonal: false,
         new: false,
         category: 'Pasta'
       },
@@ -151,6 +157,7 @@ const seedDatabase = async () => {
         stock_level: 450,
         product_image: 'https://images.unsplash.com/photo-1613919119384-7e5c4f7e5034?w=400',
         popular: true,
+        seasonal: false,
         new: true,
         category: 'Snacks'
       },
@@ -169,6 +176,7 @@ const seedDatabase = async () => {
         stock_level: 250,
         product_image: 'https://images.unsplash.com/photo-1517487881594-2787fef5ebf7?w=400',
         popular: false,
+        seasonal: true,  // Seasonal cold brew
         new: true,
         category: 'Beverages'
       },
@@ -187,6 +195,7 @@ const seedDatabase = async () => {
         stock_level: 180,
         product_image: 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?w=400',
         popular: true,
+        seasonal: true,  // Holiday cookies
         new: false,
         category: 'Bakery'
       },
@@ -205,6 +214,7 @@ const seedDatabase = async () => {
         stock_level: 350,
         product_image: 'https://images.unsplash.com/photo-1574254606148-29c55d0ad03c?w=400',
         popular: false,
+        seasonal: false,
         new: false,
         category: 'Grains'
       }
@@ -222,8 +232,8 @@ const seedDatabase = async () => {
           `INSERT INTO products (
             vendor_name, state, product_name, product_description, size, case_pack,
             upc, wholesale_case_price, wholesale_unit_price, retail_unit_price,
-            order_qty, stock_level, product_image, popular, new, category
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
+            order_qty, stock_level, product_image, popular, seasonal, new, category
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
           [
             product.vendor_name,
             product.state,
@@ -239,6 +249,7 @@ const seedDatabase = async () => {
             product.stock_level,
             product.product_image,
             product.popular,
+            product.seasonal,
             product.new,
             product.category
           ]

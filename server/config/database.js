@@ -80,6 +80,7 @@ export const initDatabase = async () => {
         stock_level INTEGER DEFAULT 0,
         product_image VARCHAR(500),
         popular BOOLEAN DEFAULT false,
+        seasonal BOOLEAN DEFAULT false,
         new BOOLEAN DEFAULT false,
         category VARCHAR(100),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -110,6 +111,7 @@ export const initDatabase = async () => {
       CREATE INDEX IF NOT EXISTS idx_products_vendor ON products(vendor_name);
       CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
       CREATE INDEX IF NOT EXISTS idx_products_popular ON products(popular);
+      CREATE INDEX IF NOT EXISTS idx_products_seasonal ON products(seasonal);
       CREATE INDEX IF NOT EXISTS idx_products_new ON products(new);
       CREATE INDEX IF NOT EXISTS idx_orders_batch ON orders(batch_order_number);
       CREATE INDEX IF NOT EXISTS idx_orders_user_email ON orders(user_email);

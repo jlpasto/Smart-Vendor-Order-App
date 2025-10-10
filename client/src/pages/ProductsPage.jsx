@@ -14,7 +14,8 @@ const ProductsPage = () => {
   const [selectedVendor, setSelectedVendor] = useState('');
   const [selectedState, setSelectedState] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
-  const [showPopular, setShowPopular] = useState(false);
+  const [showFeatured, setShowFeatured] = useState(false);
+  const [showSeasonal, setShowSeasonal] = useState(false);
   const [showNew, setShowNew] = useState(false);
 
   // Filter options
@@ -33,7 +34,7 @@ const ProductsPage = () => {
 
   useEffect(() => {
     applyFilters();
-  }, [products, searchTerm, selectedVendor, selectedState, selectedCategory, showPopular, showNew]);
+  }, [products, searchTerm, selectedVendor, selectedState, selectedCategory, showFeatured, showSeasonal, showNew]);
 
   const fetchProducts = async () => {
     try {
@@ -108,9 +109,14 @@ const ProductsPage = () => {
       filtered = filtered.filter(p => p.category === selectedCategory);
     }
 
-    // Popular filter
-    if (showPopular) {
-      filtered = filtered.filter(p => p.popular);
+    // Featured filter
+    if (showFeatured) {
+      filtered = filtered.filter(p => p.popular); // Still using 'popular' field in DB
+    }
+
+    // Seasonal filter
+    if (showSeasonal) {
+      filtered = filtered.filter(p => p.seasonal);
     }
 
     // New filter
@@ -134,7 +140,8 @@ const ProductsPage = () => {
     setSelectedVendor('');
     setSelectedState('');
     setSelectedCategory('');
-    setShowPopular(false);
+    setShowFeatured(false);
+    setShowSeasonal(false);
     setShowNew(false);
   };
 
@@ -238,14 +245,24 @@ const ProductsPage = () => {
         <div className="flex flex-wrap gap-4 items-center justify-between">
           <div className="flex flex-wrap gap-3">
             <button
-              onClick={() => setShowPopular(!showPopular)}
+              onClick={() => setShowFeatured(!showFeatured)}
               className={`px-6 py-3 rounded-lg font-semibold text-lg transition-colors ${
-                showPopular
+                showFeatured
                   ? 'bg-amber-500 text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
               }`}
             >
-              ⭐ Popular
+              ⭐ Featured
+            </button>
+            <button
+              onClick={() => setShowSeasonal(!showSeasonal)}
+              className={`px-6 py-3 rounded-lg font-semibold text-lg transition-colors ${
+                showSeasonal
+                  ? 'bg-orange-500 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              🍂 Seasonal
             </button>
             <button
               onClick={() => setShowNew(!showNew)}
@@ -298,7 +315,10 @@ const ProductsPage = () => {
                 {/* Badges */}
                 <div className="absolute top-2 left-2 flex flex-col gap-2">
                   {product.popular && (
-                    <span className="badge bg-amber-500 text-white">⭐ Popular</span>
+                    <span className="badge bg-amber-500 text-white">⭐ Featured</span>
+                  )}
+                  {product.seasonal && (
+                    <span className="badge bg-orange-500 text-white">🍂 Seasonal</span>
                   )}
                   {product.new && (
                     <span className="badge bg-green-500 text-white">🆕 New</span>

@@ -47,6 +47,7 @@ const AdminProducts = () => {
       stock_level: 0,
       product_image: '',
       popular: false,
+      seasonal: false,
       new: false,
       category: ''
     });
@@ -155,7 +156,8 @@ const AdminProducts = () => {
                 </td>
                 <td className="py-3 px-4">
                   <div className="flex gap-2">
-                    {product.popular && <span className="badge bg-amber-500 text-white text-xs">Popular</span>}
+                    {product.popular && <span className="badge bg-amber-500 text-white text-xs">Featured</span>}
+                    {product.seasonal && <span className="badge bg-orange-500 text-white text-xs">Seasonal</span>}
                     {product.new && <span className="badge bg-green-500 text-white text-xs">New</span>}
                   </div>
                 </td>
@@ -337,7 +339,19 @@ const AdminProducts = () => {
                     onChange={(e) => handleInputChange('popular', e.target.checked)}
                     className="w-6 h-6"
                   />
-                  <span className="text-lg font-semibold text-gray-700">Mark as Popular</span>
+                  <span className="text-lg font-semibold text-gray-700">Mark as Featured</span>
+                </label>
+              </div>
+
+              <div>
+                <label className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    checked={formData.seasonal || false}
+                    onChange={(e) => handleInputChange('seasonal', e.target.checked)}
+                    className="w-6 h-6"
+                  />
+                  <span className="text-lg font-semibold text-gray-700">Mark as Seasonal</span>
                 </label>
               </div>
 
