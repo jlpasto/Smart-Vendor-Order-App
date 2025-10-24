@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import api from '../config/api';
 import { useCart } from '../context/CartContext';
+import { useSearch } from '../context/SearchContext';
+import ProductDetailModal from '../components/ProductDetailModal';
 
 const ProductsPage = () => {
   const [products, setProducts] = useState([]);
@@ -9,8 +11,12 @@ const ProductsPage = () => {
   const [error, setError] = useState('');
   const [favorites, setFavorites] = useState([]);
 
+  // Modal state
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   // Filters
-  const [searchTerm, setSearchTerm] = useState('');
+  const { globalSearchTerm } = useSearch(); // Use global search from header
   const [selectedVendor, setSelectedVendor] = useState('');
   const [selectedState, setSelectedState] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -34,7 +40,7 @@ const ProductsPage = () => {
 
   useEffect(() => {
     applyFilters();
-  }, [products, searchTerm, selectedVendor, selectedState, selectedCategory, showFeatured, showSeasonal, showNew]);
+  }, [products, globalSearchTerm, selectedVendor, selectedState, selectedCategory, showFeatured, showSeasonal, showNew]);
 
   const fetchProducts = async () => {
     try {
@@ -84,9 +90,9 @@ const ProductsPage = () => {
   const applyFilters = () => {
     let filtered = [...products];
 
-    // Search filter
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
+    // Search filter (from global search in header)
+    if (globalSearchTerm) {
+      const term = globalSearchTerm.toLowerCase();
       filtered = filtered.filter(p =>
         p.product_name.toLowerCase().includes(term) ||
         p.product_description?.toLowerCase().includes(term) ||
@@ -136,13 +142,53 @@ const ProductsPage = () => {
   };
 
   const clearFilters = () => {
-    setSearchTerm('');
     setSelectedVendor('');
     setSelectedState('');
     setSelectedCategory('');
     setShowFeatured(false);
     setShowSeasonal(false);
     setShowNew(false);
+  };
+
+  const handleProductClick = (product) => {
+    setSelectedProduct(product);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setTimeout(() => setSelectedProduct(null), 300); // Wait for animation
+  };
+
+  const handleNextProduct = () => {
+    const currentIndex = filteredProducts.findIndex(p => p.id === selectedProduct.id);
+    if (currentIndex < filteredProducts.length - 1) {
+      setSelectedProduct(filteredProducts[currentIndex + 1]);
+    }
+  };
+
+  const handlePrevProduct = () => {
+    const currentIndex = filteredProducts.findIndex(p => p.id === selectedProduct.id);
+    if (currentIndex > 0) {
+      setSelectedProduct(filteredProducts[currentIndex - 1]);
+    }
+  };
+
+  const handleEdit = (product) => {
+    // TODO: Implement edit functionality
+    console.log('Edit product:', product);
+    alert('Edit functionality coming soon!');
+  };
+
+  const handleDelete = async (product) => {
+    try {
+      await api.delete(`/api/products/${product.id}`);
+      // Refresh products list
+      fetchProducts();
+    } catch (err) {
+      console.error('Error deleting product:', err);
+      alert('Failed to delete product');
+    }
   };
 
   if (loading) {
@@ -167,28 +213,13 @@ const ProductsPage = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <h1 className="page-title mb-6">Browse Products</h1>
+    <div className="px-4 sm:px-6 lg:px-8 py-6">
+      <h1 className="text-2xl font-bold mb-6">Products</h1>
 
-      {/* Search and Filters */}
-      <div className="card mb-8">
-        {/* Search Bar */}
-        <div className="mb-6">
-          <label htmlFor="search" className="block text-lg font-semibold text-gray-700 mb-2">
-            Search Products
-          </label>
-          <input
-            id="search"
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search by name, description, or vendor..."
-            className="input"
-          />
-        </div>
-
+      {/* Filters Bar */}
+      <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
         {/* Filter Dropdowns */}
-        <div className="grid md:grid-cols-3 gap-4 mb-6">
+        <div className="grid md:grid-cols-3 gap-4 mb-4">
           <div>
             <label htmlFor="vendor" className="block text-lg font-semibold text-gray-700 mb-2">
               Vendor
@@ -242,11 +273,11 @@ const ProductsPage = () => {
         </div>
 
         {/* Toggle Filters */}
-        <div className="flex flex-wrap gap-4 items-center justify-between">
-          <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-3 items-center justify-between">
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setShowFeatured(!showFeatured)}
-              className={`px-6 py-3 rounded-lg font-semibold text-lg transition-colors ${
+              className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${
                 showFeatured
                   ? 'bg-amber-500 text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -256,7 +287,7 @@ const ProductsPage = () => {
             </button>
             <button
               onClick={() => setShowSeasonal(!showSeasonal)}
-              className={`px-6 py-3 rounded-lg font-semibold text-lg transition-colors ${
+              className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${
                 showSeasonal
                   ? 'bg-orange-500 text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -266,7 +297,7 @@ const ProductsPage = () => {
             </button>
             <button
               onClick={() => setShowNew(!showNew)}
-              className={`px-6 py-3 rounded-lg font-semibold text-lg transition-colors ${
+              className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${
                 showNew
                   ? 'bg-green-500 text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -278,119 +309,124 @@ const ProductsPage = () => {
 
           <button
             onClick={clearFilters}
-            className="btn-secondary"
+            className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50"
           >
-            Clear All Filters
+            Clear Filters
           </button>
         </div>
       </div>
 
-      {/* Results Count */}
-      <div className="mb-6">
-        <p className="text-xl text-gray-700">
-          Showing <span className="font-bold">{filteredProducts.length}</span> of{' '}
-          <span className="font-bold">{products.length}</span> products
-        </p>
-      </div>
-
-      {/* Products Grid */}
+      {/* Category Header */}
       {filteredProducts.length === 0 ? (
-        <div className="card text-center py-12">
-          <p className="text-2xl text-gray-600">No products found matching your filters</p>
-          <button onClick={clearFilters} className="btn-primary mt-6">
+        <div className="bg-white rounded-lg shadow-sm text-center py-12">
+          <p className="text-xl text-gray-600">No products found matching your filters</p>
+          <button onClick={clearFilters} className="mt-4 px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
             Clear Filters
           </button>
         </div>
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredProducts.map(product => (
-            <div key={product.id} className="card hover:shadow-lg transition-shadow">
-              {/* Product Image */}
-              <div className="relative mb-4">
-                <img
-                  src={product.product_image || 'https://via.placeholder.com/400'}
-                  alt={product.product_name}
-                  className="w-full h-48 object-cover rounded-lg"
-                />
-                {/* Badges */}
-                <div className="absolute top-2 left-2 flex flex-col gap-2">
-                  {product.popular && (
-                    <span className="badge bg-amber-500 text-white">⭐ Featured</span>
-                  )}
-                  {product.seasonal && (
-                    <span className="badge bg-orange-500 text-white">🍂 Seasonal</span>
-                  )}
-                  {product.new && (
-                    <span className="badge bg-green-500 text-white">🆕 New</span>
-                  )}
-                </div>
-                {/* Favorite Star */}
-                <button
-                  onClick={() => toggleFavorite(product.id)}
-                  className="absolute top-2 right-2 w-12 h-12 bg-white rounded-full shadow-lg hover:scale-110 transition-transform"
-                >
-                  <span className="text-2xl">
-                    {favorites.includes(product.id) ? '⭐' : '☆'}
-                  </span>
-                </button>
-              </div>
-
-              {/* Product Info */}
-              <div className="mb-4">
-                <h3 className="text-xl font-bold text-gray-900 mb-2">{product.product_name}</h3>
-                <p className="text-gray-600 mb-2">{product.product_description}</p>
-                <p className="text-sm text-gray-500 mb-1">
-                  <strong>Vendor:</strong> {product.vendor_name}
-                </p>
-                <p className="text-sm text-gray-500 mb-1">
-                  <strong>Size:</strong> {product.size} | <strong>Case Pack:</strong> {product.case_pack}
-                </p>
-                <p className="text-sm text-gray-500 mb-3">
-                  <strong>Category:</strong> {product.category}
-                </p>
-              </div>
-
-              {/* Pricing */}
-              <div className="mb-4 bg-gray-50 p-4 rounded-lg">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-gray-700 font-semibold">Case Price:</span>
-                  <span className="text-2xl font-bold text-primary-600">
-                    ${parseFloat(product.wholesale_case_price).toFixed(2)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-gray-600">Unit Price:</span>
-                  <span className="font-semibold">
-                    ${parseFloat(product.wholesale_unit_price).toFixed(2)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center text-sm mt-1">
-                  <span className="text-gray-600">GM:</span>
-                  <span className="font-semibold text-green-600">
-                    {parseFloat(product.gm_percent).toFixed(1)}%
-                  </span>
-                </div>
-              </div>
-
-              {/* Stock Level */}
-              <p className="text-sm mb-4">
-                <span className={product.stock_level > 100 ? 'text-green-600' : 'text-amber-600'}>
-                  <strong>In Stock:</strong> {product.stock_level} units
+        <>
+          {/* Group products by vendor */}
+          {Array.from(new Set(filteredProducts.map(p => p.vendor_name))).map(vendor => (
+            <div key={vendor} className="mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-gray-800">{vendor}</h2>
+                <span className="text-sm text-gray-500">
+                  {filteredProducts.filter(p => p.vendor_name === vendor).length}
                 </span>
-              </p>
+              </div>
 
-              {/* Add to Cart Button */}
-              <button
-                onClick={() => handleAddToCart(product)}
-                disabled={addedToCart[product.id]}
-                className={`w-full ${addedToCart[product.id] ? 'bg-green-500' : ''} btn-primary`}
-              >
-                {addedToCart[product.id] ? '✓ Added to Cart!' : 'Add to Cart'}
-              </button>
+              {/* Product List */}
+              <div className="bg-white rounded-lg shadow-sm divide-y">
+                {filteredProducts.filter(p => p.vendor_name === vendor).map(product => (
+                  <div key={product.id} className="flex items-center p-4 hover:bg-gray-50 transition-colors">
+                    {/* Product Image - Clickable */}
+                    <div
+                      className="relative flex-shrink-0 w-16 h-16 mr-4 cursor-pointer"
+                      onClick={() => handleProductClick(product)}
+                    >
+                      <img
+                        src={product.product_image || 'https://via.placeholder.com/80'}
+                        alt={product.product_name}
+                        className="w-full h-full object-cover rounded"
+                      />
+                    </div>
+
+                    {/* Product Details - Clickable */}
+                    <div
+                      className="flex-1 min-w-0 cursor-pointer"
+                      onClick={() => handleProductClick(product)}
+                    >
+                      <h3 className="font-semibold text-gray-900 truncate hover:text-primary-600">
+                        {product.product_name}
+                      </h3>
+                      <div className="flex items-center space-x-4 mt-1 text-sm text-gray-600">
+                        <span>Unit Price = ${parseFloat(product.wholesale_unit_price).toFixed(2)}</span>
+                        <span>|</span>
+                        <span>Case Price = ${parseFloat(product.wholesale_case_price).toFixed(2)}</span>
+                        <span>|</span>
+                        <span>MSRP = ${parseFloat(product.wholesale_case_price * 1.3).toFixed(2)}</span>
+                        <span>|</span>
+                        <span className="text-green-600">GM: {parseFloat(product.gm_percent).toFixed(1)}%</span>
+                      </div>
+                    </div>
+
+                    {/* Product ID - Clickable */}
+                    <div
+                      className="flex-shrink-0 text-right mr-4 cursor-pointer"
+                      onClick={() => handleProductClick(product)}
+                    >
+                      <span className="text-xs text-gray-500">ID #{product.id}</span>
+                    </div>
+
+                    {/* Add Button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAddToCart(product);
+                      }}
+                      disabled={addedToCart[product.id]}
+                      className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${
+                        addedToCart[product.id]
+                          ? 'bg-green-500 text-white'
+                          : 'bg-primary-600 hover:bg-primary-700 text-white'
+                      }`}
+                      aria-label="Add to cart"
+                    >
+                      {addedToCart[product.id] ? (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : (
+                        <span className="text-xl font-bold">+</span>
+                      )}
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           ))}
-        </div>
+        </>
       )}
+
+      {/* Product Detail Modal */}
+      <ProductDetailModal
+        product={selectedProduct}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        onNext={
+          selectedProduct && filteredProducts.findIndex(p => p.id === selectedProduct.id) < filteredProducts.length - 1
+            ? handleNextProduct
+            : null
+        }
+        onPrev={
+          selectedProduct && filteredProducts.findIndex(p => p.id === selectedProduct.id) > 0
+            ? handlePrevProduct
+            : null
+        }
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+      />
     </div>
   );
 };

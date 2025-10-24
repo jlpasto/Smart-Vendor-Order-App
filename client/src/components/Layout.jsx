@@ -1,135 +1,191 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { useSearch } from '../context/SearchContext';
+import { useState } from 'react';
 
 const Layout = () => {
   const { user, logout, isAdmin } = useAuth();
   const { getCartCount } = useCart();
+  const { globalSearchTerm, setGlobalSearchTerm } = useSearch();
   const location = useLocation();
   const cartCount = getCartCount();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const isActive = (path) => {
     return location.pathname === path;
   };
 
+  const menuItems = [
+    { path: '/products', label: 'Products', icon: '📦' },
+    { path: '/orders', label: 'Orders', icon: '📋' },
+    { path: '/vendor', label: 'Vendor', icon: '🏪' },
+    { path: '/manage-users', label: 'Manage Users', icon: '👥' },
+    { path: '/settings', label: 'Settings', icon: '⚙️' },
+  ];
+
   return (
-    <div className="min-h-screen flex flex-col bg-cream">
-      {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            {/* Logo */}
+    <div className="min-h-screen flex bg-cream">
+      {/* Left Sidebar */}
+      <aside className={`bg-white shadow-lg transition-all duration-300 ease-in-out ${
+        sidebarOpen ? 'w-64' : 'w-20'
+      } flex flex-col fixed h-screen z-40 top-0 left-0`}>
+        {/* Logo and Toggle */}
+        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+          {sidebarOpen ? (
             <Link to="/" className="flex items-center space-x-2">
               <div className="w-10 h-10 bg-primary-900 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-xl">CC</span>
               </div>
-              <span className="font-display font-bold text-2xl text-primary-900 hidden sm:inline">
+              <span className="font-display font-bold text-lg text-primary-900">
                 Cureate Connect
               </span>
             </Link>
+          ) : (
+            <Link to="/" className="flex items-center justify-center w-full">
+              <div className="w-10 h-10 bg-primary-900 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-xl">CC</span>
+              </div>
+            </Link>
+          )}
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="p-2 rounded-lg hover:bg-gray-100 lg:block hidden"
+            aria-label="Toggle sidebar"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {sidebarOpen ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              )}
+            </svg>
+          </button>
+        </div>
 
-            {/* Navigation */}
-            <nav className="flex items-center space-x-2 sm:space-x-4">
-              <Link
-                to="/products"
-                className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
-                  isActive('/products')
-                    ? 'bg-primary-600 text-white'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
+        {/* Navigation Menu */}
+        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+          {menuItems.map((item) => (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`flex items-center space-x-3 px-4 py-3 rounded-lg font-semibold transition-colors ${
+                isActive(item.path)
+                  ? 'bg-primary-100 text-primary-900 border-l-4 border-primary-600'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+              title={!sidebarOpen ? item.label : ''}
+            >
+              <span className="text-xl">{item.icon}</span>
+              {sidebarOpen && <span>{item.label}</span>}
+            </Link>
+          ))}
+        </nav>
+
+        {/* Bottom Section - User Info */}
+        <div className="border-t border-gray-200 p-4 mt-auto">
+          {user && sidebarOpen && (
+            <div className="px-4 py-2 text-sm text-gray-600">
+              <p className="truncate">{user.email}</p>
+            </div>
+          )}
+        </div>
+      </aside>
+
+      {/* Mobile Overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Main Content Area */}
+      <div className={`flex-1 flex flex-col transition-all duration-300 ${
+        sidebarOpen ? 'lg:ml-64' : 'lg:ml-20'
+      }`}>
+        {/* Top Header */}
+        <header className="bg-white shadow-sm sticky top-0 z-20">
+          <div className="px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between py-4 gap-4">
+              {/* Mobile Menu Button */}
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="p-2 rounded-lg hover:bg-gray-100 lg:hidden flex-shrink-0"
+                aria-label="Toggle menu"
               >
-                Products
-              </Link>
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
 
-              <Link
-                to="/cart"
-                className={`relative px-4 py-2 rounded-lg font-semibold transition-colors ${
-                  isActive('/cart')
-                    ? 'bg-primary-600 text-white'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                Cart
-                {cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
-                    {cartCount}
-                  </span>
-                )}
-              </Link>
+              {/* Search Box - Center */}
+              <div className="flex-1 max-w-2xl mx-auto">
+                <div className="relative">
+                  <svg
+                    className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="Search Products"
+                    value={globalSearchTerm}
+                    onChange={(e) => setGlobalSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    id="global-search"
+                  />
+                </div>
+              </div>
 
-              <Link
-                to="/orders"
-                className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
-                  isActive('/orders')
-                    ? 'bg-primary-600 text-white'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                My Orders
-              </Link>
-
-              {isAdmin() && (
-                <Link
-                  to="/admin"
-                  className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
-                    location.pathname.startsWith('/admin')
-                      ? 'bg-amber-600 text-white'
-                      : 'text-amber-700 hover:bg-amber-50 border-2 border-amber-600'
-                  }`}
-                >
-                  Admin
+              {/* Right Side Actions */}
+              <div className="flex items-center space-x-4 flex-shrink-0">
+                {/* Cart Icon */}
+                <Link to="/cart" className="relative p-2 rounded-lg hover:bg-gray-100 hidden sm:block" aria-label="Cart">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  {cartCount > 0 && (
+                    <span className="absolute top-0 right-0 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                      {cartCount}
+                    </span>
+                  )}
                 </Link>
-              )}
 
-              {user && (
-                <button
-                  onClick={logout}
-                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg font-semibold transition-colors"
-                >
-                  Logout
+                {/* Notifications Icon */}
+                <button className="p-2 rounded-lg hover:bg-gray-100 hidden sm:block" aria-label="Notifications">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                  </svg>
                 </button>
-              )}
-            </nav>
-          </div>
-        </div>
-      </header>
 
-      {/* Main Content */}
-      <main className="flex-1">
-        <Outlet />
-      </main>
+                {/* User Avatar */}
+                <div className="flex items-center space-x-2">
+                  <div className="w-10 h-10 bg-primary-600 rounded-full flex items-center justify-center text-white font-semibold">
+                    {user?.email?.[0]?.toUpperCase() || 'U'}
+                  </div>
+                  {user && (
+                    <button
+                      onClick={logout}
+                      className="hidden sm:block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg font-semibold transition-colors"
+                    >
+                      Logout
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </header>
 
-      {/* Footer */}
-      <footer className="bg-primary-900 text-white mt-auto">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="grid md:grid-cols-2 gap-6 mb-6">
-            <div>
-              <h3 className="font-display font-bold text-xl mb-2">Cureate Connect</h3>
-              <p className="text-primary-200 text-sm">
-                Empowering local food businesses through strategic procurement opportunities.
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-primary-200">Connecting vendors with institutional buyers</p>
-              <a href="https://www.cureate.co/connect" target="_blank" rel="noopener noreferrer"
-                 className="text-primary-300 hover:text-white text-sm mt-2 inline-block">
-                Learn more about Cureate →
-              </a>
-            </div>
-          </div>
-          <div className="border-t border-primary-800 pt-4">
-            <div className="text-center">
-              <p className="text-sm text-primary-300">© 2025 Cureate Connect. All rights reserved.</p>
-              {user && (
-                <p className="text-xs mt-2 text-primary-400">
-                  Logged in as: <span className="font-semibold text-primary-200">{user.email}</span>
-                  {isAdmin() && <span className="ml-2 badge badge-pending">Admin</span>}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      </footer>
+        {/* Main Content */}
+        <main className="flex-1 overflow-auto bg-gray-50">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 };
