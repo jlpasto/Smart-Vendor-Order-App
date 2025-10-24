@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(psql:*)",
+      "Bash(set PGPASSWORD=postgres1234)"
     ],
     "deny": [],
     "ask": []
