@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useSearch } from '../context/SearchContext';
 import { useState } from 'react';
+import DemoUserSwitcher from './DemoUserSwitcher';
 
 const Layout = () => {
   const { user, logout, isAdmin } = useAuth();
@@ -13,16 +14,33 @@ const Layout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const isActive = (path) => {
-    return location.pathname === path;
+    // Special case for /admin - only match exact path, not sub-routes
+    if (path === '/admin') {
+      return location.pathname === '/admin';
+    }
+    // For all other paths, match exact or sub-paths
+    return location.pathname === path || location.pathname.startsWith(path + '/');
   };
 
-  const menuItems = [
+  // Menu items for regular users
+  const regularUserMenuItems = [
     { path: '/products', label: 'Products', icon: '📦' },
-    { path: '/orders', label: 'Orders', icon: '📋' },
-    { path: '/vendor', label: 'Vendor', icon: '🏪' },
-    { path: '/manage-users', label: 'Manage Users', icon: '👥' },
+    { path: '/cart', label: 'Cart', icon: '🛒' },
+    { path: '/orders', label: 'My Orders', icon: '📋' },
     { path: '/settings', label: 'Settings', icon: '⚙️' },
   ];
+
+  // Menu items for admin users
+  const adminMenuItems = [
+    { path: '/admin', label: 'Dashboard', icon: '📊' },
+    { path: '/admin/products', label: 'Manage Products', icon: '📦' },
+    { path: '/admin/orders', label: 'Manage Orders', icon: '📋' },
+    { path: '/products', label: 'Browse Products', icon: '🛍️' },
+    { path: '/settings', label: 'Settings', icon: '⚙️' },
+  ];
+
+  // Select menu items based on user role
+  const menuItems = isAdmin() ? adminMenuItems : regularUserMenuItems;
 
   return (
     <div className="min-h-screen flex bg-cream">
@@ -85,8 +103,19 @@ const Layout = () => {
         {/* Bottom Section - User Info */}
         <div className="border-t border-gray-200 p-4 mt-auto">
           {user && sidebarOpen && (
-            <div className="px-4 py-2 text-sm text-gray-600">
-              <p className="truncate">{user.email}</p>
+            <div className="px-4 py-2">
+              <div className="flex items-center space-x-2 mb-1">
+                <span className="text-lg">{isAdmin() ? '👨‍💼' : '👤'}</span>
+                <span className="text-xs font-bold text-gray-500 uppercase">
+                  {isAdmin() ? 'Admin' : 'User'}
+                </span>
+              </div>
+              <p className="text-sm text-gray-600 truncate">{user.email}</p>
+            </div>
+          )}
+          {user && !sidebarOpen && (
+            <div className="flex justify-center">
+              <span className="text-2xl">{isAdmin() ? '👨‍💼' : '👤'}</span>
             </div>
           )}
         </div>
@@ -143,6 +172,9 @@ const Layout = () => {
 
               {/* Right Side Actions */}
               <div className="flex items-center space-x-4 flex-shrink-0">
+                {/* Demo User Switcher (only visible when login is disabled) */}
+                <DemoUserSwitcher />
+
                 {/* Cart Icon */}
                 <Link to="/cart" className="relative p-2 rounded-lg hover:bg-gray-100 hidden sm:block" aria-label="Cart">
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -8,11 +8,11 @@ export const authenticate = (req, res, next) => {
   try {
     // Check if login is disabled (for testing)
     if (process.env.ENABLE_LOGIN === 'false') {
-      // Create a mock user for testing
+      // Create a mock admin user for testing (allows access to all features)
       req.user = {
         id: 1,
-        email: 'test@example.com',
-        role: 'user'
+        email: 'admin@demo.com',
+        role: 'admin'
       };
       return next();
     }

@@ -17,10 +17,27 @@ export const AuthProvider = ({ children }) => {
   const [loginEnabled, setLoginEnabled] = useState(false);
 
   useEffect(() => {
-    // Check if login is enabled
-    checkLoginStatus();
+    initializeAuth();
+  }, []);
 
-    // Check for existing session
+  const initializeAuth = async () => {
+    // Check if login is enabled
+    const loginStatus = await checkLoginStatus();
+
+    // If login is disabled, set demo admin user
+    if (loginStatus === false) {
+      const demoUser = {
+        id: 1,
+        email: 'admin@demo.com',
+        role: 'admin'
+      };
+      setUser(demoUser);
+      localStorage.setItem('demoUser', JSON.stringify(demoUser));
+      setLoading(false);
+      return;
+    }
+
+    // If login is enabled, check for existing session
     const storedUser = localStorage.getItem('user');
     const token = localStorage.getItem('token');
 
@@ -30,15 +47,17 @@ export const AuthProvider = ({ children }) => {
     }
 
     setLoading(false);
-  }, []);
+  };
 
   const checkLoginStatus = async () => {
     try {
       const response = await api.get('/api/auth/login-status');
       setLoginEnabled(response.data.enabled);
+      return response.data.enabled;
     } catch (error) {
       console.error('Error checking login status:', error);
       setLoginEnabled(false); // Default to disabled
+      return false;
     }
   };
 
@@ -91,6 +110,14 @@ export const AuthProvider = ({ children }) => {
     return user?.role === 'admin';
   };
 
+  // Function to set demo user (only works when login is disabled)
+  const setDemoUser = (demoUser) => {
+    if (loginEnabled === false) {
+      setUser(demoUser);
+      localStorage.setItem('demoUser', JSON.stringify(demoUser));
+    }
+  };
+
   const value = {
     user,
     loading,
@@ -98,7 +125,8 @@ export const AuthProvider = ({ children }) => {
     signup,
     login,
     logout,
-    isAdmin
+    isAdmin,
+    setDemoUser
   };
 
   return (
