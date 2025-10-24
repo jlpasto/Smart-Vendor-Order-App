@@ -1,0 +1,4 @@
+id,vendor_name,state,product_name,product_description,size,case_pack,upc,wholesale_case_price,wholesale_unit_price,retail_unit_price,order_qty,stock_level,product_image,popular,seasonal,new,category
+,Test Vendor,CA,Imported Product 1,This is a test imported product,12oz,24,123456789001,24.99,1.04,1.99,0,150,https://via.placeholder.com/300,false,false,true,Beverages
+,Test Vendor,NY,Imported Product 2,Another test product,16oz,12,123456789002,18.50,1.54,2.49,0,75,https://via.placeholder.com/300,true,false,false,Snacks
+,Sample Co,TX,Bulk Import Test,Testing bulk import feature,8oz,36,123456789003,30.00,0.83,1.50,0,200,https://via.placeholder.com/300,false,true,false,Food
