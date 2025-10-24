@@ -35,6 +35,7 @@ const Layout = () => {
     { path: '/admin', label: 'Dashboard', icon: '📊' },
     { path: '/admin/products', label: 'Manage Products', icon: '📦' },
     { path: '/admin/orders', label: 'Manage Orders', icon: '📋' },
+    { path: '/admin/users', label: 'Manage Users', icon: '👥' },
     { path: '/products', label: 'Browse Products', icon: '🛍️' },
     { path: '/settings', label: 'Settings', icon: '⚙️' },
   ];
