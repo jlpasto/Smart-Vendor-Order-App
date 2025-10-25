@@ -10,11 +10,13 @@ import HomePage from './pages/HomePage';
 import ProductsPage from './pages/ProductsPage';
 import CartPage from './pages/CartPage';
 import OrdersPage from './pages/OrdersPage';
+import VendorsPage from './pages/VendorsPage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminOrders from './pages/admin/AdminOrders';
 import AdminProducts from './pages/admin/AdminProducts';
+import AdminVendors from './pages/admin/AdminVendors';
 
 function App() {
   return (
@@ -33,6 +35,7 @@ function App() {
               <Route path="products" element={<ProductsPage />} />
               <Route path="cart" element={<CartPage />} />
               <Route path="orders" element={<OrdersPage />} />
+              <Route path="vendors" element={<VendorsPage />} />
 
               {/* Admin routes */}
               <Route
@@ -56,6 +59,14 @@ function App() {
                 element={
                   <ProtectedRoute requireAdmin>
                     <AdminProducts />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="admin/vendors"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <AdminVendors />
                   </ProtectedRoute>
                 }
               />

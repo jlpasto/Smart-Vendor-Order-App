@@ -106,6 +106,23 @@ export const initDatabase = async () => {
       );
     `);
 
+    // Create Vendors table
+    await query(`
+      CREATE TABLE IF NOT EXISTS vendors (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        state VARCHAR(100),
+        city VARCHAR(100),
+        website_url VARCHAR(500),
+        logo_url VARCHAR(500),
+        description TEXT,
+        email VARCHAR(255),
+        phone VARCHAR(50),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
     // Create indexes for better performance
     await query(`
       CREATE INDEX IF NOT EXISTS idx_products_vendor ON products(vendor_name);
@@ -117,6 +134,9 @@ export const initDatabase = async () => {
       CREATE INDEX IF NOT EXISTS idx_orders_user_email ON orders(user_email);
       CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
       CREATE INDEX IF NOT EXISTS idx_orders_date ON orders(date_submitted);
+      CREATE INDEX IF NOT EXISTS idx_vendors_name ON vendors(name);
+      CREATE INDEX IF NOT EXISTS idx_vendors_state ON vendors(state);
+      CREATE INDEX IF NOT EXISTS idx_vendors_city ON vendors(city);
     `);
 
     console.log('✅ Database tables initialized successfully');

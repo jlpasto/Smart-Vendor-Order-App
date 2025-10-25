@@ -25,6 +25,7 @@ const Layout = () => {
   // Menu items for regular users
   const regularUserMenuItems = [
     { path: '/products', label: 'Products', icon: '📦' },
+    { path: '/vendors', label: 'Vendors', icon: '🏪' },
     { path: '/cart', label: 'Cart', icon: '🛒' },
     { path: '/orders', label: 'My Orders', icon: '📋' },
     { path: '/settings', label: 'Settings', icon: '⚙️' },
@@ -34,6 +35,7 @@ const Layout = () => {
   const adminMenuItems = [
     { path: '/admin', label: 'Dashboard', icon: '📊' },
     { path: '/admin/products', label: 'Manage Products', icon: '📦' },
+    { path: '/admin/vendors', label: 'Manage Vendors', icon: '🏪' },
     { path: '/admin/orders', label: 'Manage Orders', icon: '📋' },
     { path: '/admin/users', label: 'Manage Users', icon: '👥' },
     { path: '/products', label: 'Browse Products', icon: '🛍️' },
@@ -162,7 +164,7 @@ const Layout = () => {
                   </svg>
                   <input
                     type="text"
-                    placeholder="Search Products"
+                    placeholder={location.pathname === '/admin/vendors' ? 'Search Vendors' : 'Search Products'}
                     value={globalSearchTerm}
                     onChange={(e) => setGlobalSearchTerm(e.target.value)}
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
