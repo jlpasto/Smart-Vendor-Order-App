@@ -165,7 +165,11 @@ const Layout = () => {
                     </svg>
                     <input
                       type="text"
-                      placeholder={location.pathname === '/admin/vendors' ? 'Search Vendors' : 'Search Products'}
+                      placeholder={
+                        location.pathname === '/admin/vendors' ? 'Search Vendors' :
+                        location.pathname === '/admin/users' ? 'Search Users' :
+                        'Search Products'
+                      }
                       value={globalSearchTerm}
                       onChange={(e) => setGlobalSearchTerm(e.target.value)}
                       className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"

@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import api from '../../config/api';
+import { useSearch } from '../../context/SearchContext';
 
 const AdminUsers = () => {
+  const { globalSearchTerm } = useSearch();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -119,6 +121,15 @@ const AdminUsers = () => {
     );
   }
 
+  // Filter users based on global search term
+  const filteredUsers = users.filter(user =>
+    user.name?.toLowerCase().includes(globalSearchTerm.toLowerCase()) ||
+    user.email?.toLowerCase().includes(globalSearchTerm.toLowerCase()) ||
+    user.id_no?.toLowerCase().includes(globalSearchTerm.toLowerCase()) ||
+    user.role?.toLowerCase().includes(globalSearchTerm.toLowerCase()) ||
+    user.id.toString().includes(globalSearchTerm)
+  );
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex justify-between items-center mb-6">
@@ -143,7 +154,7 @@ const AdminUsers = () => {
             </tr>
           </thead>
           <tbody>
-            {users.map(user => (
+            {filteredUsers.map(user => (
               <tr key={user.id} className="border-b border-gray-100 hover:bg-gray-50">
                 <td className="py-3 px-4">{user.id}</td>
                 <td className="py-3 px-4">{user.name || '-'}</td>
@@ -182,9 +193,11 @@ const AdminUsers = () => {
           </tbody>
         </table>
 
-        {users.length === 0 && (
+        {filteredUsers.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">No users found. Add your first user!</p>
+            <p className="text-gray-500 text-lg">
+              {globalSearchTerm ? 'No users found matching your search.' : 'No users found. Add your first user!'}
+            </p>
           </div>
         )}
       </div>
