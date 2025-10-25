@@ -17,6 +17,7 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminOrders from './pages/admin/AdminOrders';
 import AdminProducts from './pages/admin/AdminProducts';
 import AdminVendors from './pages/admin/AdminVendors';
+import AdminUsers from './pages/admin/AdminUsers';
 
 function App() {
   return (
@@ -67,6 +68,14 @@ function App() {
                 element={
                   <ProtectedRoute requireAdmin>
                     <AdminVendors />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="admin/users"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <AdminUsers />
                   </ProtectedRoute>
                 }
               />

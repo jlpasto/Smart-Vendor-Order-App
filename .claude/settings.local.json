@@ -7,7 +7,9 @@
       "Bash(npm start)",
       "Bash(netstat:*)",
       "Bash(findstr:*)",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "Bash($env:PGPASSWORD=\"postgres1234\")",
+      "Bash(node migrate_users.js:*)"
     ],
     "deny": [],
     "ask": []

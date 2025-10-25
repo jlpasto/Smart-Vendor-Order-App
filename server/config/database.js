@@ -48,11 +48,26 @@ export const initDatabase = async () => {
     await query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
+        name VARCHAR(255),
         email VARCHAR(255) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
+        id_no VARCHAR(100),
         role VARCHAR(20) DEFAULT 'user' CHECK (role IN ('user', 'admin')),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+    `);
+
+    // Add name and id_no columns if they don't exist (migration)
+    await query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='name') THEN
+          ALTER TABLE users ADD COLUMN name VARCHAR(255);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='id_no') THEN
+          ALTER TABLE users ADD COLUMN id_no VARCHAR(100);
+        END IF;
+      END $$;
     `);
 
     // Create Products table
