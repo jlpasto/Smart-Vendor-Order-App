@@ -18,10 +18,23 @@ const AdminVendors = () => {
   const [importFile, setImportFile] = useState(null);
   const [importing, setImporting] = useState(false);
   const [importResults, setImportResults] = useState(null);
+  const [openMenuId, setOpenMenuId] = useState(null);
 
   useEffect(() => {
     fetchVendors();
   }, []);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (openMenuId && !event.target.closest('.vendor-menu')) {
+        setOpenMenuId(null);
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [openMenuId]);
 
   const fetchVendors = async () => {
     try {
@@ -264,9 +277,52 @@ const AdminVendors = () => {
         {filteredVendors.map(vendor => (
           <div
             key={vendor.id}
-            className="card hover:shadow-lg transition-shadow cursor-pointer"
+            className="card hover:shadow-lg transition-shadow cursor-pointer relative"
             onClick={() => openDetailModal(vendor)}
           >
+            {/* 3-Dot Menu Button */}
+            <div className="absolute top-4 right-4 vendor-menu">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setOpenMenuId(openMenuId === vendor.id ? null : vendor.id);
+                }}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 16 16">
+                  <circle cx="8" cy="2" r="1.5"/>
+                  <circle cx="8" cy="8" r="1.5"/>
+                  <circle cx="8" cy="14" r="1.5"/>
+                </svg>
+              </button>
+
+              {/* Dropdown Menu */}
+              {openMenuId === vendor.id && (
+                <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpenMenuId(null);
+                      openEditModal(vendor);
+                    }}
+                    className="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-700 font-medium rounded-t-lg"
+                  >
+                    ✏️ Edit
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpenMenuId(null);
+                      handleDelete(vendor.id, vendor.name);
+                    }}
+                    className="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600 font-medium rounded-b-lg"
+                  >
+                    🗑️ Delete
+                  </button>
+                </div>
+              )}
+            </div>
+
             {/* Vendor Logo */}
             <div className="flex justify-center mb-4">
               <img
@@ -296,28 +352,6 @@ const AdminVendors = () => {
                 {vendor.website_url.replace(/^https?:\/\/(www\.)?/, '')}
               </a>
             )}
-
-            {/* Action Buttons */}
-            <div className="flex gap-2 mt-4">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  openEditModal(vendor);
-                }}
-                className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold text-sm"
-              >
-                Edit
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDelete(vendor.id, vendor.name);
-                }}
-                className="flex-1 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold text-sm"
-              >
-                Delete
-              </button>
-            </div>
           </div>
         ))}
       </div>
