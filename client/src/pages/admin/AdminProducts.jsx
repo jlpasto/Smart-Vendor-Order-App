@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../config/api';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
+import Pagination from '../../components/Pagination';
 
 const AdminProducts = () => {
   const [products, setProducts] = useState([]);
@@ -14,6 +15,10 @@ const AdminProducts = () => {
   const [importFile, setImportFile] = useState(null);
   const [importing, setImporting] = useState(false);
   const [importResults, setImportResults] = useState(null);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [productsPerPage] = useState(20);
 
   useEffect(() => {
     fetchProducts();
@@ -213,24 +218,29 @@ const AdminProducts = () => {
   const downloadTemplate = () => {
     const template = [
       {
-        id: '',
-        vendor_name: 'Example Vendor',
-        state: 'CA',
-        product_name: 'Sample Product',
-        product_description: 'Product description here',
-        size: '12oz',
-        case_pack: 24,
-        upc: '123456789012',
-        wholesale_case_price: 24.99,
-        wholesale_unit_price: 1.04,
-        retail_unit_price: 1.99,
-        order_qty: 0,
-        stock_level: 100,
-        product_image: 'https://example.com/image.jpg',
-        popular: false,
-        seasonal: false,
-        new: false,
-        category: 'Beverages'
+        'ID': '',
+        'Vendor Connect ID': '',
+        'Vendor Name': 'Example Vendor',
+        'Product Name': 'Sample Product',
+        'Main Category': 'Snacks',
+        'Sub-Category': 'Chips',
+        'Allergens': 'Dairy-Free, Gluten-Free',
+        'Dietary Preferences': 'Paleo, Low-Fat',
+        'Cuisine Type': 'American',
+        'Seasonal and Featured': 'Featured',
+        'Size': '1.4 oz',
+        'Case Pack': 36,
+        'Wholesale Case Price': '$68.20',
+        'Wholesale Unit Price': '$1.89',
+        'Retail Unit Price (MSRP)': '$2.99',
+        'GM%': '36.79%',
+        'Case Minimum': 1,
+        'Shelf Life': '7 months from manufacture date',
+        'UPC': '123456789012',
+        'State': 'MD',
+        'Delivery Info': 'Ships within 2-3 business days',
+        'Notes': 'Sample product notes',
+        'Image': 'https://example.com/image.jpg'
       }
     ];
 
@@ -238,6 +248,17 @@ const AdminProducts = () => {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Products');
     XLSX.writeFile(wb, 'product_import_template.xlsx');
+  };
+
+  // Calculate pagination
+  const indexOfLastProduct = currentPage * productsPerPage;
+  const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
+  const currentProducts = products.slice(indexOfFirstProduct, indexOfLastProduct);
+  const totalPages = Math.ceil(products.length / productsPerPage);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   if (loading) {
@@ -278,7 +299,7 @@ const AdminProducts = () => {
             </tr>
           </thead>
           <tbody>
-            {products.map(product => (
+            {currentProducts.map(product => (
               <tr key={product.id} className="border-b border-gray-100 hover:bg-gray-50">
                 <td className="py-3 px-4">
                   <img
@@ -330,6 +351,13 @@ const AdminProducts = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Pagination */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={handlePageChange}
+      />
 
       {/* Edit/Create Modal */}
       {showModal && (

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../config/api';
+import Pagination from '../components/Pagination';
 
 const VendorsPage = () => {
   const [vendors, setVendors] = useState([]);
@@ -7,6 +8,10 @@ const VendorsPage = () => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [vendorsPerPage] = useState(12);
 
   useEffect(() => {
     fetchVendors();
@@ -38,6 +43,22 @@ const VendorsPage = () => {
     vendor.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     vendor.state?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Calculate pagination
+  const indexOfLastVendor = currentPage * vendorsPerPage;
+  const indexOfFirstVendor = indexOfLastVendor - vendorsPerPage;
+  const currentVendors = filteredVendors.slice(indexOfFirstVendor, indexOfLastVendor);
+  const totalPages = Math.ceil(filteredVendors.length / vendorsPerPage);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   if (loading) {
     return (
@@ -77,7 +98,7 @@ const VendorsPage = () => {
 
       {/* Vendors Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {filteredVendors.map(vendor => (
+        {currentVendors.map(vendor => (
           <div
             key={vendor.id}
             className="card hover:shadow-lg transition-shadow cursor-pointer"
@@ -115,6 +136,13 @@ const VendorsPage = () => {
           </div>
         ))}
       </div>
+
+      {/* Pagination */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={handlePageChange}
+      />
 
       {filteredVendors.length === 0 && (
         <div className="text-center py-12">

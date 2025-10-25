@@ -254,59 +254,83 @@ router.post('/bulk-import', authenticate, requireAdmin, async (req, res) => {
       const product = products[i];
 
       try {
+        // Map Excel column names to database fields
+        const productData = {
+          id: product['ID'] || product.id || null,
+          vendor_connect_id: product['Vendor Connect ID'] || product.vendor_connect_id || null,
+          vendor_name: product['Vendor Name'] || product.vendor_name,
+          product_name: product['Product Name'] || product.product_name,
+          main_category: product['Main Category'] || product.main_category || null,
+          sub_category: product['Sub-Category'] || product.sub_category || null,
+          allergens: product['Allergens'] || product.allergens || null,
+          dietary_preferences: product['Dietary Preferences'] || product.dietary_preferences || null,
+          cuisine_type: product['Cuisine Type'] || product.cuisine_type || null,
+          seasonal_and_featured: product['Seasonal and Featured'] || product.seasonal_and_featured || null,
+          size: product['Size'] || product.size || null,
+          case_pack: product['Case Pack'] || product.case_pack || null,
+          wholesale_case_price: product['Wholesale Case Price'] || product.wholesale_case_price || 0,
+          wholesale_unit_price: product['Wholesale Unit Price'] || product.wholesale_unit_price || 0,
+          retail_unit_price: product['Retail Unit Price (MSRP)'] || product.retail_unit_price || 0,
+          case_minimum: product['Case Minimum'] || product.case_minimum || null,
+          shelf_life: product['Shelf Life'] || product.shelf_life || null,
+          upc: product['UPC'] || product.upc || null,
+          state: product['State'] || product.state || null,
+          delivery_info: product['Delivery Info'] || product.delivery_info || null,
+          notes: product['Notes'] || product.notes || null,
+          product_image: product['Image'] || product.product_image || null,
+          // Legacy fields for backward compatibility
+          category: product.category || product['Main Category'] || product.main_category || null,
+          product_description: product.product_description || product['Notes'] || product.notes || null
+        };
+
         // Validate required fields
-        if (!product.product_name || !product.vendor_name) {
-          errors.push(`Row ${i + 1}: Missing required fields (product_name, vendor_name)`);
+        if (!productData.product_name || !productData.vendor_name) {
+          errors.push(`Row ${i + 1}: Missing required fields (Product Name, Vendor Name)`);
           failed++;
           continue;
         }
 
-        // Parse boolean values (handle "true", "false", 1, 0, true, false)
-        const parseBool = (value) => {
-          if (typeof value === 'boolean') return value;
-          if (typeof value === 'string') {
-            return value.toLowerCase() === 'true' || value === '1';
-          }
-          return value === 1 || value === true;
+        // Clean price values (remove $ signs and convert to numbers)
+        const cleanPrice = (value) => {
+          if (!value) return 0;
+          if (typeof value === 'number') return value;
+          return parseFloat(String(value).replace(/[$,]/g, '')) || 0;
         };
 
-        const popular = parseBool(product.popular);
-        const seasonal = parseBool(product.seasonal);
-        const isNew = parseBool(product.new);
+        productData.wholesale_case_price = cleanPrice(productData.wholesale_case_price);
+        productData.wholesale_unit_price = cleanPrice(productData.wholesale_unit_price);
+        productData.retail_unit_price = cleanPrice(productData.retail_unit_price);
+
+        // Map "Seasonal and Featured" column to boolean flags
+        const seasonalFeatured = (productData.seasonal_and_featured || '').toLowerCase();
+        const popular = seasonalFeatured.includes('featured');
+        const seasonal = seasonalFeatured.includes('seasonal');
+        const isNew = seasonalFeatured.includes('new');
 
         // Check if product has an ID (update) or not (create)
-        if (product.id && product.id !== '') {
+        if (productData.id && productData.id !== '') {
           // Update existing product
-          const checkResult = await query('SELECT id FROM products WHERE id = $1', [product.id]);
+          const checkResult = await query('SELECT id FROM products WHERE id = $1', [productData.id]);
 
           if (checkResult.rows.length === 0) {
-            errors.push(`Row ${i + 1}: Product with ID ${product.id} not found. Creating new product instead.`);
+            errors.push(`Row ${i + 1}: Product with ID ${productData.id} not found. Creating new product instead.`);
 
             // Create as new product
             await query(
               `INSERT INTO products (
-                vendor_name, state, product_name, product_description, size, case_pack,
-                upc, wholesale_case_price, wholesale_unit_price, retail_unit_price,
-                order_qty, stock_level, product_image, popular, seasonal, new, category
-              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+                vendor_connect_id, vendor_name, product_name, main_category, sub_category,
+                allergens, dietary_preferences, cuisine_type, seasonal_and_featured, size, case_pack,
+                wholesale_case_price, wholesale_unit_price, retail_unit_price, case_minimum, shelf_life,
+                upc, state, delivery_info, notes, product_image, popular, seasonal, new, category, product_description
+              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)`,
               [
-                product.vendor_name,
-                product.state || null,
-                product.product_name,
-                product.product_description || null,
-                product.size || null,
-                product.case_pack || null,
-                product.upc || null,
-                product.wholesale_case_price || 0,
-                product.wholesale_unit_price || 0,
-                product.retail_unit_price || 0,
-                product.order_qty || 0,
-                product.stock_level || 0,
-                product.product_image || null,
-                popular,
-                seasonal,
-                isNew,
-                product.category || null
+                productData.vendor_connect_id, productData.vendor_name, productData.product_name,
+                productData.main_category, productData.sub_category, productData.allergens, productData.dietary_preferences,
+                productData.cuisine_type, productData.seasonal_and_featured, productData.size, productData.case_pack,
+                productData.wholesale_case_price, productData.wholesale_unit_price, productData.retail_unit_price,
+                productData.case_minimum, productData.shelf_life, productData.upc, productData.state,
+                productData.delivery_info, productData.notes, productData.product_image,
+                popular, seasonal, isNew, productData.category, productData.product_description
               ]
             );
             created++;
@@ -314,31 +338,21 @@ router.post('/bulk-import', authenticate, requireAdmin, async (req, res) => {
             // Update existing product
             await query(
               `UPDATE products SET
-                vendor_name = $1, state = $2, product_name = $3, product_description = $4,
-                size = $5, case_pack = $6, upc = $7, wholesale_case_price = $8,
-                wholesale_unit_price = $9, retail_unit_price = $10, order_qty = $11,
-                stock_level = $12, product_image = $13, popular = $14, seasonal = $15, new = $16,
-                category = $17, updated_at = CURRENT_TIMESTAMP
-              WHERE id = $18`,
+                vendor_connect_id = $1, vendor_name = $2, product_name = $3, main_category = $4, sub_category = $5,
+                allergens = $6, dietary_preferences = $7, cuisine_type = $8, seasonal_and_featured = $9, size = $10, case_pack = $11,
+                wholesale_case_price = $12, wholesale_unit_price = $13, retail_unit_price = $14, case_minimum = $15, shelf_life = $16,
+                upc = $17, state = $18, delivery_info = $19, notes = $20, product_image = $21, popular = $22, seasonal = $23,
+                new = $24, category = $25, product_description = $26, updated_at = CURRENT_TIMESTAMP
+              WHERE id = $27`,
               [
-                product.vendor_name,
-                product.state || null,
-                product.product_name,
-                product.product_description || null,
-                product.size || null,
-                product.case_pack || null,
-                product.upc || null,
-                product.wholesale_case_price || 0,
-                product.wholesale_unit_price || 0,
-                product.retail_unit_price || 0,
-                product.order_qty || 0,
-                product.stock_level || 0,
-                product.product_image || null,
-                popular,
-                seasonal,
-                isNew,
-                product.category || null,
-                product.id
+                productData.vendor_connect_id, productData.vendor_name, productData.product_name,
+                productData.main_category, productData.sub_category, productData.allergens, productData.dietary_preferences,
+                productData.cuisine_type, productData.seasonal_and_featured, productData.size, productData.case_pack,
+                productData.wholesale_case_price, productData.wholesale_unit_price, productData.retail_unit_price,
+                productData.case_minimum, productData.shelf_life, productData.upc, productData.state,
+                productData.delivery_info, productData.notes, productData.product_image,
+                popular, seasonal, isNew, productData.category, productData.product_description,
+                productData.id
               ]
             );
             updated++;
@@ -347,28 +361,19 @@ router.post('/bulk-import', authenticate, requireAdmin, async (req, res) => {
           // Create new product (no ID provided)
           await query(
             `INSERT INTO products (
-              vendor_name, state, product_name, product_description, size, case_pack,
-              upc, wholesale_case_price, wholesale_unit_price, retail_unit_price,
-              order_qty, stock_level, product_image, popular, seasonal, new, category
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+              vendor_connect_id, vendor_name, product_name, main_category, sub_category,
+              allergens, dietary_preferences, cuisine_type, seasonal_and_featured, size, case_pack,
+              wholesale_case_price, wholesale_unit_price, retail_unit_price, case_minimum, shelf_life,
+              upc, state, delivery_info, notes, product_image, popular, seasonal, new, category, product_description
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)`,
             [
-              product.vendor_name,
-              product.state || null,
-              product.product_name,
-              product.product_description || null,
-              product.size || null,
-              product.case_pack || null,
-              product.upc || null,
-              product.wholesale_case_price || 0,
-              product.wholesale_unit_price || 0,
-              product.retail_unit_price || 0,
-              product.order_qty || 0,
-              product.stock_level || 0,
-              product.product_image || null,
-              popular,
-              seasonal,
-              isNew,
-              product.category || null
+              productData.vendor_connect_id, productData.vendor_name, productData.product_name,
+              productData.main_category, productData.sub_category, productData.allergens, productData.dietary_preferences,
+              productData.cuisine_type, productData.seasonal_and_featured, productData.size, productData.case_pack,
+              productData.wholesale_case_price, productData.wholesale_unit_price, productData.retail_unit_price,
+              productData.case_minimum, productData.shelf_life, productData.upc, productData.state,
+              productData.delivery_info, productData.notes, productData.product_image,
+              popular, seasonal, isNew, productData.category, productData.product_description
             ]
           );
           created++;

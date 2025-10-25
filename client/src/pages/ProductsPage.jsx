@@ -3,6 +3,7 @@ import api from '../config/api';
 import { useCart } from '../context/CartContext';
 import { useSearch } from '../context/SearchContext';
 import ProductDetailModal from '../components/ProductDetailModal';
+import Pagination from '../components/Pagination';
 
 const ProductsPage = () => {
   const [products, setProducts] = useState([]);
@@ -31,6 +32,10 @@ const ProductsPage = () => {
 
   const { addToCart } = useCart();
   const [addedToCart, setAddedToCart] = useState({});
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [productsPerPage] = useState(20);
 
   useEffect(() => {
     fetchProducts();
@@ -131,6 +136,18 @@ const ProductsPage = () => {
     }
 
     setFilteredProducts(filtered);
+    setCurrentPage(1); // Reset to first page when filters change
+  };
+
+  // Calculate pagination
+  const indexOfLastProduct = currentPage * productsPerPage;
+  const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
+  const currentProducts = filteredProducts.slice(indexOfFirstProduct, indexOfLastProduct);
+  const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleAddToCart = (product) => {
@@ -327,18 +344,18 @@ const ProductsPage = () => {
       ) : (
         <>
           {/* Group products by vendor */}
-          {Array.from(new Set(filteredProducts.map(p => p.vendor_name))).map(vendor => (
+          {Array.from(new Set(currentProducts.map(p => p.vendor_name))).map(vendor => (
             <div key={vendor} className="mb-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-bold text-gray-800">{vendor}</h2>
                 <span className="text-sm text-gray-500">
-                  {filteredProducts.filter(p => p.vendor_name === vendor).length}
+                  {currentProducts.filter(p => p.vendor_name === vendor).length}
                 </span>
               </div>
 
               {/* Product List */}
               <div className="bg-white rounded-lg shadow-sm divide-y">
-                {filteredProducts.filter(p => p.vendor_name === vendor).map(product => (
+                {currentProducts.filter(p => p.vendor_name === vendor).map(product => (
                   <div key={product.id} className="flex items-center p-4 hover:bg-gray-50 transition-colors">
                     {/* Product Image - Clickable */}
                     <div
@@ -357,8 +374,10 @@ const ProductsPage = () => {
                       className="flex-1 min-w-0 cursor-pointer"
                       onClick={() => handleProductClick(product)}
                     >
-                      <h3 className="font-semibold text-gray-900 truncate hover:text-primary-600">
-                        {product.product_name}
+                      <h3 className="font-semibold text-gray-900 hover:text-primary-600">
+                        {product.product_name.length > 230
+                          ? product.product_name.substring(0, 230) + '...'
+                          : product.product_name}
                       </h3>
                       <div className="flex items-center space-x-4 mt-1 text-sm text-gray-600">
                         <span>Unit Price = ${parseFloat(product.wholesale_unit_price).toFixed(2)}</span>
@@ -406,6 +425,13 @@ const ProductsPage = () => {
               </div>
             </div>
           ))}
+
+          {/* Pagination */}
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+          />
         </>
       )}
 

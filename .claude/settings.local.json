@@ -9,7 +9,11 @@
       "Bash(findstr:*)",
       "Bash(taskkill:*)",
       "Bash($env:PGPASSWORD=\"postgres1234\")",
-      "Bash(node migrate_users.js:*)"
+      "Bash(node migrate_users.js:*)",
+      "Bash(node migrate_products_new_fields.js:*)",
+      "Bash(timeout:*)",
+      "Bash(node delete_all_products.js:*)",
+      "Bash(node check_products.js:*)"
     ],
     "deny": [],
     "ask": []
