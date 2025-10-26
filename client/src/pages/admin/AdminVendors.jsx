@@ -56,14 +56,15 @@ const AdminVendors = () => {
   const openCreateModal = () => {
     setEditingVendor(null);
     setFormData({
+      vendor_connect_id: '',
       name: '',
-      state: '',
-      city: '',
       website_url: '',
       logo_url: '',
-      description: '',
+      phone: '',
       email: '',
-      phone: ''
+      address: '',
+      state: '',
+      territory: ''
     });
     setShowModal(true);
   };
@@ -224,15 +225,16 @@ const AdminVendors = () => {
   const downloadTemplate = () => {
     const template = [
       {
-        id: '',
-        name: 'Example Vendor',
-        state: 'CA',
-        city: 'Los Angeles',
-        website_url: 'https://example.com',
-        logo_url: 'https://example.com/logo.png',
-        description: 'Vendor description here',
-        email: 'contact@example.com',
-        phone: '555-123-4567'
+        'ID': '',
+        'Vendor Connect ID': '',
+        'Vendor Name': 'Example Vendor',
+        'URL': 'https://example.com',
+        'Logo': 'https://example.com/logo.png',
+        'Phone': '(555) 123-4567',
+        'Email': 'contact@example.com',
+        'Address': '123 Main St, Suite 100',
+        'State': 'CA',
+        'Territory': 'West Coast'
       }
     ];
 
@@ -405,6 +407,16 @@ const AdminVendors = () => {
               </div>
 
               <div>
+                <label className="block text-lg font-semibold text-gray-700 mb-2">Vendor Connect ID</label>
+                <input
+                  type="text"
+                  value={formData.vendor_connect_id || ''}
+                  onChange={(e) => handleInputChange('vendor_connect_id', e.target.value)}
+                  className="input"
+                />
+              </div>
+
+              <div>
                 <label className="block text-lg font-semibold text-gray-700 mb-2">State</label>
                 <input
                   type="text"
@@ -416,12 +428,13 @@ const AdminVendors = () => {
               </div>
 
               <div>
-                <label className="block text-lg font-semibold text-gray-700 mb-2">City</label>
+                <label className="block text-lg font-semibold text-gray-700 mb-2">Territory</label>
                 <input
                   type="text"
-                  value={formData.city || ''}
-                  onChange={(e) => handleInputChange('city', e.target.value)}
+                  value={formData.territory || ''}
+                  onChange={(e) => handleInputChange('territory', e.target.value)}
                   className="input"
+                  placeholder="e.g., West Coast"
                 />
               </div>
 
@@ -448,12 +461,13 @@ const AdminVendors = () => {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-lg font-semibold text-gray-700 mb-2">Description</label>
+                <label className="block text-lg font-semibold text-gray-700 mb-2">Address</label>
                 <textarea
-                  value={formData.description || ''}
-                  onChange={(e) => handleInputChange('description', e.target.value)}
+                  value={formData.address || ''}
+                  onChange={(e) => handleInputChange('address', e.target.value)}
                   className="input"
-                  rows="4"
+                  rows="3"
+                  placeholder="Full address"
                 />
               </div>
             </div>
@@ -512,6 +526,11 @@ const AdminVendors = () => {
                 </div>
 
                 <div>
+                  <p className="text-sm font-semibold text-gray-500">Vendor Connect ID</p>
+                  <p className="text-lg text-gray-900">{selectedVendor.vendor_connect_id || 'N/A'}</p>
+                </div>
+
+                <div>
                   <p className="text-sm font-semibold text-gray-500">Email</p>
                   <p className="text-lg text-gray-900">{selectedVendor.email || 'N/A'}</p>
                 </div>
@@ -522,12 +541,13 @@ const AdminVendors = () => {
                 </div>
 
                 <div>
-                  <p className="text-sm font-semibold text-gray-500">Location</p>
-                  <p className="text-lg text-gray-900">
-                    {selectedVendor.city && selectedVendor.state
-                      ? `${selectedVendor.city}, ${selectedVendor.state}`
-                      : selectedVendor.city || selectedVendor.state || 'N/A'}
-                  </p>
+                  <p className="text-sm font-semibold text-gray-500">State</p>
+                  <p className="text-lg text-gray-900">{selectedVendor.state || 'N/A'}</p>
+                </div>
+
+                <div>
+                  <p className="text-sm font-semibold text-gray-500">Territory</p>
+                  <p className="text-lg text-gray-900">{selectedVendor.territory || 'N/A'}</p>
                 </div>
 
                 <div className="col-span-2">
@@ -547,8 +567,8 @@ const AdminVendors = () => {
                 </div>
 
                 <div className="col-span-2">
-                  <p className="text-sm font-semibold text-gray-500">Description</p>
-                  <p className="text-gray-900">{selectedVendor.description || 'No description available'}</p>
+                  <p className="text-sm font-semibold text-gray-500">Address</p>
+                  <p className="text-gray-900">{selectedVendor.address || 'N/A'}</p>
                 </div>
               </div>
             </div>
@@ -586,9 +606,9 @@ const AdminVendors = () => {
                 <h3 className="font-semibold text-blue-900 mb-2">📋 Import Instructions:</h3>
                 <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
                   <li>Upload a CSV or Excel file (.csv, .xlsx, .xls)</li>
-                  <li>Leave <strong>id</strong> empty for new vendors, or include existing id to update</li>
-                  <li>Required field: name</li>
-                  <li>Optional fields: state, city, website_url, logo_url, description, email, phone</li>
+                  <li>Leave <strong>ID</strong> empty for new vendors, or include existing ID to update</li>
+                  <li>Required field: Vendor Name</li>
+                  <li>Optional fields: Vendor Connect ID, URL, Logo, Phone, Email, Address, State, Territory</li>
                 </ul>
               </div>
 

@@ -13,7 +13,12 @@
       "Bash(node migrate_products_new_fields.js:*)",
       "Bash(timeout:*)",
       "Bash(node delete_all_products.js:*)",
-      "Bash(node check_products.js:*)"
+      "Bash(node check_products.js:*)",
+      "Bash(node check_vendor_schema.js:*)",
+      "Bash(node migrate_vendors_new_schema.js:*)",
+      "Bash(node test_vendor_import.js:*)",
+      "Bash(node check_vendor_logos.js:*)",
+      "Bash(node:*)"
     ],
     "deny": [],
     "ask": []

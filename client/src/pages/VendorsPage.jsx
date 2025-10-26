@@ -40,8 +40,9 @@ const VendorsPage = () => {
 
   const filteredVendors = vendors.filter(vendor =>
     vendor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    vendor.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    vendor.state?.toLowerCase().includes(searchTerm.toLowerCase())
+    vendor.address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    vendor.state?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    vendor.territory?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Calculate pagination
@@ -196,12 +197,13 @@ const VendorsPage = () => {
                 </div>
 
                 <div>
-                  <p className="text-sm font-semibold text-gray-500">Location</p>
-                  <p className="text-lg text-gray-900">
-                    {selectedVendor.city && selectedVendor.state
-                      ? `${selectedVendor.city}, ${selectedVendor.state}`
-                      : selectedVendor.city || selectedVendor.state || 'N/A'}
-                  </p>
+                  <p className="text-sm font-semibold text-gray-500">State</p>
+                  <p className="text-lg text-gray-900">{selectedVendor.state || 'N/A'}</p>
+                </div>
+
+                <div>
+                  <p className="text-sm font-semibold text-gray-500">Territory</p>
+                  <p className="text-lg text-gray-900">{selectedVendor.territory || 'N/A'}</p>
                 </div>
 
                 <div className="col-span-2">
@@ -221,8 +223,8 @@ const VendorsPage = () => {
                 </div>
 
                 <div className="col-span-2">
-                  <p className="text-sm font-semibold text-gray-500">Description</p>
-                  <p className="text-gray-900">{selectedVendor.description || 'No description available'}</p>
+                  <p className="text-sm font-semibold text-gray-500">Address</p>
+                  <p className="text-gray-900">{selectedVendor.address || 'N/A'}</p>
                 </div>
               </div>
             </div>

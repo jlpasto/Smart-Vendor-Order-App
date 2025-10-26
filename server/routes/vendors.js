@@ -22,73 +22,92 @@ router.post('/bulk-import', authenticate, requireAdmin, async (req, res) => {
       const vendor = vendors[i];
 
       try {
+        // Map Excel column names to database fields
+        const vendorData = {
+          id: vendor['ID'] || vendor.id || null,
+          vendor_connect_id: vendor['Vendor Connect ID'] || vendor.vendor_connect_id || null,
+          name: vendor['Vendor Name'] || vendor.name,
+          website_url: vendor['URL'] || vendor.website_url || null,
+          logo_url: vendor['Logo'] || vendor.logo_url || null,
+          phone: vendor['Phone'] || vendor.phone || null,
+          email: vendor['Email'] || vendor.email || null,
+          address: vendor['Address'] || vendor.address || null,
+          state: vendor['State'] || vendor.state || null,
+          territory: vendor['Territory'] || vendor.territory || null
+        };
+
         // Validate required fields
-        if (!vendor.name || vendor.name.trim() === '') {
-          errors.push(`Row ${i + 1}: Vendor name is required`);
+        if (!vendorData.name || vendorData.name.trim() === '') {
+          errors.push(`Row ${i + 1}: Vendor Name is required`);
           failed++;
           continue;
         }
 
-        // Check if vendor has an ID and if it exists in the database
-        if (vendor.id && vendor.id !== '') {
-          const checkResult = await query('SELECT id FROM vendors WHERE id = $1', [vendor.id]);
+        // Check if vendor exists by ID, vendor_connect_id, or name
+        let existingVendor = null;
 
-          if (checkResult.rows.length === 0) {
-            // ID provided but doesn't exist - create new vendor
-            const result = await query(
-              `INSERT INTO vendors (
-                name, state, city, website_url, logo_url, description, email, phone
-              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-              RETURNING id`,
-              [
-                vendor.name,
-                vendor.state || null,
-                vendor.city || null,
-                vendor.website_url || null,
-                vendor.logo_url || null,
-                vendor.description || null,
-                vendor.email || null,
-                vendor.phone || null
-              ]
-            );
-            created++;
-          } else {
-            // ID exists - update existing vendor
-            await query(
-              `UPDATE vendors SET
-                name = $1, state = $2, city = $3, website_url = $4,
-                logo_url = $5, description = $6, email = $7, phone = $8,
-                updated_at = CURRENT_TIMESTAMP
-              WHERE id = $9`,
-              [
-                vendor.name,
-                vendor.state || null,
-                vendor.city || null,
-                vendor.website_url || null,
-                vendor.logo_url || null,
-                vendor.description || null,
-                vendor.email || null,
-                vendor.phone || null,
-                vendor.id
-              ]
-            );
-            updated++;
+        if (vendorData.id && vendorData.id !== '') {
+          // Check by ID first
+          const checkResult = await query('SELECT id FROM vendors WHERE id = $1', [vendorData.id]);
+          if (checkResult.rows.length > 0) {
+            existingVendor = checkResult.rows[0];
           }
+        }
+
+        if (!existingVendor && vendorData.vendor_connect_id) {
+          // Check by vendor_connect_id
+          const checkResult = await query('SELECT id FROM vendors WHERE vendor_connect_id = $1', [vendorData.vendor_connect_id]);
+          if (checkResult.rows.length > 0) {
+            existingVendor = checkResult.rows[0];
+          }
+        }
+
+        if (!existingVendor) {
+          // Check by name (case-insensitive)
+          const checkResult = await query('SELECT id FROM vendors WHERE LOWER(name) = LOWER($1)', [vendorData.name]);
+          if (checkResult.rows.length > 0) {
+            existingVendor = checkResult.rows[0];
+          }
+        }
+
+        if (existingVendor) {
+          // Vendor exists - update it
+          await query(
+            `UPDATE vendors SET
+              vendor_connect_id = $1, name = $2, website_url = $3, logo_url = $4,
+              phone = $5, email = $6, address = $7, state = $8, territory = $9,
+              updated_at = CURRENT_TIMESTAMP
+            WHERE id = $10`,
+            [
+              vendorData.vendor_connect_id,
+              vendorData.name,
+              vendorData.website_url,
+              vendorData.logo_url,
+              vendorData.phone,
+              vendorData.email,
+              vendorData.address,
+              vendorData.state,
+              vendorData.territory,
+              existingVendor.id
+            ]
+          );
+          updated++;
         } else {
-          // No ID provided - create new vendor
+          // Vendor doesn't exist - create new one
           await query(
             `INSERT INTO vendors (
-              name, state, city, website_url, logo_url, description, email, phone
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+              vendor_connect_id, name, website_url, logo_url, phone, email, address, state, territory
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
             [
-              vendor.name,
-              vendor.state || null,
-              vendor.city || null,
-              vendor.website_url || null,
-              vendor.logo_url || null,
-              vendor.description || null,
-              vendor.email || null,
-              vendor.phone || null
+              vendorData.vendor_connect_id,
+              vendorData.name,
+              vendorData.website_url,
+              vendorData.logo_url,
+              vendorData.phone,
+              vendorData.email,
+              vendorData.address,
+              vendorData.state,
+              vendorData.territory
             ]
           );
           created++;
@@ -117,7 +136,7 @@ router.post('/bulk-import', authenticate, requireAdmin, async (req, res) => {
 // Get all vendors (public - anyone can view)
 router.get('/', async (req, res) => {
   try {
-    const { search, state, city } = req.query;
+    const { search, state, territory } = req.query;
 
     let queryText = 'SELECT * FROM vendors WHERE 1=1';
     const queryParams = [];
@@ -125,7 +144,7 @@ router.get('/', async (req, res) => {
 
     // Add search filter
     if (search) {
-      queryText += ` AND (name ILIKE $${paramCount} OR description ILIKE $${paramCount} OR city ILIKE $${paramCount})`;
+      queryText += ` AND (name ILIKE $${paramCount} OR address ILIKE $${paramCount} OR territory ILIKE $${paramCount})`;
       queryParams.push(`%${search}%`);
       paramCount++;
     }
@@ -137,10 +156,10 @@ router.get('/', async (req, res) => {
       paramCount++;
     }
 
-    // Add city filter
-    if (city) {
-      queryText += ` AND city = $${paramCount}`;
-      queryParams.push(city);
+    // Add territory filter
+    if (territory) {
+      queryText += ` AND territory = $${paramCount}`;
+      queryParams.push(territory);
       paramCount++;
     }
 
@@ -184,16 +203,16 @@ router.get('/filters/states', async (req, res) => {
   }
 });
 
-// Get unique cities (for filters)
-router.get('/filters/cities', async (req, res) => {
+// Get unique territories (for filters)
+router.get('/filters/territories', async (req, res) => {
   try {
     const result = await query(
-      'SELECT DISTINCT city FROM vendors WHERE city IS NOT NULL ORDER BY city'
+      'SELECT DISTINCT territory FROM vendors WHERE territory IS NOT NULL ORDER BY territory'
     );
-    res.json(result.rows.map(row => row.city));
+    res.json(result.rows.map(row => row.territory));
   } catch (error) {
-    console.error('Error fetching cities:', error);
-    res.status(500).json({ error: 'Error fetching cities' });
+    console.error('Error fetching territories:', error);
+    res.status(500).json({ error: 'Error fetching territories' });
   }
 });
 
@@ -201,14 +220,15 @@ router.get('/filters/cities', async (req, res) => {
 router.post('/', authenticate, requireAdmin, async (req, res) => {
   try {
     const {
+      vendor_connect_id,
       name,
-      state,
-      city,
       website_url,
       logo_url,
-      description,
+      phone,
       email,
-      phone
+      address,
+      state,
+      territory
     } = req.body;
 
     // Validate required fields
@@ -218,10 +238,10 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
 
     const result = await query(
       `INSERT INTO vendors (
-        name, state, city, website_url, logo_url, description, email, phone
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        vendor_connect_id, name, website_url, logo_url, phone, email, address, state, territory
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING *`,
-      [name, state, city, website_url, logo_url, description, email, phone]
+      [vendor_connect_id, name, website_url, logo_url, phone, email, address, state, territory]
     );
 
     res.status(201).json(result.rows[0]);
@@ -236,24 +256,25 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const {
+      vendor_connect_id,
       name,
-      state,
-      city,
       website_url,
       logo_url,
-      description,
+      phone,
       email,
-      phone
+      address,
+      state,
+      territory
     } = req.body;
 
     const result = await query(
       `UPDATE vendors SET
-        name = $1, state = $2, city = $3, website_url = $4,
-        logo_url = $5, description = $6, email = $7, phone = $8,
+        vendor_connect_id = $1, name = $2, website_url = $3, logo_url = $4,
+        phone = $5, email = $6, address = $7, state = $8, territory = $9,
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $9
+      WHERE id = $10
       RETURNING *`,
-      [name, state, city, website_url, logo_url, description, email, phone, id]
+      [vendor_connect_id, name, website_url, logo_url, phone, email, address, state, territory, id]
     );
 
     if (result.rows.length === 0) {
