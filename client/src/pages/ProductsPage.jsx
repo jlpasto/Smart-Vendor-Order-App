@@ -2,8 +2,12 @@ import { useState, useEffect } from 'react';
 import api from '../config/api';
 import { useCart } from '../context/CartContext';
 import { useSearch } from '../context/SearchContext';
+import { useFilter } from '../context/FilterContext';
 import ProductDetailModal from '../components/ProductDetailModal';
 import Pagination from '../components/Pagination';
+import FilterIcon from '../components/FilterIcon';
+import FilterModal from '../components/FilterModal';
+import FilterDetailPanel from '../components/FilterDetailPanel';
 
 const ProductsPage = () => {
   const [products, setProducts] = useState([]);
@@ -16,19 +20,14 @@ const ProductsPage = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Filters
-  const { globalSearchTerm } = useSearch(); // Use global search from header
-  const [selectedVendor, setSelectedVendor] = useState('');
-  const [selectedState, setSelectedState] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [showFeatured, setShowFeatured] = useState(false);
-  const [showSeasonal, setShowSeasonal] = useState(false);
-  const [showNew, setShowNew] = useState(false);
+  // Filter modal state
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [selectedFilterField, setSelectedFilterField] = useState(null);
 
-  // Filter options
-  const [vendors, setVendors] = useState([]);
-  const [states, setStates] = useState([]);
-  const [categories, setCategories] = useState([]);
+  // Use filter context
+  const { globalSearchTerm } = useSearch();
+  const { filters } = useFilter();
 
   const { addToCart } = useCart();
   const [addedToCart, setAddedToCart] = useState({});
@@ -39,13 +38,12 @@ const ProductsPage = () => {
 
   useEffect(() => {
     fetchProducts();
-    fetchFilterOptions();
     loadFavorites();
   }, []);
 
   useEffect(() => {
     applyFilters();
-  }, [products, globalSearchTerm, selectedVendor, selectedState, selectedCategory, showFeatured, showSeasonal, showNew]);
+  }, [products, globalSearchTerm, filters]);
 
   const fetchProducts = async () => {
     try {
@@ -56,21 +54,6 @@ const ProductsPage = () => {
     } catch (err) {
       setError('Failed to load products');
       setLoading(false);
-    }
-  };
-
-  const fetchFilterOptions = async () => {
-    try {
-      const [vendorsRes, statesRes, categoriesRes] = await Promise.all([
-        api.get('/api/products/filters/vendors'),
-        api.get('/api/products/filters/states'),
-        api.get('/api/products/filters/categories')
-      ]);
-      setVendors(vendorsRes.data);
-      setStates(statesRes.data);
-      setCategories(categoriesRes.data);
-    } catch (err) {
-      console.error('Error fetching filter options:', err);
     }
   };
 
@@ -95,7 +78,7 @@ const ProductsPage = () => {
   const applyFilters = () => {
     let filtered = [...products];
 
-    // Search filter (from global search in header)
+    // Global search filter
     if (globalSearchTerm) {
       const term = globalSearchTerm.toLowerCase();
       filtered = filtered.filter(p =>
@@ -105,38 +88,133 @@ const ProductsPage = () => {
       );
     }
 
-    // Vendor filter
-    if (selectedVendor) {
-      filtered = filtered.filter(p => p.vendor_name === selectedVendor);
+    // Text filters
+    if (filters.id) {
+      filtered = filtered.filter(p => p.id === parseInt(filters.id));
+    }
+    if (filters.vendor_connect_id) {
+      filtered = filtered.filter(p => p.vendor_connect_id === filters.vendor_connect_id);
+    }
+    if (filters.product_name) {
+      filtered = filtered.filter(p => p.product_name?.toLowerCase().includes(filters.product_name.toLowerCase()));
+    }
+    if (filters.size) {
+      filtered = filtered.filter(p => p.size?.toLowerCase().includes(filters.size.toLowerCase()));
+    }
+    if (filters.upc) {
+      filtered = filtered.filter(p => p.upc === filters.upc);
+    }
+    if (filters.shelf_life) {
+      filtered = filtered.filter(p => p.shelf_life?.toLowerCase().includes(filters.shelf_life.toLowerCase()));
+    }
+    if (filters.delivery_info) {
+      filtered = filtered.filter(p => p.delivery_info?.toLowerCase().includes(filters.delivery_info.toLowerCase()));
+    }
+    if (filters.notes) {
+      filtered = filtered.filter(p => p.notes?.toLowerCase().includes(filters.notes.toLowerCase()));
     }
 
-    // State filter
-    if (selectedState) {
-      filtered = filtered.filter(p => p.state === selectedState);
+    // Dropdown filters
+    if (filters.vendor) {
+      filtered = filtered.filter(p => p.vendor_name === filters.vendor);
+    }
+    if (filters.state) {
+      filtered = filtered.filter(p => p.state === filters.state);
+    }
+    if (filters.cuisine_type) {
+      filtered = filtered.filter(p => p.cuisine_type === filters.cuisine_type);
+    }
+    if (filters.seasonal_featured) {
+      filtered = filtered.filter(p => p.seasonal_featured === filters.seasonal_featured);
     }
 
-    // Category filter
-    if (selectedCategory) {
-      filtered = filtered.filter(p => p.category === selectedCategory);
+    // Multi-select filters
+    if (filters.main_categories && filters.main_categories.length > 0) {
+      filtered = filtered.filter(p => filters.main_categories.includes(p.main_category));
+    }
+    if (filters.sub_categories && filters.sub_categories.length > 0) {
+      filtered = filtered.filter(p => filters.sub_categories.includes(p.sub_category));
+    }
+    if (filters.allergens && filters.allergens.length > 0) {
+      filtered = filtered.filter(p => {
+        const productAllergens = p.allergens?.split(',').map(a => a.trim()) || [];
+        return filters.allergens.some(allergen => productAllergens.includes(allergen));
+      });
+    }
+    if (filters.dietary_preferences && filters.dietary_preferences.length > 0) {
+      filtered = filtered.filter(p => {
+        const productPrefs = p.dietary_preferences?.split(',').map(d => d.trim()) || [];
+        return filters.dietary_preferences.some(pref => productPrefs.includes(pref));
+      });
     }
 
-    // Featured filter
-    if (showFeatured) {
-      filtered = filtered.filter(p => p.popular); // Still using 'popular' field in DB
+    // Range filters
+    if (filters.case_pack_min) {
+      filtered = filtered.filter(p => parseFloat(p.case_pack) >= parseFloat(filters.case_pack_min));
+    }
+    if (filters.case_pack_max) {
+      filtered = filtered.filter(p => parseFloat(p.case_pack) <= parseFloat(filters.case_pack_max));
+    }
+    if (filters.price_min) {
+      filtered = filtered.filter(p => parseFloat(p.wholesale_case_price) >= parseFloat(filters.price_min));
+    }
+    if (filters.price_max) {
+      filtered = filtered.filter(p => parseFloat(p.wholesale_case_price) <= parseFloat(filters.price_max));
+    }
+    if (filters.unit_price_min) {
+      filtered = filtered.filter(p => parseFloat(p.wholesale_unit_price) >= parseFloat(filters.unit_price_min));
+    }
+    if (filters.unit_price_max) {
+      filtered = filtered.filter(p => parseFloat(p.wholesale_unit_price) <= parseFloat(filters.unit_price_max));
+    }
+    if (filters.msrp_min) {
+      filtered = filtered.filter(p => parseFloat(p.retail_unit_price) >= parseFloat(filters.msrp_min));
+    }
+    if (filters.msrp_max) {
+      filtered = filtered.filter(p => parseFloat(p.retail_unit_price) <= parseFloat(filters.msrp_max));
+    }
+    if (filters.gm_min) {
+      filtered = filtered.filter(p => parseFloat(p.gm_percent) >= parseFloat(filters.gm_min));
+    }
+    if (filters.gm_max) {
+      filtered = filtered.filter(p => parseFloat(p.gm_percent) <= parseFloat(filters.gm_max));
+    }
+    if (filters.case_minimum_min) {
+      filtered = filtered.filter(p => parseFloat(p.case_minimum) >= parseFloat(filters.case_minimum_min));
+    }
+    if (filters.case_minimum_max) {
+      filtered = filtered.filter(p => parseFloat(p.case_minimum) <= parseFloat(filters.case_minimum_max));
     }
 
-    // Seasonal filter
-    if (showSeasonal) {
+    // Boolean filters
+    if (filters.popular) {
+      filtered = filtered.filter(p => p.popular);
+    }
+    if (filters.seasonal) {
       filtered = filtered.filter(p => p.seasonal);
     }
-
-    // New filter
-    if (showNew) {
+    if (filters.new) {
       filtered = filtered.filter(p => p.new);
     }
 
     setFilteredProducts(filtered);
     setCurrentPage(1); // Reset to first page when filters change
+  };
+
+  const handleFilterIconClick = () => {
+    setShowFilterModal(true);
+  };
+
+  const handleSelectField = (field) => {
+    setSelectedFilterField(field);
+    setShowFilterModal(false);
+    setShowFilterPanel(true);
+  };
+
+  const handleBackToFilterModal = () => {
+    setShowFilterPanel(false);
+    setShowFilterModal(true);
+    setSelectedFilterField(null);
   };
 
   // Calculate pagination
@@ -231,106 +309,9 @@ const ProductsPage = () => {
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6">
-      <h1 className="text-2xl font-bold mb-6">Products</h1>
-
-      {/* Filters Bar */}
-      <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
-        {/* Filter Dropdowns */}
-        <div className="grid md:grid-cols-3 gap-4 mb-4">
-          <div>
-            <label htmlFor="vendor" className="block text-lg font-semibold text-gray-700 mb-2">
-              Vendor
-            </label>
-            <select
-              id="vendor"
-              value={selectedVendor}
-              onChange={(e) => setSelectedVendor(e.target.value)}
-              className="select"
-            >
-              <option value="">All Vendors</option>
-              {vendors.map(vendor => (
-                <option key={vendor} value={vendor}>{vendor}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label htmlFor="state" className="block text-lg font-semibold text-gray-700 mb-2">
-              State
-            </label>
-            <select
-              id="state"
-              value={selectedState}
-              onChange={(e) => setSelectedState(e.target.value)}
-              className="select"
-            >
-              <option value="">All States</option>
-              {states.map(state => (
-                <option key={state} value={state}>{state}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label htmlFor="category" className="block text-lg font-semibold text-gray-700 mb-2">
-              Category
-            </label>
-            <select
-              id="category"
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="select"
-            >
-              <option value="">All Categories</option>
-              {categories.map(category => (
-                <option key={category} value={category}>{category}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Toggle Filters */}
-        <div className="flex flex-wrap gap-3 items-center justify-between">
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setShowFeatured(!showFeatured)}
-              className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${
-                showFeatured
-                  ? 'bg-amber-500 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              ⭐ Featured
-            </button>
-            <button
-              onClick={() => setShowSeasonal(!showSeasonal)}
-              className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${
-                showSeasonal
-                  ? 'bg-orange-500 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              🍂 Seasonal
-            </button>
-            <button
-              onClick={() => setShowNew(!showNew)}
-              className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${
-                showNew
-                  ? 'bg-green-500 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              🆕 New
-            </button>
-          </div>
-
-          <button
-            onClick={clearFilters}
-            className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50"
-          >
-            Clear Filters
-          </button>
-        </div>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">Products</h1>
+        <FilterIcon onClick={handleFilterIconClick} />
       </div>
 
       {/* Category Header */}
@@ -452,6 +433,20 @@ const ProductsPage = () => {
         }
         onEdit={handleEdit}
         onDelete={handleDelete}
+      />
+
+      {/* Filter Modal */}
+      <FilterModal
+        isOpen={showFilterModal}
+        onClose={() => setShowFilterModal(false)}
+        onSelectField={handleSelectField}
+      />
+
+      {/* Filter Detail Panel */}
+      <FilterDetailPanel
+        field={selectedFilterField}
+        isOpen={showFilterPanel}
+        onBack={handleBackToFilterModal}
       />
     </div>
   );

@@ -4,6 +4,10 @@ import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import Pagination from '../../components/Pagination';
 import { useSearch } from '../../context/SearchContext';
+import { useFilter } from '../../context/FilterContext';
+import FilterIcon from '../../components/FilterIcon';
+import FilterModal from '../../components/FilterModal';
+import FilterDetailPanel from '../../components/FilterDetailPanel';
 
 const AdminProducts = () => {
   const [products, setProducts] = useState([]);
@@ -17,8 +21,14 @@ const AdminProducts = () => {
   const [importing, setImporting] = useState(false);
   const [importResults, setImportResults] = useState(null);
 
+  // Filter modal state
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [selectedFilterField, setSelectedFilterField] = useState(null);
+
   // Use global search from context
   const { globalSearchTerm } = useSearch();
+  const { filters } = useFilter();
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -28,10 +38,10 @@ const AdminProducts = () => {
     fetchProducts();
   }, []);
 
-  // Reset to first page when search term changes
+  // Reset to first page when search term or filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [globalSearchTerm]);
+  }, [globalSearchTerm, filters]);
 
   const fetchProducts = async () => {
     try {
@@ -259,19 +269,89 @@ const AdminProducts = () => {
     XLSX.writeFile(wb, 'product_import_template.xlsx');
   };
 
-  // Filter products based on global search term
-  const filteredProducts = products.filter(product => {
-    if (!globalSearchTerm) return true;
+  // Filter handlers
+  const handleFilterIconClick = () => {
+    setShowFilterModal(true);
+  };
 
-    const searchLower = globalSearchTerm.toLowerCase();
-    return (
-      product.product_name?.toLowerCase().includes(searchLower) ||
-      product.vendor_name?.toLowerCase().includes(searchLower) ||
-      product.category?.toLowerCase().includes(searchLower) ||
-      product.product_description?.toLowerCase().includes(searchLower) ||
-      product.size?.toLowerCase().includes(searchLower) ||
-      product.upc?.toLowerCase().includes(searchLower)
-    );
+  const handleSelectField = (field) => {
+    setSelectedFilterField(field);
+    setShowFilterModal(false);
+    setShowFilterPanel(true);
+  };
+
+  const handleBackToFilterModal = () => {
+    setShowFilterPanel(false);
+    setShowFilterModal(true);
+    setSelectedFilterField(null);
+  };
+
+  // Filter products based on global search term and advanced filters
+  const filteredProducts = products.filter(product => {
+    // Global search filter
+    if (globalSearchTerm) {
+      const searchLower = globalSearchTerm.toLowerCase();
+      const matchesSearch = (
+        product.product_name?.toLowerCase().includes(searchLower) ||
+        product.vendor_name?.toLowerCase().includes(searchLower) ||
+        product.category?.toLowerCase().includes(searchLower) ||
+        product.product_description?.toLowerCase().includes(searchLower) ||
+        product.size?.toLowerCase().includes(searchLower) ||
+        product.upc?.toLowerCase().includes(searchLower)
+      );
+      if (!matchesSearch) return false;
+    }
+
+    // Text filters
+    if (filters.id && product.id !== parseInt(filters.id)) return false;
+    if (filters.vendor_connect_id && product.vendor_connect_id !== filters.vendor_connect_id) return false;
+    if (filters.product_name && !product.product_name?.toLowerCase().includes(filters.product_name.toLowerCase())) return false;
+    if (filters.size && !product.size?.toLowerCase().includes(filters.size.toLowerCase())) return false;
+    if (filters.upc && product.upc !== filters.upc) return false;
+    if (filters.shelf_life && !product.shelf_life?.toLowerCase().includes(filters.shelf_life.toLowerCase())) return false;
+    if (filters.delivery_info && !product.delivery_info?.toLowerCase().includes(filters.delivery_info.toLowerCase())) return false;
+    if (filters.notes && !product.notes?.toLowerCase().includes(filters.notes.toLowerCase())) return false;
+
+    // Dropdown filters
+    if (filters.vendor && product.vendor_name !== filters.vendor) return false;
+    if (filters.state && product.state !== filters.state) return false;
+    if (filters.cuisine_type && product.cuisine_type !== filters.cuisine_type) return false;
+    if (filters.seasonal_featured && product.seasonal_featured !== filters.seasonal_featured) return false;
+
+    // Multi-select filters
+    if (filters.main_categories?.length > 0 && !filters.main_categories.includes(product.main_category)) return false;
+    if (filters.sub_categories?.length > 0 && !filters.sub_categories.includes(product.sub_category)) return false;
+
+    if (filters.allergens?.length > 0) {
+      const productAllergens = product.allergens?.split(',').map(a => a.trim()) || [];
+      if (!filters.allergens.some(allergen => productAllergens.includes(allergen))) return false;
+    }
+
+    if (filters.dietary_preferences?.length > 0) {
+      const productPrefs = product.dietary_preferences?.split(',').map(d => d.trim()) || [];
+      if (!filters.dietary_preferences.some(pref => productPrefs.includes(pref))) return false;
+    }
+
+    // Range filters
+    if (filters.case_pack_min && parseFloat(product.case_pack) < parseFloat(filters.case_pack_min)) return false;
+    if (filters.case_pack_max && parseFloat(product.case_pack) > parseFloat(filters.case_pack_max)) return false;
+    if (filters.price_min && parseFloat(product.wholesale_case_price) < parseFloat(filters.price_min)) return false;
+    if (filters.price_max && parseFloat(product.wholesale_case_price) > parseFloat(filters.price_max)) return false;
+    if (filters.unit_price_min && parseFloat(product.wholesale_unit_price) < parseFloat(filters.unit_price_min)) return false;
+    if (filters.unit_price_max && parseFloat(product.wholesale_unit_price) > parseFloat(filters.unit_price_max)) return false;
+    if (filters.msrp_min && parseFloat(product.retail_unit_price) < parseFloat(filters.msrp_min)) return false;
+    if (filters.msrp_max && parseFloat(product.retail_unit_price) > parseFloat(filters.msrp_max)) return false;
+    if (filters.gm_min && parseFloat(product.gm_percent) < parseFloat(filters.gm_min)) return false;
+    if (filters.gm_max && parseFloat(product.gm_percent) > parseFloat(filters.gm_max)) return false;
+    if (filters.case_minimum_min && parseFloat(product.case_minimum) < parseFloat(filters.case_minimum_min)) return false;
+    if (filters.case_minimum_max && parseFloat(product.case_minimum) > parseFloat(filters.case_minimum_max)) return false;
+
+    // Boolean filters
+    if (filters.popular && !product.popular) return false;
+    if (filters.seasonal && !product.seasonal) return false;
+    if (filters.new && !product.new) return false;
+
+    return true;
   });
 
   // Calculate pagination using filtered products
@@ -297,7 +377,8 @@ const AdminProducts = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="page-title mb-0">Manage Products</h1>
-        <div className="flex gap-3">
+        <div className="flex gap-3 items-center">
+          <FilterIcon onClick={handleFilterIconClick} />
           <button onClick={openImportModal} className="btn-secondary">
             📥 Import Products
           </button>
@@ -784,6 +865,20 @@ const AdminProducts = () => {
           </div>
         </div>
       )}
+
+      {/* Filter Modal */}
+      <FilterModal
+        isOpen={showFilterModal}
+        onClose={() => setShowFilterModal(false)}
+        onSelectField={handleSelectField}
+      />
+
+      {/* Filter Detail Panel */}
+      <FilterDetailPanel
+        field={selectedFilterField}
+        isOpen={showFilterPanel}
+        onBack={handleBackToFilterModal}
+      />
     </div>
   );
 };

@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { SearchProvider } from './context/SearchContext';
+import { FilterProvider } from './context/FilterContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 
@@ -25,7 +26,8 @@ function App() {
       <AuthProvider>
         <CartProvider>
           <SearchProvider>
-            <Routes>
+            <FilterProvider>
+              <Routes>
             {/* Public routes */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
@@ -84,6 +86,7 @@ function App() {
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>
+            </FilterProvider>
           </SearchProvider>
         </CartProvider>
       </AuthProvider>

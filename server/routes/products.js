@@ -13,7 +13,35 @@ router.get('/', async (req, res) => {
       state,
       category,
       popular,
-      new: isNew
+      seasonal,
+      new: isNew,
+      // New filters
+      id,
+      vendor_connect_id,
+      product_name,
+      main_categories, // JSON array
+      sub_categories, // JSON array
+      allergens, // JSON array
+      dietary_preferences, // JSON array
+      cuisine_type,
+      seasonal_featured,
+      size,
+      upc,
+      case_pack_min,
+      case_pack_max,
+      price_min,
+      price_max,
+      unit_price_min,
+      unit_price_max,
+      msrp_min,
+      msrp_max,
+      gm_min,
+      gm_max,
+      case_minimum_min,
+      case_minimum_max,
+      shelf_life,
+      delivery_info,
+      notes
     } = req.query;
 
     let queryText = 'SELECT * FROM products WHERE 1=1';
@@ -27,33 +55,232 @@ router.get('/', async (req, res) => {
       paramCount++;
     }
 
-    // Add vendor filter
+    // Text exact match filters
+    if (id) {
+      queryText += ` AND id = $${paramCount}`;
+      queryParams.push(id);
+      paramCount++;
+    }
+
+    if (vendor_connect_id) {
+      queryText += ` AND vendor_connect_id = $${paramCount}`;
+      queryParams.push(vendor_connect_id);
+      paramCount++;
+    }
+
+    if (upc) {
+      queryText += ` AND upc = $${paramCount}`;
+      queryParams.push(upc);
+      paramCount++;
+    }
+
+    // Text contains filters
+    if (product_name) {
+      queryText += ` AND product_name ILIKE $${paramCount}`;
+      queryParams.push(`%${product_name}%`);
+      paramCount++;
+    }
+
+    if (size) {
+      queryText += ` AND size ILIKE $${paramCount}`;
+      queryParams.push(`%${size}%`);
+      paramCount++;
+    }
+
+    if (shelf_life) {
+      queryText += ` AND shelf_life ILIKE $${paramCount}`;
+      queryParams.push(`%${shelf_life}%`);
+      paramCount++;
+    }
+
+    if (delivery_info) {
+      queryText += ` AND delivery_info ILIKE $${paramCount}`;
+      queryParams.push(`%${delivery_info}%`);
+      paramCount++;
+    }
+
+    if (notes) {
+      queryText += ` AND notes ILIKE $${paramCount}`;
+      queryParams.push(`%${notes}%`);
+      paramCount++;
+    }
+
+    // Single select filters
     if (vendor) {
       queryText += ` AND vendor_name = $${paramCount}`;
       queryParams.push(vendor);
       paramCount++;
     }
 
-    // Add state filter
     if (state) {
       queryText += ` AND state = $${paramCount}`;
       queryParams.push(state);
       paramCount++;
     }
 
-    // Add category filter
     if (category) {
       queryText += ` AND category = $${paramCount}`;
       queryParams.push(category);
       paramCount++;
     }
 
-    // Add popular filter
+    if (cuisine_type) {
+      queryText += ` AND cuisine_type = $${paramCount}`;
+      queryParams.push(cuisine_type);
+      paramCount++;
+    }
+
+    if (seasonal_featured) {
+      queryText += ` AND seasonal_featured = $${paramCount}`;
+      queryParams.push(seasonal_featured);
+      paramCount++;
+    }
+
+    // Multi-select filters (arrays)
+    if (main_categories) {
+      try {
+        const categoriesArray = JSON.parse(main_categories);
+        if (categoriesArray.length > 0) {
+          queryText += ` AND main_category = ANY($${paramCount})`;
+          queryParams.push(categoriesArray);
+          paramCount++;
+        }
+      } catch (e) {
+        console.error('Error parsing main_categories:', e);
+      }
+    }
+
+    if (sub_categories) {
+      try {
+        const subCategoriesArray = JSON.parse(sub_categories);
+        if (subCategoriesArray.length > 0) {
+          queryText += ` AND sub_category = ANY($${paramCount})`;
+          queryParams.push(subCategoriesArray);
+          paramCount++;
+        }
+      } catch (e) {
+        console.error('Error parsing sub_categories:', e);
+      }
+    }
+
+    // Allergens filter (comma-separated, match any)
+    if (allergens) {
+      try {
+        const allergensArray = JSON.parse(allergens);
+        if (allergensArray.length > 0) {
+          const allergenConditions = allergensArray.map(() => {
+            const condition = `allergens ILIKE $${paramCount}`;
+            paramCount++;
+            return condition;
+          });
+          queryParams.push(...allergensArray.map(a => `%${a}%`));
+          queryText += ` AND (${allergenConditions.join(' OR ')})`;
+        }
+      } catch (e) {
+        console.error('Error parsing allergens:', e);
+      }
+    }
+
+    // Dietary preferences filter (comma-separated, match any)
+    if (dietary_preferences) {
+      try {
+        const dietaryArray = JSON.parse(dietary_preferences);
+        if (dietaryArray.length > 0) {
+          const dietaryConditions = dietaryArray.map(() => {
+            const condition = `dietary_preferences ILIKE $${paramCount}`;
+            paramCount++;
+            return condition;
+          });
+          queryParams.push(...dietaryArray.map(d => `%${d}%`));
+          queryText += ` AND (${dietaryConditions.join(' OR ')})`;
+        }
+      } catch (e) {
+        console.error('Error parsing dietary_preferences:', e);
+      }
+    }
+
+    // Range filters
+    if (case_pack_min) {
+      queryText += ` AND CAST(case_pack AS NUMERIC) >= $${paramCount}`;
+      queryParams.push(case_pack_min);
+      paramCount++;
+    }
+
+    if (case_pack_max) {
+      queryText += ` AND CAST(case_pack AS NUMERIC) <= $${paramCount}`;
+      queryParams.push(case_pack_max);
+      paramCount++;
+    }
+
+    if (price_min) {
+      queryText += ` AND wholesale_case_price >= $${paramCount}`;
+      queryParams.push(price_min);
+      paramCount++;
+    }
+
+    if (price_max) {
+      queryText += ` AND wholesale_case_price <= $${paramCount}`;
+      queryParams.push(price_max);
+      paramCount++;
+    }
+
+    if (unit_price_min) {
+      queryText += ` AND wholesale_unit_price >= $${paramCount}`;
+      queryParams.push(unit_price_min);
+      paramCount++;
+    }
+
+    if (unit_price_max) {
+      queryText += ` AND wholesale_unit_price <= $${paramCount}`;
+      queryParams.push(unit_price_max);
+      paramCount++;
+    }
+
+    if (msrp_min) {
+      queryText += ` AND retail_unit_price >= $${paramCount}`;
+      queryParams.push(msrp_min);
+      paramCount++;
+    }
+
+    if (msrp_max) {
+      queryText += ` AND retail_unit_price <= $${paramCount}`;
+      queryParams.push(msrp_max);
+      paramCount++;
+    }
+
+    if (gm_min) {
+      queryText += ` AND gm_percent >= $${paramCount}`;
+      queryParams.push(gm_min);
+      paramCount++;
+    }
+
+    if (gm_max) {
+      queryText += ` AND gm_percent <= $${paramCount}`;
+      queryParams.push(gm_max);
+      paramCount++;
+    }
+
+    if (case_minimum_min) {
+      queryText += ` AND CAST(case_minimum AS NUMERIC) >= $${paramCount}`;
+      queryParams.push(case_minimum_min);
+      paramCount++;
+    }
+
+    if (case_minimum_max) {
+      queryText += ` AND CAST(case_minimum AS NUMERIC) <= $${paramCount}`;
+      queryParams.push(case_minimum_max);
+      paramCount++;
+    }
+
+    // Boolean filters
     if (popular === 'true') {
       queryText += ` AND popular = true`;
     }
 
-    // Add new filter
+    if (seasonal === 'true') {
+      queryText += ` AND seasonal = true`;
+    }
+
     if (isNew === 'true') {
       queryText += ` AND new = true`;
     }
@@ -121,6 +348,94 @@ router.get('/filters/categories', async (req, res) => {
   } catch (error) {
     console.error('Error fetching categories:', error);
     res.status(500).json({ error: 'Error fetching categories' });
+  }
+});
+
+// Get unique main categories
+router.get('/filters/main-categories', async (req, res) => {
+  try {
+    const result = await query(
+      'SELECT DISTINCT main_category FROM products WHERE main_category IS NOT NULL ORDER BY main_category'
+    );
+    res.json(result.rows.map(row => row.main_category));
+  } catch (error) {
+    console.error('Error fetching main categories:', error);
+    res.status(500).json({ error: 'Error fetching main categories' });
+  }
+});
+
+// Get unique sub-categories
+router.get('/filters/sub-categories', async (req, res) => {
+  try {
+    const result = await query(
+      'SELECT DISTINCT sub_category FROM products WHERE sub_category IS NOT NULL ORDER BY sub_category'
+    );
+    res.json(result.rows.map(row => row.sub_category));
+  } catch (error) {
+    console.error('Error fetching sub-categories:', error);
+    res.status(500).json({ error: 'Error fetching sub-categories' });
+  }
+});
+
+// Get unique allergens (parse comma-separated values)
+router.get('/filters/allergens', async (req, res) => {
+  try {
+    const result = await query(
+      'SELECT DISTINCT allergens FROM products WHERE allergens IS NOT NULL AND allergens != \'\''
+    );
+    const allergensSet = new Set();
+    result.rows.forEach(row => {
+      const allergens = row.allergens.split(',').map(a => a.trim()).filter(a => a);
+      allergens.forEach(a => allergensSet.add(a));
+    });
+    res.json(Array.from(allergensSet).sort());
+  } catch (error) {
+    console.error('Error fetching allergens:', error);
+    res.status(500).json({ error: 'Error fetching allergens' });
+  }
+});
+
+// Get unique dietary preferences (parse comma-separated values)
+router.get('/filters/dietary-preferences', async (req, res) => {
+  try {
+    const result = await query(
+      'SELECT DISTINCT dietary_preferences FROM products WHERE dietary_preferences IS NOT NULL AND dietary_preferences != \'\''
+    );
+    const preferencesSet = new Set();
+    result.rows.forEach(row => {
+      const preferences = row.dietary_preferences.split(',').map(p => p.trim()).filter(p => p);
+      preferences.forEach(p => preferencesSet.add(p));
+    });
+    res.json(Array.from(preferencesSet).sort());
+  } catch (error) {
+    console.error('Error fetching dietary preferences:', error);
+    res.status(500).json({ error: 'Error fetching dietary preferences' });
+  }
+});
+
+// Get unique cuisine types
+router.get('/filters/cuisine-types', async (req, res) => {
+  try {
+    const result = await query(
+      'SELECT DISTINCT cuisine_type FROM products WHERE cuisine_type IS NOT NULL ORDER BY cuisine_type'
+    );
+    res.json(result.rows.map(row => row.cuisine_type));
+  } catch (error) {
+    console.error('Error fetching cuisine types:', error);
+    res.status(500).json({ error: 'Error fetching cuisine types' });
+  }
+});
+
+// Get unique seasonal/featured values
+router.get('/filters/seasonal-featured', async (req, res) => {
+  try {
+    const result = await query(
+      'SELECT DISTINCT seasonal_featured FROM products WHERE seasonal_featured IS NOT NULL ORDER BY seasonal_featured'
+    );
+    res.json(result.rows.map(row => row.seasonal_featured));
+  } catch (error) {
+    console.error('Error fetching seasonal/featured values:', error);
+    res.status(500).json({ error: 'Error fetching seasonal/featured values' });
   }
 });
 
