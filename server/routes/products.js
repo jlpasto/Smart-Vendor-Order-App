@@ -41,7 +41,10 @@ router.get('/', async (req, res) => {
       case_minimum_max,
       shelf_life,
       delivery_info,
-      notes
+      notes,
+      // Sorting
+      sort,
+      order
     } = req.query;
 
     let queryText = 'SELECT * FROM products WHERE 1=1';
@@ -285,7 +288,18 @@ router.get('/', async (req, res) => {
       queryText += ` AND new = true`;
     }
 
-    queryText += ' ORDER BY created_at DESC';
+    // Sorting
+    const sortField = sort || 'product_name'; // Default sort by product name
+    const sortOrder = order || 'asc'; // Default ascending (A-Z)
+
+    // Validate sort field to prevent SQL injection
+    const allowedSortFields = ['product_name', 'vendor_name', 'price', 'created_at', 'category', 'state'];
+    const validSortField = allowedSortFields.includes(sortField) ? sortField : 'product_name';
+
+    // Validate sort order
+    const validSortOrder = (sortOrder === 'desc') ? 'DESC' : 'ASC';
+
+    queryText += ` ORDER BY ${validSortField} ${validSortOrder}`;
 
     const result = await query(queryText, queryParams);
     res.json(result.rows);

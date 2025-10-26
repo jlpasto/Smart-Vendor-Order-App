@@ -39,9 +39,13 @@ const AdminProducts = () => {
   const [selectAllPages, setSelectAllPages] = useState(false); // Whether "Select All Pages" is active
   const [bulkDeleting, setBulkDeleting] = useState(false);
 
+  // Sorting state
+  const [sortField, setSortField] = useState('vendor_name');
+  const [sortOrder, setSortOrder] = useState('asc');
+
   useEffect(() => {
     fetchProducts();
-  }, []);
+  }, [sortField, sortOrder]);
 
   // Reset to first page when search term or filters change
   useEffect(() => {
@@ -50,7 +54,11 @@ const AdminProducts = () => {
 
   const fetchProducts = async () => {
     try {
-      const response = await api.get('/api/products');
+      const params = {
+        sort: sortField,
+        order: sortOrder
+      };
+      const response = await api.get('/api/products', { params });
       setProducts(response.data);
       setLoading(false);
     } catch (error) {
@@ -490,6 +498,61 @@ const AdminProducts = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="page-title mb-0">Manage Products</h1>
         <div className="flex gap-3 items-center">
+          {/* Sort Buttons */}
+          <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+            <span className="text-sm font-medium text-gray-700 px-2">Sort:</span>
+
+            {/* Product Name Sort */}
+            <button
+              onClick={() => {
+                if (sortField === 'product_name') {
+                  setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                } else {
+                  setSortField('product_name');
+                  setSortOrder('asc');
+                }
+              }}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                sortField === 'product_name'
+                  ? 'bg-white text-primary-700 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+              title={`Sort by Product Name ${sortField === 'product_name' ? (sortOrder === 'asc' ? '(A-Z)' : '(Z-A)') : ''}`}
+            >
+              Product
+              {sortField === 'product_name' && (
+                <span className="text-lg">
+                  {sortOrder === 'asc' ? '↑' : '↓'}
+                </span>
+              )}
+            </button>
+
+            {/* Vendor Name Sort */}
+            <button
+              onClick={() => {
+                if (sortField === 'vendor_name') {
+                  setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                } else {
+                  setSortField('vendor_name');
+                  setSortOrder('asc');
+                }
+              }}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                sortField === 'vendor_name'
+                  ? 'bg-white text-primary-700 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+              title={`Sort by Vendor Name ${sortField === 'vendor_name' ? (sortOrder === 'asc' ? '(A-Z)' : '(Z-A)') : ''}`}
+            >
+              Vendor
+              {sortField === 'vendor_name' && (
+                <span className="text-lg">
+                  {sortOrder === 'asc' ? '↑' : '↓'}
+                </span>
+              )}
+            </button>
+          </div>
+
           <FilterIcon onClick={handleFilterIconClick} />
           <button onClick={openImportModal} className="btn-secondary">
             📥 Import Products

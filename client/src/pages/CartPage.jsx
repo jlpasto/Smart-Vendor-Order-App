@@ -48,7 +48,11 @@ const CartPage = () => {
         // Navigate to orders page
         navigate('/orders');
       } catch (err) {
-        setError(err.response?.data?.error || 'Failed to submit order');
+        console.error('Order submission error:', err);
+        console.error('Error response:', err.response);
+        const errorMessage = err.response?.data?.error || err.message || 'Failed to submit order';
+        setError(errorMessage);
+        alert(`Error submitting order: ${errorMessage}`);
         setSubmitting(false);
       }
     }
