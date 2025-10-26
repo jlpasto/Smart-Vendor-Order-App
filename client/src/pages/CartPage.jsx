@@ -63,8 +63,8 @@ const CartPage = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
           </div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">Your Cart is Empty</h2>
-          <p className="text-xl text-gray-600 mb-8">Add some products to get started!</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Your Cart is Empty</h2>
+          <p className="text-lg text-gray-600 mb-8">Add some products to get started!</p>
           <button
             onClick={() => navigate('/products')}
             className="btn-primary"
@@ -75,6 +75,24 @@ const CartPage = () => {
       </div>
     );
   }
+
+  // Group cart items by vendor
+  const groupedByVendor = cart.reduce((groups, item) => {
+    const vendorName = item.vendor_name || 'Unknown Vendor';
+    if (!groups[vendorName]) {
+      groups[vendorName] = [];
+    }
+    groups[vendorName].push(item);
+    return groups;
+  }, {});
+
+  // Calculate subtotal for each vendor
+  const getVendorSubtotal = (items) => {
+    return items.reduce((total, item) => {
+      const price = item.wholesale_case_price || item.wholesale_unit_price || 0;
+      return total + (price * item.quantity);
+    }, 0);
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -87,77 +105,99 @@ const CartPage = () => {
       )}
 
       <div className="grid lg:grid-cols-3 gap-8">
-        {/* Cart Items */}
-        <div className="lg:col-span-2 space-y-4">
-          {cart.map(item => {
-            const price = item.wholesale_case_price || item.wholesale_unit_price || 0;
-            const itemTotal = price * item.quantity;
+        {/* Cart Items Grouped by Vendor */}
+        <div className="lg:col-span-2 space-y-6">
+          {Object.entries(groupedByVendor).map(([vendorName, items]) => {
+            const vendorSubtotal = getVendorSubtotal(items);
 
             return (
-              <div key={item.id} className="card">
-                <div className="flex flex-col sm:flex-row gap-4">
-                  {/* Product Image */}
-                  <img
-                    src={item.product_image || 'https://via.placeholder.com/150'}
-                    alt={item.product_name}
-                    className="w-full sm:w-32 h-32 object-cover rounded-lg"
-                  />
-
-                  {/* Product Info */}
-                  <div className="flex-1">
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">{item.product_name}</h3>
-                    <p className="text-gray-600 mb-2">{item.vendor_name}</p>
-                    <p className="text-lg font-semibold text-primary-600 mb-3">
-                      ${parseFloat(price).toFixed(2)} per case
-                    </p>
-
-                    {/* Quantity Controls */}
-                    <div className="flex items-center gap-4 flex-wrap">
-                      <div className="flex items-center">
-                        <label htmlFor={`qty-${item.id}`} className="font-semibold text-gray-700 mr-3 text-lg">
-                          Quantity:
-                        </label>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                            className="w-12 h-12 bg-gray-200 hover:bg-gray-300 rounded-lg font-bold text-xl"
-                          >
-                            −
-                          </button>
-                          <input
-                            id={`qty-${item.id}`}
-                            type="number"
-                            min="1"
-                            value={item.quantity}
-                            onChange={(e) => handleQuantityChange(item.id, e.target.value)}
-                            className="w-20 text-center input"
-                          />
-                          <button
-                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                            className="w-12 h-12 bg-gray-200 hover:bg-gray-300 rounded-lg font-bold text-xl"
-                          >
-                            +
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="flex-1 text-right">
-                        <p className="text-sm text-gray-600">Item Total</p>
-                        <p className="text-2xl font-bold text-gray-900">
-                          ${itemTotal.toFixed(2)}
-                        </p>
-                      </div>
+              <div key={vendorName} className="space-y-4">
+                {/* Vendor Header */}
+                <div className="bg-primary-600 text-white px-6 py-3 rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <h2 className="text-lg font-bold">{vendorName}</h2>
+                    <div className="text-right">
+                      <p className="text-xs opacity-90">Vendor Subtotal</p>
+                      <p className="text-lg font-bold">${vendorSubtotal.toFixed(2)}</p>
                     </div>
                   </div>
-
-                  {/* Remove Button */}
-                  <button
-                    onClick={() => handleRemove(item.id)}
-                    className="self-start btn-danger sm:ml-auto"
-                  >
-                    Remove
-                  </button>
                 </div>
+
+                {/* Items for this vendor */}
+                {items.map(item => {
+                  const price = item.wholesale_case_price || item.wholesale_unit_price || 0;
+                  const itemTotal = price * item.quantity;
+
+                  return (
+                    <div key={item.id} className="card p-4">
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        {/* Product Image */}
+                        <img
+                          src={item.product_image || 'https://via.placeholder.com/150'}
+                          alt={item.product_name}
+                          className="w-full sm:w-24 h-24 object-cover rounded-lg"
+                        />
+
+                        {/* Product Info */}
+                        <div className="flex-1">
+                          <h3 className="text-base font-bold text-gray-900 mb-1">{item.product_name}</h3>
+                          <p className="text-sm font-semibold text-primary-600 mb-2">
+                            ${parseFloat(price).toFixed(2)} per case
+                          </p>
+
+                          {/* Quantity Controls */}
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <div className="flex items-center">
+                              <label htmlFor={`qty-${item.id}`} className="font-semibold text-gray-700 mr-2 text-sm">
+                                Qty:
+                              </label>
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                                  className="w-8 h-8 bg-gray-200 hover:bg-gray-300 rounded-lg font-bold text-base"
+                                >
+                                  −
+                                </button>
+                                <input
+                                  id={`qty-${item.id}`}
+                                  type="number"
+                                  min="1"
+                                  value={item.quantity}
+                                  onChange={(e) => handleQuantityChange(item.id, e.target.value)}
+                                  className="w-14 text-center input text-sm py-1"
+                                />
+                                <button
+                                  onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                  className="w-8 h-8 bg-gray-200 hover:bg-gray-300 rounded-lg font-bold text-base"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="flex-1 text-right">
+                              <p className="text-xs text-gray-600">Item Total</p>
+                              <p className="text-base font-bold text-gray-900">
+                                ${itemTotal.toFixed(2)}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Remove Button */}
+                        <button
+                          onClick={() => handleRemove(item.id)}
+                          className="self-start p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors sm:ml-auto"
+                          title="Remove item"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             );
           })}
@@ -166,23 +206,42 @@ const CartPage = () => {
         {/* Order Summary */}
         <div className="lg:col-span-1">
           <div className="card sticky top-24">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Order Summary</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Order Summary</h2>
 
-            <div className="space-y-4 mb-6">
-              <div className="flex justify-between text-lg">
+            <div className="space-y-3 mb-4">
+              <div className="flex justify-between text-base">
                 <span className="text-gray-700">Items:</span>
                 <span className="font-semibold">{cart.length}</span>
               </div>
-              <div className="flex justify-between text-lg">
+              <div className="flex justify-between text-base">
                 <span className="text-gray-700">Total Units:</span>
                 <span className="font-semibold">
                   {cart.reduce((sum, item) => sum + item.quantity, 0)}
                 </span>
               </div>
-              <div className="border-t-2 border-gray-200 pt-4">
+
+              {/* Vendor Subtotals Breakdown */}
+              <div className="border-t-2 border-gray-200 pt-3">
+                <h3 className="font-semibold text-gray-900 mb-2 text-base">Subtotals by Vendor:</h3>
+                <div className="space-y-1.5">
+                  {Object.entries(groupedByVendor).map(([vendorName, items]) => {
+                    const vendorSubtotal = getVendorSubtotal(items);
+                    return (
+                      <div key={vendorName} className="flex justify-between text-sm">
+                        <span className="text-gray-700">{vendorName}:</span>
+                        <span className="font-semibold text-gray-900">
+                          ${vendorSubtotal.toFixed(2)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="border-t-2 border-gray-200 pt-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-2xl font-bold text-gray-900">Total:</span>
-                  <span className="text-3xl font-bold text-primary-600">
+                  <span className="text-lg font-bold text-gray-900">Total:</span>
+                  <span className="text-2xl font-bold text-primary-600">
                     ${getCartTotal().toFixed(2)}
                   </span>
                 </div>
