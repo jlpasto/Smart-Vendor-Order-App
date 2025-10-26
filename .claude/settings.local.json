@@ -18,7 +18,9 @@
       "Bash(node migrate_vendors_new_schema.js:*)",
       "Bash(node test_vendor_import.js:*)",
       "Bash(node check_vendor_logos.js:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(curl:*)",
+      "Bash(npm run server:*)"
     ],
     "deny": [],
     "ask": []

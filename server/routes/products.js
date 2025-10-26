@@ -295,6 +295,208 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Get all product IDs (for "Select All Pages" feature)
+router.get('/ids', authenticate, requireAdmin, async (req, res) => {
+  try {
+    // Use the same filtering logic as the main GET endpoint
+    const {
+      search,
+      vendor,
+      state,
+      category,
+      popular,
+      seasonal,
+      new: isNew,
+      id, vendor_connect_id, product_name, upc, size,
+      main_categories, sub_categories, allergens, dietary_preferences,
+      cuisine_type, seasonal_featured,
+      case_pack_min, case_pack_max, price_min, price_max,
+      unit_price_min, unit_price_max, msrp_min, msrp_max,
+      gm_min, gm_max, case_minimum_min, case_minimum_max,
+      shelf_life, delivery_info, notes
+    } = req.query;
+
+    let queryText = 'SELECT id FROM products WHERE 1=1';
+    const queryParams = [];
+    let paramCount = 1;
+
+    // Global search
+    if (search) {
+      queryText += ` AND (product_name ILIKE $${paramCount} OR product_description ILIKE $${paramCount} OR vendor_name ILIKE $${paramCount})`;
+      queryParams.push(`%${search}%`);
+      paramCount++;
+    }
+
+    // Text exact match filters
+    if (id) {
+      queryText += ` AND id = $${paramCount}`;
+      queryParams.push(id);
+      paramCount++;
+    }
+
+    if (vendor_connect_id) {
+      queryText += ` AND vendor_connect_id = $${paramCount}`;
+      queryParams.push(vendor_connect_id);
+      paramCount++;
+    }
+
+    if (upc) {
+      queryText += ` AND upc = $${paramCount}`;
+      queryParams.push(upc);
+      paramCount++;
+    }
+
+    // Text contains filters
+    if (product_name) {
+      queryText += ` AND product_name ILIKE $${paramCount}`;
+      queryParams.push(`%${product_name}%`);
+      paramCount++;
+    }
+
+    if (size) {
+      queryText += ` AND size ILIKE $${paramCount}`;
+      queryParams.push(`%${size}%`);
+      paramCount++;
+    }
+
+    if (shelf_life) {
+      queryText += ` AND shelf_life ILIKE $${paramCount}`;
+      queryParams.push(`%${shelf_life}%`);
+      paramCount++;
+    }
+
+    if (delivery_info) {
+      queryText += ` AND delivery_info ILIKE $${paramCount}`;
+      queryParams.push(`%${delivery_info}%`);
+      paramCount++;
+    }
+
+    if (notes) {
+      queryText += ` AND notes ILIKE $${paramCount}`;
+      queryParams.push(`%${notes}%`);
+      paramCount++;
+    }
+
+    // Single select filters
+    if (vendor) {
+      queryText += ` AND vendor_name = $${paramCount}`;
+      queryParams.push(vendor);
+      paramCount++;
+    }
+
+    if (state) {
+      queryText += ` AND state = $${paramCount}`;
+      queryParams.push(state);
+      paramCount++;
+    }
+
+    if (category) {
+      queryText += ` AND category = $${paramCount}`;
+      queryParams.push(category);
+      paramCount++;
+    }
+
+    if (cuisine_type) {
+      queryText += ` AND cuisine_type = $${paramCount}`;
+      queryParams.push(cuisine_type);
+      paramCount++;
+    }
+
+    if (seasonal_featured) {
+      queryText += ` AND seasonal_and_featured = $${paramCount}`;
+      queryParams.push(seasonal_featured);
+      paramCount++;
+    }
+
+    // Boolean filters
+    if (popular === 'true') {
+      queryText += ` AND popular = true`;
+    }
+
+    if (seasonal === 'true') {
+      queryText += ` AND seasonal = true`;
+    }
+
+    if (isNew === 'true') {
+      queryText += ` AND new = true`;
+    }
+
+    // Multi-select filters
+    if (main_categories) {
+      try {
+        const categoriesArray = JSON.parse(main_categories);
+        if (categoriesArray.length > 0) {
+          queryText += ` AND main_category = ANY($${paramCount})`;
+          queryParams.push(categoriesArray);
+          paramCount++;
+        }
+      } catch (e) {
+        console.error('Error parsing main_categories:', e);
+      }
+    }
+
+    if (sub_categories) {
+      try {
+        const subCategoriesArray = JSON.parse(sub_categories);
+        if (subCategoriesArray.length > 0) {
+          queryText += ` AND sub_category = ANY($${paramCount})`;
+          queryParams.push(subCategoriesArray);
+          paramCount++;
+        }
+      } catch (e) {
+        console.error('Error parsing sub_categories:', e);
+      }
+    }
+
+    if (allergens) {
+      try {
+        const allergensArray = JSON.parse(allergens);
+        if (allergensArray.length > 0) {
+          const allergenConditions = allergensArray.map(() => {
+            const condition = `allergens ILIKE $${paramCount}`;
+            paramCount++;
+            return condition;
+          });
+          queryParams.push(...allergensArray.map(a => `%${a}%`));
+          queryText += ` AND (${allergenConditions.join(' OR ')})`;
+        }
+      } catch (e) {
+        console.error('Error parsing allergens:', e);
+      }
+    }
+
+    if (dietary_preferences) {
+      try {
+        const dietaryArray = JSON.parse(dietary_preferences);
+        if (dietaryArray.length > 0) {
+          const dietaryConditions = dietaryArray.map(() => {
+            const condition = `dietary_preferences ILIKE $${paramCount}`;
+            paramCount++;
+            return condition;
+          });
+          queryParams.push(...dietaryArray.map(d => `%${d}%`));
+          queryText += ` AND (${dietaryConditions.join(' OR ')})`;
+        }
+      } catch (e) {
+        console.error('Error parsing dietary_preferences:', e);
+      }
+    }
+
+    queryText += ' ORDER BY id';
+
+    const result = await query(queryText, queryParams);
+    const productIds = result.rows.map(row => row.id);
+
+    res.json({
+      count: productIds.length,
+      productIds
+    });
+  } catch (error) {
+    console.error('Error fetching product IDs:', error);
+    res.status(500).json({ error: 'Error fetching product IDs' });
+  }
+});
+
 // Get single product
 router.get('/:id', async (req, res) => {
   try {
@@ -547,6 +749,33 @@ router.delete('/:id', authenticate, requireAdmin, async (req, res) => {
   } catch (error) {
     console.error('Error deleting product:', error);
     res.status(500).json({ error: 'Error deleting product' });
+  }
+});
+
+// Bulk delete products (Admin only)
+router.post('/bulk-delete', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { productIds } = req.body;
+
+    if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
+      return res.status(400).json({ error: 'No product IDs provided' });
+    }
+
+    // Create parameterized query for bulk delete
+    const placeholders = productIds.map((_, index) => `$${index + 1}`).join(',');
+    const result = await query(
+      `DELETE FROM products WHERE id IN (${placeholders}) RETURNING id, product_name`,
+      productIds
+    );
+
+    res.json({
+      message: `${result.rows.length} product(s) deleted successfully`,
+      deleted: result.rows.length,
+      products: result.rows
+    });
+  } catch (error) {
+    console.error('Error bulk deleting products:', error);
+    res.status(500).json({ error: 'Error deleting products' });
   }
 });
 

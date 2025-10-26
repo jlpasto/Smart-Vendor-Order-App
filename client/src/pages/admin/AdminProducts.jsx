@@ -34,6 +34,11 @@ const AdminProducts = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [productsPerPage] = useState(20);
 
+  // Bulk delete state
+  const [selectedProducts, setSelectedProducts] = useState([]); // Array of product IDs
+  const [selectAllPages, setSelectAllPages] = useState(false); // Whether "Select All Pages" is active
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
   useEffect(() => {
     fetchProducts();
   }, []);
@@ -126,6 +131,113 @@ const AdminProducts = () => {
       }
     }
   };
+
+  // Handle individual checkbox toggle
+  const handleSelectProduct = (productId) => {
+    setSelectedProducts(prev => {
+      if (prev.includes(productId)) {
+        // Unselect
+        return prev.filter(id => id !== productId);
+      } else {
+        // Select
+        return [...prev, productId];
+      }
+    });
+    // If manually selecting/deselecting, turn off "Select All Pages"
+    setSelectAllPages(false);
+  };
+
+  // Handle "Select All on This Page"
+  const handleSelectAllCurrentPage = () => {
+    const allCurrentIds = currentProducts.map(p => p.id);
+    const allSelected = allCurrentIds.every(id => selectedProducts.includes(id));
+
+    if (allSelected) {
+      // Deselect all on current page
+      setSelectedProducts(prev => prev.filter(id => !allCurrentIds.includes(id)));
+    } else {
+      // Select all on current page
+      const newSelection = [...new Set([...selectedProducts, ...allCurrentIds])];
+      setSelectedProducts(newSelection);
+    }
+    setSelectAllPages(false);
+  };
+
+  // Handle "Select All Pages"
+  const handleSelectAllPages = async () => {
+    if (selectAllPages) {
+      // Deselect all
+      setSelectedProducts([]);
+      setSelectAllPages(false);
+    } else {
+      try {
+        // Fetch all product IDs with current filters
+        const params = {};
+        if (globalSearchTerm) params.search = globalSearchTerm;
+
+        // Add all active filters
+        Object.keys(filters).forEach(key => {
+          const value = filters[key];
+          if (value && value !== '' && !(Array.isArray(value) && value.length === 0)) {
+            params[key] = Array.isArray(value) ? JSON.stringify(value) : value;
+          }
+        });
+
+        const response = await api.get('/api/products/ids', { params });
+        setSelectedProducts(response.data.productIds);
+        setSelectAllPages(true);
+      } catch (error) {
+        console.error('Error selecting all products:', error);
+        alert('Error selecting all products');
+      }
+    }
+  };
+
+  // Handle bulk delete
+  const handleBulkDelete = async () => {
+    if (selectedProducts.length === 0) {
+      alert('Please select products to delete');
+      return;
+    }
+
+    const confirmMessage = selectAllPages
+      ? `Are you sure you want to delete ALL ${selectedProducts.length} products (across all pages)? This action cannot be undone.`
+      : `Are you sure you want to delete ${selectedProducts.length} product(s)? This action cannot be undone.`;
+
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    setBulkDeleting(true);
+    try {
+      const response = await api.post('/api/products/bulk-delete', {
+        productIds: selectedProducts
+      });
+
+      alert(`✅ ${response.data.deleted} product(s) deleted successfully!`);
+
+      // Clear selection and refresh
+      setSelectedProducts([]);
+      setSelectAllPages(false);
+      await fetchProducts();
+    } catch (error) {
+      alert('Error deleting products: ' + (error.response?.data?.error || 'Unknown error'));
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
+  // Clear selection when page changes or filters change
+  useEffect(() => {
+    if (!selectAllPages) {
+      setSelectedProducts([]);
+    }
+  }, [currentPage]);
+
+  useEffect(() => {
+    setSelectedProducts([]);
+    setSelectAllPages(false);
+  }, [globalSearchTerm, filters]);
 
   const openImportModal = () => {
     setShowImportModal(true);
@@ -388,11 +500,62 @@ const AdminProducts = () => {
         </div>
       </div>
 
+      {/* Bulk Action Bar */}
+      {selectedProducts.length > 0 && (
+        <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 mb-4 flex justify-between items-center flex-wrap gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-blue-900 font-semibold text-base">
+              {selectAllPages
+                ? `All ${selectedProducts.length} products selected (across all pages)`
+                : `${selectedProducts.length} product(s) selected`}
+            </span>
+            <button
+              onClick={() => {
+                setSelectedProducts([]);
+                setSelectAllPages(false);
+              }}
+              className="text-blue-700 hover:text-blue-900 underline text-sm font-medium"
+            >
+              Clear Selection
+            </button>
+          </div>
+          <button
+            onClick={handleBulkDelete}
+            disabled={bulkDeleting}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+          >
+            {bulkDeleting ? 'Deleting...' : `🗑️ Delete ${selectedProducts.length} Product(s)`}
+          </button>
+        </div>
+      )}
+
       {/* Products Table */}
       <div className="card">
         <table className="w-full">
           <thead>
             <tr className="border-b-2 border-gray-200">
+              <th className="py-3 px-4">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={currentProducts.length > 0 && currentProducts.every(p => selectedProducts.includes(p.id))}
+                    onChange={handleSelectAllCurrentPage}
+                    className="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                    title="Select all on this page"
+                  />
+                  <button
+                    onClick={handleSelectAllPages}
+                    className={`text-xs font-medium px-2 py-1 rounded ${
+                      selectAllPages
+                        ? 'bg-primary-600 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                    title={selectAllPages ? 'Deselect all pages' : 'Select all pages'}
+                  >
+                    {selectAllPages ? 'All' : 'All Pages'}
+                  </button>
+                </div>
+              </th>
               <th className="text-left py-3 px-4 font-semibold text-gray-700">Image</th>
               <th className="text-left py-3 px-4 font-semibold text-gray-700">Product Name</th>
               <th className="text-left py-3 px-4 font-semibold text-gray-700">Vendor</th>
@@ -405,6 +568,14 @@ const AdminProducts = () => {
           <tbody>
             {currentProducts.map(product => (
               <tr key={product.id} className="border-b border-gray-100 hover:bg-gray-50">
+                <td className="py-3 px-4">
+                  <input
+                    type="checkbox"
+                    checked={selectedProducts.includes(product.id)}
+                    onChange={() => handleSelectProduct(product.id)}
+                    className="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                  />
+                </td>
                 <td className="py-3 px-4">
                   <img
                     src={product.product_image || 'https://via.placeholder.com/60'}
