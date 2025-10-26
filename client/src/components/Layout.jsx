@@ -52,26 +52,27 @@ const Layout = () => {
         sidebarOpen ? 'w-64' : 'w-20'
       } flex flex-col fixed h-screen z-40 top-0 left-0`}>
         {/* Logo and Toggle */}
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+        <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-primary-900">
           {sidebarOpen ? (
-            <Link to="/" className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-primary-900 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-xl">CC</span>
-              </div>
-              <span className="font-display font-bold text-lg text-primary-900">
-                Cureate Connect
-              </span>
+            <Link to="/" className="flex items-center">
+              <img
+                src="https://images.squarespace-cdn.com/content/v1/5ddff88f3fbbc6593ad61f78/1591895090134-JR31YC50QVJNP9DORBEQ/cureate_white.png?format=1500w"
+                alt="Cureate"
+                className="h-12 w-auto object-contain"
+              />
             </Link>
           ) : (
             <Link to="/" className="flex items-center justify-center w-full">
-              <div className="w-10 h-10 bg-primary-900 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-xl">CC</span>
-              </div>
+              <img
+                src="https://images.squarespace-cdn.com/content/v1/5ddff88f3fbbc6593ad61f78/1591895090134-JR31YC50QVJNP9DORBEQ/cureate_white.png?format=1500w"
+                alt="Cureate"
+                className="h-12 w-auto object-contain"
+              />
             </Link>
           )}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 rounded-lg hover:bg-gray-100 lg:block hidden"
+            className="p-2 rounded-lg hover:bg-primary-800 lg:block hidden text-white"
             aria-label="Toggle sidebar"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

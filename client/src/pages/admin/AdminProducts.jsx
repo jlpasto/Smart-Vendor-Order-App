@@ -3,6 +3,7 @@ import api from '../../config/api';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import Pagination from '../../components/Pagination';
+import { useSearch } from '../../context/SearchContext';
 
 const AdminProducts = () => {
   const [products, setProducts] = useState([]);
@@ -16,6 +17,9 @@ const AdminProducts = () => {
   const [importing, setImporting] = useState(false);
   const [importResults, setImportResults] = useState(null);
 
+  // Use global search from context
+  const { globalSearchTerm } = useSearch();
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [productsPerPage] = useState(20);
@@ -23,6 +27,11 @@ const AdminProducts = () => {
   useEffect(() => {
     fetchProducts();
   }, []);
+
+  // Reset to first page when search term changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [globalSearchTerm]);
 
   const fetchProducts = async () => {
     try {
@@ -250,11 +259,26 @@ const AdminProducts = () => {
     XLSX.writeFile(wb, 'product_import_template.xlsx');
   };
 
-  // Calculate pagination
+  // Filter products based on global search term
+  const filteredProducts = products.filter(product => {
+    if (!globalSearchTerm) return true;
+
+    const searchLower = globalSearchTerm.toLowerCase();
+    return (
+      product.product_name?.toLowerCase().includes(searchLower) ||
+      product.vendor_name?.toLowerCase().includes(searchLower) ||
+      product.category?.toLowerCase().includes(searchLower) ||
+      product.product_description?.toLowerCase().includes(searchLower) ||
+      product.size?.toLowerCase().includes(searchLower) ||
+      product.upc?.toLowerCase().includes(searchLower)
+    );
+  });
+
+  // Calculate pagination using filtered products
   const indexOfLastProduct = currentPage * productsPerPage;
   const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
-  const currentProducts = products.slice(indexOfFirstProduct, indexOfLastProduct);
-  const totalPages = Math.ceil(products.length / productsPerPage);
+  const currentProducts = filteredProducts.slice(indexOfFirstProduct, indexOfLastProduct);
+  const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
 
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
@@ -284,7 +308,7 @@ const AdminProducts = () => {
       </div>
 
       {/* Products Table */}
-      <div className="card overflow-x-auto">
+      <div className="card">
         <table className="w-full">
           <thead>
             <tr className="border-b-2 border-gray-200">
@@ -294,7 +318,6 @@ const AdminProducts = () => {
               <th className="text-left py-3 px-4 font-semibold text-gray-700">Category</th>
               <th className="text-left py-3 px-4 font-semibold text-gray-700">Price</th>
               <th className="text-left py-3 px-4 font-semibold text-gray-700">Stock</th>
-              <th className="text-left py-3 px-4 font-semibold text-gray-700">Badges</th>
               <th className="text-left py-3 px-4 font-semibold text-gray-700">Actions</th>
             </tr>
           </thead>
@@ -313,22 +336,15 @@ const AdminProducts = () => {
                   <p className="text-sm text-gray-600">{product.size}</p>
                 </td>
                 <td className="py-3 px-4">{product.vendor_name}</td>
-                <td className="py-3 px-4">{product.category}</td>
+                <td className="py-3 px-4">{product.main_category || product.category || '-'}</td>
                 <td className="py-3 px-4">
-                  <p className="font-semibold">${parseFloat(product.wholesale_case_price).toFixed(2)}</p>
-                  <p className="text-sm text-gray-600">GM: {parseFloat(product.gm_percent).toFixed(1)}%</p>
+                  <p className="font-semibold">${parseFloat(product.wholesale_case_price || 0).toFixed(2)}</p>
+                  <p className="text-sm text-gray-600">GM: {parseFloat(product.gm_percent || 0).toFixed(1)}%</p>
                 </td>
                 <td className="py-3 px-4">
                   <span className={product.stock_level > 100 ? 'text-green-600' : 'text-amber-600'}>
                     {product.stock_level}
                   </span>
-                </td>
-                <td className="py-3 px-4">
-                  <div className="flex gap-2">
-                    {product.popular && <span className="badge bg-amber-500 text-white text-xs">Featured</span>}
-                    {product.seasonal && <span className="badge bg-orange-500 text-white text-xs">Seasonal</span>}
-                    {product.new && <span className="badge bg-green-500 text-white text-xs">New</span>}
-                  </div>
                 </td>
                 <td className="py-3 px-4">
                   <div className="flex gap-2">
@@ -369,13 +385,12 @@ const AdminProducts = () => {
 
             <div className="grid md:grid-cols-2 gap-6 max-h-[60vh] overflow-y-auto pr-4">
               <div>
-                <label className="block text-lg font-semibold text-gray-700 mb-2">Product Name *</label>
+                <label className="block text-lg font-semibold text-gray-700 mb-2">Vendor Connect ID</label>
                 <input
                   type="text"
-                  value={formData.product_name || ''}
-                  onChange={(e) => handleInputChange('product_name', e.target.value)}
+                  value={formData.vendor_connect_id || ''}
+                  onChange={(e) => handleInputChange('vendor_connect_id', e.target.value)}
                   className="input"
-                  required
                 />
               </div>
 
@@ -390,33 +405,78 @@ const AdminProducts = () => {
                 />
               </div>
 
-              <div>
-                <label className="block text-lg font-semibold text-gray-700 mb-2">State</label>
-                <input
-                  type="text"
-                  value={formData.state || ''}
-                  onChange={(e) => handleInputChange('state', e.target.value)}
-                  className="input"
-                />
-              </div>
-
-              <div>
-                <label className="block text-lg font-semibold text-gray-700 mb-2">Category</label>
-                <input
-                  type="text"
-                  value={formData.category || ''}
-                  onChange={(e) => handleInputChange('category', e.target.value)}
-                  className="input"
-                />
-              </div>
-
               <div className="md:col-span-2">
-                <label className="block text-lg font-semibold text-gray-700 mb-2">Description</label>
-                <textarea
-                  value={formData.product_description || ''}
-                  onChange={(e) => handleInputChange('product_description', e.target.value)}
+                <label className="block text-lg font-semibold text-gray-700 mb-2">Product Name *</label>
+                <input
+                  type="text"
+                  value={formData.product_name || ''}
+                  onChange={(e) => handleInputChange('product_name', e.target.value)}
                   className="input"
-                  rows="3"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-lg font-semibold text-gray-700 mb-2">Main Category</label>
+                <input
+                  type="text"
+                  value={formData.main_category || ''}
+                  onChange={(e) => handleInputChange('main_category', e.target.value)}
+                  className="input"
+                />
+              </div>
+
+              <div>
+                <label className="block text-lg font-semibold text-gray-700 mb-2">Sub-Category</label>
+                <input
+                  type="text"
+                  value={formData.sub_category || ''}
+                  onChange={(e) => handleInputChange('sub_category', e.target.value)}
+                  className="input"
+                />
+              </div>
+
+              <div>
+                <label className="block text-lg font-semibold text-gray-700 mb-2">Allergens</label>
+                <input
+                  type="text"
+                  value={formData.allergens || ''}
+                  onChange={(e) => handleInputChange('allergens', e.target.value)}
+                  className="input"
+                  placeholder="Dairy-Free, Gluten-Free"
+                />
+              </div>
+
+              <div>
+                <label className="block text-lg font-semibold text-gray-700 mb-2">Dietary Preferences</label>
+                <input
+                  type="text"
+                  value={formData.dietary_preferences || ''}
+                  onChange={(e) => handleInputChange('dietary_preferences', e.target.value)}
+                  className="input"
+                  placeholder="Paleo, Low-Fat"
+                />
+              </div>
+
+              <div>
+                <label className="block text-lg font-semibold text-gray-700 mb-2">Cuisine Type</label>
+                <input
+                  type="text"
+                  value={formData.cuisine_type || ''}
+                  onChange={(e) => handleInputChange('cuisine_type', e.target.value)}
+                  className="input"
+                  placeholder="American"
+                />
+              </div>
+
+              <div>
+                <label className="block text-lg font-semibold text-gray-700 mb-2">Seasonal and Featured</label>
+                <input
+                  type="text"
+                  value={formData.seasonal_featured || ''}
+                  onChange={(e) => handleInputChange('seasonal_featured', e.target.value)}
+                  className="input"
+                  placeholder="Featured, Seasonal"
                 />
               </div>
 
@@ -427,6 +487,7 @@ const AdminProducts = () => {
                   value={formData.size || ''}
                   onChange={(e) => handleInputChange('size', e.target.value)}
                   className="input"
+                  placeholder="1.4 oz"
                 />
               </div>
 
@@ -436,16 +497,6 @@ const AdminProducts = () => {
                   type="number"
                   value={formData.case_pack || ''}
                   onChange={(e) => handleInputChange('case_pack', e.target.value)}
-                  className="input"
-                />
-              </div>
-
-              <div>
-                <label className="block text-lg font-semibold text-gray-700 mb-2">UPC</label>
-                <input
-                  type="text"
-                  value={formData.upc || ''}
-                  onChange={(e) => handleInputChange('upc', e.target.value)}
                   className="input"
                 />
               </div>
@@ -487,12 +538,77 @@ const AdminProducts = () => {
               </div>
 
               <div>
-                <label className="block text-lg font-semibold text-gray-700 mb-2">Stock Level</label>
+                <label className="block text-lg font-semibold text-gray-700 mb-2">GM%</label>
                 <input
                   type="number"
-                  value={formData.stock_level || 0}
-                  onChange={(e) => handleInputChange('stock_level', e.target.value)}
+                  step="0.01"
+                  value={formData.gm_percent || ''}
+                  onChange={(e) => handleInputChange('gm_percent', e.target.value)}
                   className="input"
+                  placeholder="Calculated automatically"
+                />
+              </div>
+
+              <div>
+                <label className="block text-lg font-semibold text-gray-700 mb-2">Case Minimum</label>
+                <input
+                  type="number"
+                  value={formData.case_minimum || ''}
+                  onChange={(e) => handleInputChange('case_minimum', e.target.value)}
+                  className="input"
+                />
+              </div>
+
+              <div>
+                <label className="block text-lg font-semibold text-gray-700 mb-2">Shelf Life</label>
+                <input
+                  type="text"
+                  value={formData.shelf_life || ''}
+                  onChange={(e) => handleInputChange('shelf_life', e.target.value)}
+                  className="input"
+                  placeholder="7 months from manufacture date"
+                />
+              </div>
+
+              <div>
+                <label className="block text-lg font-semibold text-gray-700 mb-2">UPC</label>
+                <input
+                  type="text"
+                  value={formData.upc || ''}
+                  onChange={(e) => handleInputChange('upc', e.target.value)}
+                  className="input"
+                />
+              </div>
+
+              <div>
+                <label className="block text-lg font-semibold text-gray-700 mb-2">State</label>
+                <input
+                  type="text"
+                  value={formData.state || ''}
+                  onChange={(e) => handleInputChange('state', e.target.value)}
+                  className="input"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-lg font-semibold text-gray-700 mb-2">Delivery Info</label>
+                <textarea
+                  value={formData.delivery_info || ''}
+                  onChange={(e) => handleInputChange('delivery_info', e.target.value)}
+                  className="input"
+                  rows="2"
+                  placeholder="Ships within 2-3 business days"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-lg font-semibold text-gray-700 mb-2">Notes</label>
+                <textarea
+                  value={formData.notes || ''}
+                  onChange={(e) => handleInputChange('notes', e.target.value)}
+                  className="input"
+                  rows="2"
+                  placeholder="Additional product notes"
                 />
               </div>
 
@@ -504,6 +620,16 @@ const AdminProducts = () => {
                   onChange={(e) => handleInputChange('product_image', e.target.value)}
                   className="input"
                   placeholder="https://example.com/image.jpg"
+                />
+              </div>
+
+              <div>
+                <label className="block text-lg font-semibold text-gray-700 mb-2">Stock Level</label>
+                <input
+                  type="number"
+                  value={formData.stock_level || 0}
+                  onChange={(e) => handleInputChange('stock_level', e.target.value)}
+                  className="input"
                 />
               </div>
 

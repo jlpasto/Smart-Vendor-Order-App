@@ -214,11 +214,13 @@ const ProductDetailModal = ({ product, isOpen, onClose, onNext, onPrev, onEdit, 
               <p className="text-lg text-gray-900">{product.id}</p>
             </div>
 
-            {/* Product Name */}
-            <div className="border-b border-gray-200 pb-4">
-              <label className="block text-sm font-semibold text-gray-500 mb-1">Product Name</label>
-              <p className="text-lg text-gray-900">{product.product_name}</p>
-            </div>
+            {/* Vendor Connect ID */}
+            {product.vendor_connect_id && (
+              <div className="border-b border-gray-200 pb-4">
+                <label className="block text-sm font-semibold text-gray-500 mb-1">Vendor Connect ID</label>
+                <p className="text-lg text-gray-900">{product.vendor_connect_id}</p>
+              </div>
+            )}
 
             {/* Vendor Name */}
             <div className="border-b border-gray-200 pb-4">
@@ -226,11 +228,55 @@ const ProductDetailModal = ({ product, isOpen, onClose, onNext, onPrev, onEdit, 
               <p className="text-lg text-gray-900">{product.vendor_name}</p>
             </div>
 
-            {/* Main Category */}
+            {/* Product Name */}
             <div className="border-b border-gray-200 pb-4">
-              <label className="block text-sm font-semibold text-gray-500 mb-1">Main Category</label>
-              <p className="text-lg text-gray-900">{product.category || 'Snacks'}</p>
+              <label className="block text-sm font-semibold text-gray-500 mb-1">Product Name</label>
+              <p className="text-lg text-gray-900">{product.product_name}</p>
             </div>
+
+            {/* Main Category & Sub-Category */}
+            <div className="grid grid-cols-2 gap-4 border-b border-gray-200 pb-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-500 mb-1">Main Category</label>
+                <p className="text-lg text-gray-900">{product.main_category || '-'}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-500 mb-1">Sub-Category</label>
+                <p className="text-lg text-gray-900">{product.sub_category || '-'}</p>
+              </div>
+            </div>
+
+            {/* Allergens */}
+            {product.allergens && (
+              <div className="border-b border-gray-200 pb-4">
+                <label className="block text-sm font-semibold text-gray-500 mb-1">Allergens</label>
+                <p className="text-lg text-gray-900">{product.allergens}</p>
+              </div>
+            )}
+
+            {/* Dietary Preferences */}
+            {product.dietary_preferences && (
+              <div className="border-b border-gray-200 pb-4">
+                <label className="block text-sm font-semibold text-gray-500 mb-1">Dietary Preferences</label>
+                <p className="text-lg text-gray-900">{product.dietary_preferences}</p>
+              </div>
+            )}
+
+            {/* Cuisine Type */}
+            {product.cuisine_type && (
+              <div className="border-b border-gray-200 pb-4">
+                <label className="block text-sm font-semibold text-gray-500 mb-1">Cuisine Type</label>
+                <p className="text-lg text-gray-900">{product.cuisine_type}</p>
+              </div>
+            )}
+
+            {/* Seasonal and Featured */}
+            {product.seasonal_featured && (
+              <div className="border-b border-gray-200 pb-4">
+                <label className="block text-sm font-semibold text-gray-500 mb-1">Seasonal and Featured</label>
+                <p className="text-lg text-gray-900">{product.seasonal_featured}</p>
+              </div>
+            )}
 
             {/* Description */}
             {product.product_description && (
@@ -244,11 +290,11 @@ const ProductDetailModal = ({ product, isOpen, onClose, onNext, onPrev, onEdit, 
             <div className="grid grid-cols-2 gap-4 border-b border-gray-200 pb-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-500 mb-1">Size</label>
-                <p className="text-lg text-gray-900">{product.size}</p>
+                <p className="text-lg text-gray-900">{product.size || '-'}</p>
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-500 mb-1">Case Pack</label>
-                <p className="text-lg text-gray-900">{product.case_pack}</p>
+                <p className="text-lg text-gray-900">{product.case_pack || '-'}</p>
               </div>
             </div>
 
@@ -257,33 +303,81 @@ const ProductDetailModal = ({ product, isOpen, onClose, onNext, onPrev, onEdit, 
               <h3 className="font-bold text-gray-900 mb-3">Pricing Information</h3>
 
               <div className="flex justify-between items-center">
-                <span className="text-gray-700 font-semibold">Unit Price:</span>
+                <span className="text-gray-700 font-semibold">Wholesale Case Price:</span>
                 <span className="text-xl font-bold text-primary-600">
-                  ${parseFloat(product.wholesale_unit_price).toFixed(2)}
+                  ${parseFloat(product.wholesale_case_price || 0).toFixed(2)}
                 </span>
               </div>
 
               <div className="flex justify-between items-center">
-                <span className="text-gray-700 font-semibold">Case Price:</span>
+                <span className="text-gray-700 font-semibold">Wholesale Unit Price:</span>
                 <span className="text-xl font-bold text-primary-600">
-                  ${parseFloat(product.wholesale_case_price).toFixed(2)}
+                  ${parseFloat(product.wholesale_unit_price || 0).toFixed(2)}
                 </span>
               </div>
 
               <div className="flex justify-between items-center">
-                <span className="text-gray-700 font-semibold">MSRP:</span>
+                <span className="text-gray-700 font-semibold">Retail Unit Price (MSRP):</span>
                 <span className="text-lg font-semibold text-gray-900">
-                  ${parseFloat(product.wholesale_case_price * 1.3).toFixed(2)}
+                  ${parseFloat(product.retail_unit_price || 0).toFixed(2)}
                 </span>
               </div>
 
               <div className="flex justify-between items-center">
-                <span className="text-gray-700 font-semibold">Gross Margin:</span>
+                <span className="text-gray-700 font-semibold">Gross Margin (GM%):</span>
                 <span className="text-lg font-bold text-green-600">
-                  {parseFloat(product.gm_percent).toFixed(1)}%
+                  {parseFloat(product.gm_percent || 0).toFixed(1)}%
                 </span>
               </div>
             </div>
+
+            {/* Case Minimum */}
+            {product.case_minimum && (
+              <div className="border-b border-gray-200 pb-4">
+                <label className="block text-sm font-semibold text-gray-500 mb-1">Case Minimum</label>
+                <p className="text-lg text-gray-900">{product.case_minimum}</p>
+              </div>
+            )}
+
+            {/* Shelf Life */}
+            {product.shelf_life && (
+              <div className="border-b border-gray-200 pb-4">
+                <label className="block text-sm font-semibold text-gray-500 mb-1">Shelf Life</label>
+                <p className="text-lg text-gray-900">{product.shelf_life}</p>
+              </div>
+            )}
+
+            {/* UPC */}
+            {product.upc && (
+              <div className="border-b border-gray-200 pb-4">
+                <label className="block text-sm font-semibold text-gray-500 mb-1">UPC</label>
+                <p className="text-lg text-gray-900">{product.upc}</p>
+              </div>
+            )}
+
+            {/* State */}
+            {product.state && (
+              <div className="border-b border-gray-200 pb-4">
+                <label className="block text-sm font-semibold text-gray-500 mb-1">State</label>
+                <p className="text-lg text-gray-900">{product.state}</p>
+              </div>
+            )}
+
+            {/* Delivery Info */}
+            {product.delivery_info && (
+              <div className="border-b border-gray-200 pb-4">
+                <label className="block text-sm font-semibold text-gray-500 mb-1">Delivery Info</label>
+                <p className="text-lg text-gray-900">{product.delivery_info}</p>
+              </div>
+            )}
+
+            {/* Notes */}
+            {product.notes && (
+              <div className="border-b border-gray-200 pb-4">
+                <label className="block text-sm font-semibold text-gray-500 mb-1">Notes</label>
+                <p className="text-lg text-gray-900">{product.notes}</p>
+              </div>
+            )}
 
             {/* Stock Level */}
             <div className="border-b border-gray-200 pb-4">
@@ -294,14 +388,6 @@ const ProductDetailModal = ({ product, isOpen, onClose, onNext, onPrev, onEdit, 
                 {product.stock_level} units
               </p>
             </div>
-
-            {/* State */}
-            {product.state && (
-              <div className="border-b border-gray-200 pb-4">
-                <label className="block text-sm font-semibold text-gray-500 mb-1">State</label>
-                <p className="text-lg text-gray-900">{product.state}</p>
-              </div>
-            )}
           </div>
         </div>
       </div>

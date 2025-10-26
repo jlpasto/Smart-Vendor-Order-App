@@ -380,13 +380,13 @@ const ProductsPage = () => {
                           : product.product_name}
                       </h3>
                       <div className="flex items-center space-x-4 mt-1 text-sm text-gray-600">
-                        <span>Unit Price = ${parseFloat(product.wholesale_unit_price).toFixed(2)}</span>
+                        <span>Unit Price = ${parseFloat(product.wholesale_unit_price || 0).toFixed(2)}</span>
                         <span>|</span>
-                        <span>Case Price = ${parseFloat(product.wholesale_case_price).toFixed(2)}</span>
+                        <span>Case Price = ${parseFloat(product.wholesale_case_price || 0).toFixed(2)}</span>
                         <span>|</span>
-                        <span>MSRP = ${parseFloat(product.wholesale_case_price * 1.3).toFixed(2)}</span>
+                        <span>MSRP = ${parseFloat(product.retail_unit_price || 0).toFixed(2)}</span>
                         <span>|</span>
-                        <span className="text-green-600">GM: {parseFloat(product.gm_percent).toFixed(1)}%</span>
+                        <span className="text-green-600">GM: {parseFloat(product.gm_percent || 0).toFixed(1)}%</span>
                       </div>
                     </div>
 
