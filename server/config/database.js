@@ -110,6 +110,8 @@ export const initDatabase = async () => {
         batch_order_number VARCHAR(50) NOT NULL,
         product_id INTEGER REFERENCES products(id) ON DELETE SET NULL,
         product_name VARCHAR(255) NOT NULL,
+        vendor_id INTEGER REFERENCES vendors(id) ON DELETE SET NULL,
+        vendor_name VARCHAR(255),
         quantity INTEGER NOT NULL,
         amount DECIMAL(10, 2) NOT NULL,
         status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'cancelled')),
@@ -149,6 +151,8 @@ export const initDatabase = async () => {
       CREATE INDEX IF NOT EXISTS idx_orders_user_email ON orders(user_email);
       CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
       CREATE INDEX IF NOT EXISTS idx_orders_date ON orders(date_submitted);
+      CREATE INDEX IF NOT EXISTS idx_orders_vendor_id ON orders(vendor_id);
+      CREATE INDEX IF NOT EXISTS idx_orders_vendor_name ON orders(vendor_name);
       CREATE INDEX IF NOT EXISTS idx_vendors_name ON vendors(name);
       CREATE INDEX IF NOT EXISTS idx_vendors_state ON vendors(state);
       CREATE INDEX IF NOT EXISTS idx_vendors_city ON vendors(city);

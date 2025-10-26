@@ -130,16 +130,37 @@ router.post('/submit', authenticate, async (req, res) => {
       const price = item.wholesale_case_price || item.wholesale_unit_price || 0;
       const amount = price * item.quantity;
 
+      // Get vendor_id by looking up vendor_name in vendors table
+      let vendorId = null;
+      const vendorName = item.vendor_name;
+
+      if (vendorName) {
+        try {
+          const vendorResult = await query(
+            'SELECT id FROM vendors WHERE LOWER(name) = LOWER($1) LIMIT 1',
+            [vendorName]
+          );
+          if (vendorResult.rows.length > 0) {
+            vendorId = vendorResult.rows[0].id;
+          }
+        } catch (vendorError) {
+          console.error('Error looking up vendor:', vendorError);
+          // Continue with null vendor_id
+        }
+      }
+
       const result = await query(
         `INSERT INTO orders (
-          batch_order_number, product_id, product_name, quantity, amount,
-          status, user_email, user_id, date_submitted
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP)
+          batch_order_number, product_id, product_name, vendor_id, vendor_name,
+          quantity, amount, status, user_email, user_id, date_submitted
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP)
         RETURNING *`,
         [
           batchNumber,
           item.id,
           item.product_name,
+          vendorId,
+          vendorName,
           item.quantity,
           amount,
           'pending',
@@ -173,10 +194,10 @@ router.post('/submit', authenticate, async (req, res) => {
 // Get all orders (Admin only)
 router.get('/all', authenticate, requireAdmin, async (req, res) => {
   try {
-    const { vendor, status, startDate, endDate } = req.query;
+    const { vendor, vendor_id, status, startDate, endDate } = req.query;
 
     let queryText = `
-      SELECT o.*, p.vendor_name, p.category
+      SELECT o.*, p.category
       FROM orders o
       LEFT JOIN products p ON o.product_id = p.id
       WHERE 1=1
@@ -184,8 +205,13 @@ router.get('/all', authenticate, requireAdmin, async (req, res) => {
     const queryParams = [];
     let paramCount = 1;
 
-    if (vendor) {
-      queryText += ` AND p.vendor_name = $${paramCount}`;
+    // Filter by vendor_id (preferred) or vendor_name
+    if (vendor_id) {
+      queryText += ` AND o.vendor_id = $${paramCount}`;
+      queryParams.push(vendor_id);
+      paramCount++;
+    } else if (vendor) {
+      queryText += ` AND o.vendor_name = $${paramCount}`;
       queryParams.push(vendor);
       paramCount++;
     }
