@@ -391,81 +391,77 @@ const ProductsPage = () => {
         <>
           {/* Group products by vendor */}
           {Array.from(new Set(currentProducts.map(p => p.vendor_name))).map(vendor => (
-            <div key={vendor} className="mb-6">
+            <div key={vendor} className="mb-8">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-bold text-gray-800">{vendor}</h2>
                 <span className="text-sm text-gray-500">
-                  {currentProducts.filter(p => p.vendor_name === vendor).length}
+                  {currentProducts.filter(p => p.vendor_name === vendor).length} items
                 </span>
               </div>
 
-              {/* Product List */}
-              <div className="bg-white rounded-lg shadow-sm divide-y">
+              {/* Product Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                 {currentProducts.filter(p => p.vendor_name === vendor).map(product => (
-                  <div key={product.id} className="flex items-center p-4 hover:bg-gray-50 transition-colors">
-                    {/* Product Image - Clickable */}
-                    <div
-                      className="relative flex-shrink-0 w-16 h-16 mr-4 cursor-pointer"
-                      onClick={() => handleProductClick(product)}
-                    >
+                  <div
+                    key={product.id}
+                    className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer overflow-hidden flex flex-col"
+                    onClick={() => handleProductClick(product)}
+                  >
+                    {/* Product Image */}
+                    <div className="relative w-full pt-[100%] bg-gray-100">
                       <img
-                        src={product.product_image || 'https://via.placeholder.com/80'}
+                        src={product.product_image || 'https://via.placeholder.com/200'}
                         alt={product.product_name}
-                        className="w-full h-full object-cover rounded"
+                        className="absolute top-0 left-0 w-full h-full object-cover"
                       />
-                    </div>
-
-                    {/* Product Details - Clickable */}
-                    <div
-                      className="flex-1 min-w-0 cursor-pointer"
-                      onClick={() => handleProductClick(product)}
-                    >
-                      <h3 className="font-semibold text-gray-900 hover:text-primary-600">
-                        {product.product_name.length > 230
-                          ? product.product_name.substring(0, 230) + '...'
-                          : product.product_name}
-                      </h3>
-                      <div className="flex items-center space-x-4 mt-1 text-sm text-gray-600">
-                        <span>Unit Price = ${parseFloat(product.wholesale_unit_price || 0).toFixed(2)}</span>
-                        <span>|</span>
-                        <span>Case Price = ${parseFloat(product.wholesale_case_price || 0).toFixed(2)}</span>
-                        <span>|</span>
-                        <span>MSRP = ${parseFloat(product.retail_unit_price || 0).toFixed(2)}</span>
-                        <span>|</span>
-                        <span className="text-green-600">GM: {parseFloat(product.gm_percent || 0).toFixed(1)}%</span>
+                      {/* Product ID Badge */}
+                      <div className="absolute top-1 right-1 bg-black bg-opacity-50 text-white text-xs px-1.5 py-0.5 rounded">
+                        #{product.id}
                       </div>
                     </div>
 
-                    {/* Product ID - Clickable */}
-                    <div
-                      className="flex-shrink-0 text-right mr-4 cursor-pointer"
-                      onClick={() => handleProductClick(product)}
-                    >
-                      <span className="text-xs text-gray-500">ID #{product.id}</span>
-                    </div>
+                    {/* Product Details */}
+                    <div className="p-2 flex-1 flex flex-col">
+                      <h3 className="font-semibold text-xs text-gray-900 line-clamp-2 mb-1 min-h-[2rem]">
+                        {product.product_name}
+                      </h3>
 
-                    {/* Add Button */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleAddToCart(product);
-                      }}
-                      disabled={addedToCart[product.id]}
-                      className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${
-                        addedToCart[product.id]
-                          ? 'bg-green-500 text-white'
-                          : 'bg-primary-600 hover:bg-primary-700 text-white'
-                      }`}
-                      aria-label="Add to cart"
-                    >
-                      {addedToCart[product.id] ? (
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      ) : (
-                        <span className="text-xl font-bold">+</span>
-                      )}
-                    </button>
+                      <div className="space-y-0.5 text-xs text-gray-600 mb-2">
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Unit:</span>
+                          <span className="font-semibold">${parseFloat(product.wholesale_unit_price || 0).toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Case:</span>
+                          <span className="font-semibold">${parseFloat(product.wholesale_case_price || 0).toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">MSRP:</span>
+                          <span className="font-semibold">${parseFloat(product.retail_unit_price || 0).toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">GM:</span>
+                          <span className="font-semibold text-green-600">{parseFloat(product.gm_percent || 0).toFixed(1)}%</span>
+                        </div>
+                      </div>
+
+                      {/* Add Button */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAddToCart(product);
+                        }}
+                        disabled={addedToCart[product.id]}
+                        className={`w-full py-1.5 rounded-md text-xs font-semibold transition-colors mt-auto ${
+                          addedToCart[product.id]
+                            ? 'bg-green-500 text-white'
+                            : 'bg-primary-600 hover:bg-primary-700 text-white'
+                    }`}
+                        aria-label="Add to cart"
+                      >
+                        {addedToCart[product.id] ? '✓ Added' : '+ Add to Cart'}
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

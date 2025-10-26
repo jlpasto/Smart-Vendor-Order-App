@@ -20,7 +20,9 @@
       "Bash(node check_vendor_logos.js:*)",
       "Bash(node:*)",
       "Bash(curl:*)",
-      "Bash(npm run server:*)"
+      "Bash(npm run server:*)",
+      "Bash(npm run dev:client:*)",
+      "Bash(npm run:*)"
     ],
     "deny": [],
     "ask": []

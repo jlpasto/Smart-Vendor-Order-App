@@ -50,7 +50,7 @@ const Layout = () => {
       {/* Left Sidebar */}
       <aside className={`bg-white shadow-lg transition-all duration-300 ease-in-out ${
         sidebarOpen ? 'w-64' : 'w-20'
-      } flex flex-col fixed h-screen z-40 top-0 left-0`}>
+      } flex flex-col fixed h-screen z-40 top-0 left-0 lg:block ${sidebarOpen ? 'block' : 'hidden'}`}>
         {/* Logo and Toggle */}
         <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-primary-900">
           {sidebarOpen ? (
@@ -135,7 +135,7 @@ const Layout = () => {
 
       {/* Main Content Area */}
       <div className={`flex-1 flex flex-col transition-all duration-300 ${
-        sidebarOpen ? 'ml-64' : 'ml-20'
+        sidebarOpen ? 'lg:ml-64' : 'lg:ml-20'
       }`}>
         {/* Top Header */}
         <header className="bg-white shadow-sm sticky top-0 z-20">
