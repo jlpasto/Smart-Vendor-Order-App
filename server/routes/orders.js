@@ -111,6 +111,90 @@ router.get('/batch/:batchNumber', authenticate, async (req, res) => {
   }
 });
 
+// Get products for reordering from batch (for "Buy Again" feature)
+router.get('/batch/:batchNumber/products', authenticate, async (req, res) => {
+  try {
+    const { batchNumber } = req.params;
+    const userEmail = req.user.email;
+
+    // Get all orders in the batch with current product details
+    const result = await query(
+      `SELECT
+        o.product_id,
+        o.product_name as ordered_product_name,
+        o.quantity as quantity_ordered,
+        p.id,
+        p.product_name,
+        p.vendor_name,
+        p.wholesale_case_price,
+        p.wholesale_unit_price,
+        p.product_image,
+        p.product_description,
+        p.size,
+        p.case_pack,
+        p.upc,
+        p.retail_unit_price,
+        p.stock_level,
+        p.category,
+        p.main_category,
+        p.sub_category,
+        p.state
+      FROM orders o
+      LEFT JOIN products p ON o.product_id = p.id
+      WHERE o.batch_order_number = $1 AND o.user_email = $2
+      ORDER BY o.id`,
+      [batchNumber, userEmail]
+    );
+
+    // Separate available products from unavailable ones
+    const products = [];
+    const unavailable = [];
+
+    result.rows.forEach(row => {
+      if (row.id) {
+        // Product still exists in catalog
+        products.push({
+          id: row.id,
+          product_name: row.product_name,
+          vendor_name: row.vendor_name,
+          wholesale_case_price: row.wholesale_case_price,
+          wholesale_unit_price: row.wholesale_unit_price,
+          product_image: row.product_image,
+          product_description: row.product_description,
+          size: row.size,
+          case_pack: row.case_pack,
+          upc: row.upc,
+          retail_unit_price: row.retail_unit_price,
+          stock_level: row.stock_level,
+          category: row.category,
+          main_category: row.main_category,
+          sub_category: row.sub_category,
+          state: row.state,
+          quantity_ordered: row.quantity_ordered
+        });
+      } else {
+        // Product no longer exists
+        unavailable.push({
+          product_id: row.product_id,
+          product_name: row.ordered_product_name,
+          reason: 'Product no longer available in catalog'
+        });
+      }
+    });
+
+    res.json({
+      products,
+      unavailable,
+      total_items: result.rows.length,
+      available_count: products.length,
+      unavailable_count: unavailable.length
+    });
+  } catch (error) {
+    console.error('Error fetching batch products:', error);
+    res.status(500).json({ error: 'Error fetching batch products for reorder' });
+  }
+});
+
 // Submit new order (batch of items)
 router.post('/submit', authenticate, async (req, res) => {
   try {
