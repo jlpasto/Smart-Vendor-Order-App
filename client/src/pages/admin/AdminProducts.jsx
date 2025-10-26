@@ -598,14 +598,7 @@ const AdminProducts = () => {
           <thead>
             <tr className="border-b-2 border-gray-200">
               <th className="py-3 px-4">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={currentProducts.length > 0 && currentProducts.every(p => selectedProducts.includes(p.id))}
-                    onChange={handleSelectAllCurrentPage}
-                    className="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
-                    title="Select all on this page"
-                  />
+                <div className="flex flex-col items-center gap-1">
                   <button
                     onClick={handleSelectAllPages}
                     className={`text-xs font-medium px-2 py-1 rounded ${
@@ -617,6 +610,13 @@ const AdminProducts = () => {
                   >
                     {selectAllPages ? 'All' : 'All Pages'}
                   </button>
+                  <input
+                    type="checkbox"
+                    checked={currentProducts.length > 0 && currentProducts.every(p => selectedProducts.includes(p.id))}
+                    onChange={handleSelectAllCurrentPage}
+                    className="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                    title="Select all on this page"
+                  />
                 </div>
               </th>
               <th className="text-left py-3 px-4 font-semibold text-gray-700">Image</th>
@@ -632,12 +632,14 @@ const AdminProducts = () => {
             {currentProducts.map(product => (
               <tr key={product.id} className="border-b border-gray-100 hover:bg-gray-50">
                 <td className="py-3 px-4">
-                  <input
-                    type="checkbox"
-                    checked={selectedProducts.includes(product.id)}
-                    onChange={() => handleSelectProduct(product.id)}
-                    className="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
-                  />
+                  <div className="flex justify-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedProducts.includes(product.id)}
+                      onChange={() => handleSelectProduct(product.id)}
+                      className="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                    />
+                  </div>
                 </td>
                 <td className="py-3 px-4">
                   <img

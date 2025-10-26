@@ -135,7 +135,7 @@ const Layout = () => {
 
       {/* Main Content Area */}
       <div className={`flex-1 flex flex-col transition-all duration-300 ${
-        sidebarOpen ? 'lg:ml-64' : 'lg:ml-20'
+        sidebarOpen ? 'ml-64' : 'ml-20'
       }`}>
         {/* Top Header */}
         <header className="bg-white shadow-sm sticky top-0 z-20">
