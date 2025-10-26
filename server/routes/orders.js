@@ -5,6 +5,32 @@ import { sendOrderConfirmation, sendStatusUpdateEmail } from '../utils/email.js'
 
 const router = express.Router();
 
+// Health check endpoint for debugging
+router.get('/health', authenticate, async (req, res) => {
+  try {
+    // Test database connection
+    const dbTest = await query('SELECT 1 as test');
+
+    res.json({
+      status: 'OK',
+      user: {
+        id: req.user.id,
+        email: req.user.email,
+        role: req.user.role
+      },
+      database: dbTest.rows.length > 0 ? 'Connected' : 'Error',
+      environment: process.env.NODE_ENV || 'development',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'ERROR',
+      error: error.message,
+      stack: error.stack
+    });
+  }
+});
+
 // Generate batch order number
 const generateBatchNumber = () => {
   const now = new Date();
@@ -198,25 +224,39 @@ router.get('/batch/:batchNumber/products', authenticate, async (req, res) => {
 // Submit new order (batch of items)
 router.post('/submit', authenticate, async (req, res) => {
   try {
+    console.log('📦 Order submission started');
+    console.log('User:', req.user);
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+
     const { items } = req.body; // Array of cart items
     const userEmail = req.user.email;
     const userId = req.user.id;
 
+    console.log(`👤 User: ${userEmail} (ID: ${userId})`);
+    console.log(`📋 Items count: ${items?.length || 0}`);
+
     if (!items || items.length === 0) {
+      console.log('❌ No items in order');
       return res.status(400).json({ error: 'No items in order' });
     }
 
     const batchNumber = generateBatchNumber();
+    console.log(`🎫 Generated batch number: ${batchNumber}`);
     const createdOrders = [];
 
     // Insert each item as an order
-    for (const item of items) {
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      console.log(`\n📦 Processing item ${i + 1}/${items.length}:`, item.product_name);
+
       const price = item.wholesale_case_price || item.wholesale_unit_price || 0;
       const amount = price * item.quantity;
+      console.log(`💰 Price: ${price}, Quantity: ${item.quantity}, Amount: ${amount}`);
 
       // Get vendor_id by looking up vendor_name in vendors table
       let vendorId = null;
       const vendorName = item.vendor_name;
+      console.log(`🏪 Vendor: ${vendorName}`);
 
       if (vendorName) {
         try {
@@ -226,13 +266,17 @@ router.post('/submit', authenticate, async (req, res) => {
           );
           if (vendorResult.rows.length > 0) {
             vendorId = vendorResult.rows[0].id;
+            console.log(`✓ Vendor ID found: ${vendorId}`);
+          } else {
+            console.log(`⚠️  Vendor "${vendorName}" not found in vendors table`);
           }
         } catch (vendorError) {
-          console.error('Error looking up vendor:', vendorError);
+          console.error('❌ Error looking up vendor:', vendorError);
           // Continue with null vendor_id
         }
       }
 
+      console.log(`💾 Inserting order into database...`);
       const result = await query(
         `INSERT INTO orders (
           batch_order_number, product_id, product_name, vendor_id, vendor_name,
@@ -253,25 +297,37 @@ router.post('/submit', authenticate, async (req, res) => {
         ]
       );
 
+      console.log(`✓ Order inserted with ID: ${result.rows[0].id}`);
       createdOrders.push(result.rows[0]);
     }
 
+    console.log(`\n✅ All ${createdOrders.length} orders inserted successfully`);
+
     // Send email confirmation
+    console.log('\n📧 Sending email confirmation...');
     try {
       await sendOrderConfirmation(userEmail, batchNumber, createdOrders);
+      console.log('✓ Email sent successfully');
     } catch (emailError) {
-      console.error('Error sending order confirmation email:', emailError);
+      console.error('⚠️  Error sending order confirmation email:', emailError);
       // Don't fail the order if email fails
     }
 
+    console.log('\n🎉 Order submission completed successfully!');
     res.status(201).json({
       message: 'Order submitted successfully',
       batchNumber,
       orders: createdOrders
     });
   } catch (error) {
-    console.error('Error submitting order:', error);
-    res.status(500).json({ error: 'Error submitting order' });
+    console.error('\n❌❌❌ ERROR SUBMITTING ORDER ❌❌❌');
+    console.error('Error details:', error);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({
+      error: 'Error submitting order',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
