@@ -24,20 +24,27 @@ router.post('/bulk-import', authenticate, requireAdmin, async (req, res) => {
       try {
         // Map Excel column names to database fields
         const vendorData = {
-          id: vendor['ID'] || vendor.id || null,
-          vendor_connect_id: vendor['Vendor Connect ID'] || vendor.vendor_connect_id || null,
-          name: vendor['Vendor Name'] || vendor.name,
-          website_url: vendor['URL'] || vendor.website_url || null,
-          logo_url: vendor['Logo'] || vendor.logo_url || null,
-          phone: vendor['Phone'] || vendor.phone || null,
-          email: vendor['Email'] || vendor.email || null,
-          address: vendor['Address'] || vendor.address || null,
-          state: vendor['State'] || vendor.state || null,
-          territory: vendor['Territory'] || vendor.territory || null
+          id: vendor['ID'] || null,
+          vendor_connect_id: vendor['Vendor Connect ID'] || null,
+          name: vendor['Vendor Name'] || null,
+          website_url: vendor['URL'] || null,
+          logo_url: vendor['Logo'] || null,
+          phone: vendor['Phone'] || null,
+          email: vendor['Email'] || null,
+          address: vendor['Address'] || null,
+          state: vendor['State'] || null,
+          territory: vendor['Territory'] || null
         };
+
+        // Debug log for first row to help troubleshoot
+        if (i === 0) {
+          console.log('First vendor row columns:', Object.keys(vendor));
+          console.log('Mapped vendor data:', vendorData);
+        }
 
         // Validate required fields
         if (!vendorData.name || vendorData.name.trim() === '') {
+          console.log(`Row ${i + 1} failed - columns available:`, Object.keys(vendor));
           errors.push(`Row ${i + 1}: Vendor Name is required`);
           failed++;
           continue;
