@@ -1,19 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import api from '../config/api';
 import { useCart } from '../context/CartContext';
 import { useSearch } from '../context/SearchContext';
 import { useFilter } from '../context/FilterContext';
 import ProductDetailModal from '../components/ProductDetailModal';
-import Pagination from '../components/Pagination';
 import FilterIcon from '../components/FilterIcon';
 import FilterModal from '../components/FilterModal';
 import FilterDetailPanel from '../components/FilterDetailPanel';
+import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 
 const ProductsPage = () => {
+  // State for accumulated products from infinite scroll
   const [products, setProducts] = useState([]);
-  const [filteredProducts, setFilteredProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
+  const [cursor, setCursor] = useState(null);
+  const [hasMore, setHasMore] = useState(true);
   const [favorites, setFavorites] = useState([]);
 
   // Modal state
@@ -32,38 +35,86 @@ const ProductsPage = () => {
   const { addToCart } = useCart();
   const [addedToCart, setAddedToCart] = useState({});
 
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [productsPerPage] = useState(20);
-
   // Sorting state
   const [sortField, setSortField] = useState('vendor_name');
   const [sortOrder, setSortOrder] = useState('asc');
 
+  // Infinite scroll hook
+  const observerTarget = useInfiniteScroll({
+    loading: loadingMore,
+    hasMore,
+    onLoadMore: loadMoreProducts,
+    rootMargin: '100px'
+  });
+
+  // Reset and load products when filters or sort changes
   useEffect(() => {
-    fetchProducts();
+    resetAndLoadProducts();
+  }, [sortField, sortOrder, globalSearchTerm, filters]);
+
+  // Load favorites on mount
+  useEffect(() => {
     loadFavorites();
-  }, [sortField, sortOrder]);
+  }, []);
 
-  useEffect(() => {
-    applyFilters();
-  }, [products, globalSearchTerm, filters]);
+  const resetAndLoadProducts = useCallback(async () => {
+    setProducts([]);
+    setCursor(null);
+    setHasMore(true);
+    setLoading(true);
+    setError('');
 
-  const fetchProducts = async () => {
     try {
-      const params = {
-        sort: sortField,
-        order: sortOrder
-      };
-      const response = await api.get('/api/products', { params });
-      setProducts(response.data);
-      setFilteredProducts(response.data);
-      setLoading(false);
+      await fetchProducts(null);
     } catch (err) {
       setError('Failed to load products');
+    } finally {
       setLoading(false);
     }
+  }, [sortField, sortOrder, globalSearchTerm, filters]);
+
+  const fetchProducts = async (currentCursor) => {
+    const params = {
+      cursor: currentCursor,
+      limit: 20,
+      sort: sortField,
+      order: sortOrder,
+      search: globalSearchTerm || undefined,
+      ...filters
+    };
+
+    const response = await api.get('/api/products', { params });
+
+    // Handle cursor pagination response
+    if (response.data.items) {
+      const { items, pagination } = response.data;
+
+      setProducts(prev => currentCursor ? [...prev, ...items] : items);
+      setCursor(pagination.nextCursor);
+      setHasMore(pagination.hasMore);
+    } else {
+      // Backward compatibility: if API returns array (old format)
+      setProducts(response.data);
+      setHasMore(false);
+    }
+
+    return response.data;
   };
+
+  async function loadMoreProducts() {
+    if (loadingMore || !hasMore) return;
+
+    setLoadingMore(true);
+    setError('');
+
+    try {
+      await fetchProducts(cursor);
+    } catch (err) {
+      setError('Failed to load more products');
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   const loadFavorites = () => {
     const saved = localStorage.getItem('favorites');
@@ -83,132 +134,6 @@ const ProductsPage = () => {
     localStorage.setItem('favorites', JSON.stringify(newFavorites));
   };
 
-  const applyFilters = () => {
-    let filtered = [...products];
-
-    // Global search filter
-    if (globalSearchTerm) {
-      const term = globalSearchTerm.toLowerCase();
-      filtered = filtered.filter(p =>
-        p.product_name.toLowerCase().includes(term) ||
-        p.product_description?.toLowerCase().includes(term) ||
-        p.vendor_name.toLowerCase().includes(term)
-      );
-    }
-
-    // Text filters
-    if (filters.id) {
-      filtered = filtered.filter(p => p.id === parseInt(filters.id));
-    }
-    if (filters.vendor_connect_id) {
-      filtered = filtered.filter(p => p.vendor_connect_id === filters.vendor_connect_id);
-    }
-    if (filters.product_name) {
-      filtered = filtered.filter(p => p.product_name?.toLowerCase().includes(filters.product_name.toLowerCase()));
-    }
-    if (filters.size) {
-      filtered = filtered.filter(p => p.size?.toLowerCase().includes(filters.size.toLowerCase()));
-    }
-    if (filters.upc) {
-      filtered = filtered.filter(p => p.upc === filters.upc);
-    }
-    if (filters.shelf_life) {
-      filtered = filtered.filter(p => p.shelf_life?.toLowerCase().includes(filters.shelf_life.toLowerCase()));
-    }
-    if (filters.delivery_info) {
-      filtered = filtered.filter(p => p.delivery_info?.toLowerCase().includes(filters.delivery_info.toLowerCase()));
-    }
-    if (filters.notes) {
-      filtered = filtered.filter(p => p.notes?.toLowerCase().includes(filters.notes.toLowerCase()));
-    }
-
-    // Dropdown filters
-    if (filters.vendor) {
-      filtered = filtered.filter(p => p.vendor_name === filters.vendor);
-    }
-    if (filters.state) {
-      filtered = filtered.filter(p => p.state === filters.state);
-    }
-    if (filters.cuisine_type) {
-      filtered = filtered.filter(p => p.cuisine_type === filters.cuisine_type);
-    }
-    if (filters.seasonal_featured) {
-      filtered = filtered.filter(p => p.seasonal_featured === filters.seasonal_featured);
-    }
-
-    // Multi-select filters
-    if (filters.main_categories && filters.main_categories.length > 0) {
-      filtered = filtered.filter(p => filters.main_categories.includes(p.main_category));
-    }
-    if (filters.sub_categories && filters.sub_categories.length > 0) {
-      filtered = filtered.filter(p => filters.sub_categories.includes(p.sub_category));
-    }
-    if (filters.allergens && filters.allergens.length > 0) {
-      filtered = filtered.filter(p => {
-        const productAllergens = p.allergens?.split(',').map(a => a.trim()) || [];
-        return filters.allergens.some(allergen => productAllergens.includes(allergen));
-      });
-    }
-    if (filters.dietary_preferences && filters.dietary_preferences.length > 0) {
-      filtered = filtered.filter(p => {
-        const productPrefs = p.dietary_preferences?.split(',').map(d => d.trim()) || [];
-        return filters.dietary_preferences.some(pref => productPrefs.includes(pref));
-      });
-    }
-
-    // Range filters
-    if (filters.case_pack_min) {
-      filtered = filtered.filter(p => parseFloat(p.case_pack) >= parseFloat(filters.case_pack_min));
-    }
-    if (filters.case_pack_max) {
-      filtered = filtered.filter(p => parseFloat(p.case_pack) <= parseFloat(filters.case_pack_max));
-    }
-    if (filters.price_min) {
-      filtered = filtered.filter(p => parseFloat(p.wholesale_case_price) >= parseFloat(filters.price_min));
-    }
-    if (filters.price_max) {
-      filtered = filtered.filter(p => parseFloat(p.wholesale_case_price) <= parseFloat(filters.price_max));
-    }
-    if (filters.unit_price_min) {
-      filtered = filtered.filter(p => parseFloat(p.wholesale_unit_price) >= parseFloat(filters.unit_price_min));
-    }
-    if (filters.unit_price_max) {
-      filtered = filtered.filter(p => parseFloat(p.wholesale_unit_price) <= parseFloat(filters.unit_price_max));
-    }
-    if (filters.msrp_min) {
-      filtered = filtered.filter(p => parseFloat(p.retail_unit_price) >= parseFloat(filters.msrp_min));
-    }
-    if (filters.msrp_max) {
-      filtered = filtered.filter(p => parseFloat(p.retail_unit_price) <= parseFloat(filters.msrp_max));
-    }
-    if (filters.gm_min) {
-      filtered = filtered.filter(p => parseFloat(p.gm_percent) >= parseFloat(filters.gm_min));
-    }
-    if (filters.gm_max) {
-      filtered = filtered.filter(p => parseFloat(p.gm_percent) <= parseFloat(filters.gm_max));
-    }
-    if (filters.case_minimum_min) {
-      filtered = filtered.filter(p => parseFloat(p.case_minimum) >= parseFloat(filters.case_minimum_min));
-    }
-    if (filters.case_minimum_max) {
-      filtered = filtered.filter(p => parseFloat(p.case_minimum) <= parseFloat(filters.case_minimum_max));
-    }
-
-    // Boolean filters
-    if (filters.popular) {
-      filtered = filtered.filter(p => p.popular);
-    }
-    if (filters.seasonal) {
-      filtered = filtered.filter(p => p.seasonal);
-    }
-    if (filters.new) {
-      filtered = filtered.filter(p => p.new);
-    }
-
-    setFilteredProducts(filtered);
-    setCurrentPage(1); // Reset to first page when filters change
-  };
-
   const handleFilterIconClick = () => {
     setShowFilterModal(true);
   };
@@ -225,32 +150,12 @@ const ProductsPage = () => {
     setSelectedFilterField(null);
   };
 
-  // Calculate pagination
-  const indexOfLastProduct = currentPage * productsPerPage;
-  const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
-  const currentProducts = filteredProducts.slice(indexOfFirstProduct, indexOfLastProduct);
-  const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
-
-  const handlePageChange = (pageNumber) => {
-    setCurrentPage(pageNumber);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
   const handleAddToCart = (product) => {
     addToCart(product, 1);
     setAddedToCart({ ...addedToCart, [product.id]: true });
     setTimeout(() => {
       setAddedToCart({ ...addedToCart, [product.id]: false });
     }, 2000);
-  };
-
-  const clearFilters = () => {
-    setSelectedVendor('');
-    setSelectedState('');
-    setSelectedCategory('');
-    setShowFeatured(false);
-    setShowSeasonal(false);
-    setShowNew(false);
   };
 
   const handleProductClick = (product) => {
@@ -264,21 +169,20 @@ const ProductsPage = () => {
   };
 
   const handleNextProduct = () => {
-    const currentIndex = filteredProducts.findIndex(p => p.id === selectedProduct.id);
-    if (currentIndex < filteredProducts.length - 1) {
-      setSelectedProduct(filteredProducts[currentIndex + 1]);
+    const currentIndex = products.findIndex(p => p.id === selectedProduct.id);
+    if (currentIndex < products.length - 1) {
+      setSelectedProduct(products[currentIndex + 1]);
     }
   };
 
   const handlePrevProduct = () => {
-    const currentIndex = filteredProducts.findIndex(p => p.id === selectedProduct.id);
+    const currentIndex = products.findIndex(p => p.id === selectedProduct.id);
     if (currentIndex > 0) {
-      setSelectedProduct(filteredProducts[currentIndex - 1]);
+      setSelectedProduct(products[currentIndex - 1]);
     }
   };
 
   const handleEdit = (product) => {
-    // TODO: Implement edit functionality
     console.log('Edit product:', product);
     alert('Edit functionality coming soon!');
   };
@@ -287,12 +191,24 @@ const ProductsPage = () => {
     try {
       await api.delete(`/api/products/${product.id}`);
       // Refresh products list
-      fetchProducts();
+      resetAndLoadProducts();
     } catch (err) {
       console.error('Error deleting product:', err);
       alert('Failed to delete product');
     }
   };
+
+  // Group products by vendor (memoized for performance)
+  const groupedProducts = useMemo(() => {
+    const groups = {};
+    products.forEach(product => {
+      if (!groups[product.vendor_name]) {
+        groups[product.vendor_name] = [];
+      }
+      groups[product.vendor_name].push(product);
+    });
+    return groups;
+  }, [products]);
 
   if (loading) {
     return (
@@ -379,29 +295,25 @@ const ProductsPage = () => {
         </div>
       </div>
 
-      {/* Category Header */}
-      {filteredProducts.length === 0 ? (
+      {/* No results */}
+      {products.length === 0 && !loading && (
         <div className="bg-white rounded-lg shadow-sm text-center py-12">
           <p className="text-xl text-gray-600">No products found matching your filters</p>
-          <button onClick={clearFilters} className="mt-4 px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
-            Clear Filters
-          </button>
         </div>
-      ) : (
-        <>
-          {/* Group products by vendor */}
-          {Array.from(new Set(currentProducts.map(p => p.vendor_name))).map(vendor => (
-            <div key={vendor} className="mb-8">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-gray-800">{vendor}</h2>
-                <span className="text-sm text-gray-500">
-                  {currentProducts.filter(p => p.vendor_name === vendor).length} items
-                </span>
-              </div>
+      )}
 
-              {/* Product Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-                {currentProducts.filter(p => p.vendor_name === vendor).map(product => (
+      {/* Product Grid by Vendor */}
+      {Object.entries(groupedProducts).map(([vendor, vendorProducts]) => (
+        <div key={vendor} className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-gray-800">{vendor}</h2>
+            <span className="text-sm text-gray-500">
+              {vendorProducts.length} items
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+            {vendorProducts.map(product => (
                   <div
                     key={product.id}
                     className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer overflow-hidden flex flex-col"
@@ -463,19 +375,67 @@ const ProductsPage = () => {
                       </button>
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
+        </div>
+      ))}
 
-          {/* Pagination */}
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={handlePageChange}
-          />
-        </>
+      {/* Loading More Indicator */}
+      {loadingMore && (
+        <div className="flex justify-center py-8">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 border-3 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+            <span className="text-gray-600">Loading more products...</span>
+          </div>
+        </div>
       )}
+
+      {/* Error State */}
+      {error && !loading && (
+        <div className="flex flex-col items-center gap-4 py-8">
+          <div className="text-red-600 text-center">
+            <p className="font-semibold">{error}</p>
+          </div>
+          <button
+            onClick={loadMoreProducts}
+            className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      )}
+
+      {/* Intersection Observer Target */}
+      {hasMore && !loadingMore && !error && (
+        <div
+          ref={observerTarget}
+          className="h-20 flex items-center justify-center"
+          role="status"
+          aria-live="polite"
+        >
+          <div className="text-gray-400 text-sm">Scroll for more</div>
+        </div>
+      )}
+
+      {/* End of Results */}
+      {!hasMore && products.length > 0 && (
+        <div className="text-center py-12 border-t border-gray-200">
+          <p className="text-xl font-semibold text-gray-700">You've reached the end!</p>
+          <p className="text-gray-500 mt-2">Showing all {products.length} products</p>
+          <button
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="mt-4 px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            Back to Top ↑
+          </button>
+        </div>
+      )}
+
+      {/* Screen reader announcements */}
+      <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+        {loadingMore && 'Loading more products'}
+        {!hasMore && `All ${products.length} products loaded`}
+      </div>
 
       {/* Product Detail Modal */}
       <ProductDetailModal
@@ -483,12 +443,12 @@ const ProductsPage = () => {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         onNext={
-          selectedProduct && filteredProducts.findIndex(p => p.id === selectedProduct.id) < filteredProducts.length - 1
+          selectedProduct && products.findIndex(p => p.id === selectedProduct.id) < products.length - 1
             ? handleNextProduct
             : null
         }
         onPrev={
-          selectedProduct && filteredProducts.findIndex(p => p.id === selectedProduct.id) > 0
+          selectedProduct && products.findIndex(p => p.id === selectedProduct.id) > 0
             ? handlePrevProduct
             : null
         }

@@ -4,6 +4,24 @@ import { authenticate, requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
+// Cursor encoding/decoding utilities
+const encodeCursor = (lastItem, sortField) => {
+  const cursorData = {
+    [sortField]: lastItem[sortField],
+    id: lastItem.id
+  };
+  return Buffer.from(JSON.stringify(cursorData)).toString('base64');
+};
+
+const decodeCursor = (cursor) => {
+  try {
+    const decoded = Buffer.from(cursor, 'base64').toString('utf-8');
+    return JSON.parse(decoded);
+  } catch (e) {
+    return null;
+  }
+};
+
 // Get all products with optional filters
 router.get('/', async (req, res) => {
   try {
@@ -44,12 +62,37 @@ router.get('/', async (req, res) => {
       notes,
       // Sorting
       sort,
-      order
+      order,
+      // Cursor-based pagination
+      cursor,
+      limit
     } = req.query;
+
+    // Pagination setup
+    const pageLimit = limit ? Math.min(parseInt(limit), 100) : null; // Max 100 items per request
+    const useCursorPagination = cursor !== undefined || limit !== undefined;
 
     let queryText = 'SELECT * FROM products WHERE 1=1';
     const queryParams = [];
     let paramCount = 1;
+
+    // Decode and apply cursor if provided
+    if (cursor) {
+      const cursorData = decodeCursor(cursor);
+      if (!cursorData) {
+        return res.status(400).json({ error: 'Invalid cursor' });
+      }
+
+      // Determine sort field and order
+      const sortField = sort || 'vendor_name';
+      const sortOrder = order || 'asc';
+      const operator = sortOrder.toLowerCase() === 'asc' ? '>' : '<';
+
+      // Apply cursor condition
+      queryText += ` AND (${sortField}, id) ${operator} ($${paramCount}, $${paramCount + 1})`;
+      queryParams.push(cursorData[sortField], cursorData.id);
+      paramCount += 2;
+    }
 
     // Add search filter
     if (search) {
@@ -289,20 +332,55 @@ router.get('/', async (req, res) => {
     }
 
     // Sorting
-    const sortField = sort || 'product_name'; // Default sort by product name
+    const sortField = sort || 'vendor_name'; // Default sort by vendor_name for cursor pagination
     const sortOrder = order || 'asc'; // Default ascending (A-Z)
 
     // Validate sort field to prevent SQL injection
-    const allowedSortFields = ['product_name', 'vendor_name', 'price', 'created_at', 'category', 'state'];
-    const validSortField = allowedSortFields.includes(sortField) ? sortField : 'product_name';
+    const allowedSortFields = ['product_name', 'vendor_name', 'wholesale_case_price', 'wholesale_unit_price', 'retail_unit_price', 'gm_percent', 'created_at', 'category', 'state'];
+    const validSortField = allowedSortFields.includes(sortField) ? sortField : 'vendor_name';
 
     // Validate sort order
     const validSortOrder = (sortOrder === 'desc') ? 'DESC' : 'ASC';
 
-    queryText += ` ORDER BY ${validSortField} ${validSortOrder}`;
+    // Add ORDER BY with id as tiebreaker for cursor pagination
+    queryText += ` ORDER BY ${validSortField} ${validSortOrder}, id ${validSortOrder}`;
+
+    // Add LIMIT for cursor pagination (request one extra to check if there are more)
+    if (useCursorPagination && pageLimit) {
+      queryText += ` LIMIT ${pageLimit + 1}`;
+    }
 
     const result = await query(queryText, queryParams);
-    res.json(result.rows);
+
+    // Handle cursor pagination response
+    if (useCursorPagination && pageLimit) {
+      const hasMore = result.rows.length > pageLimit;
+      const items = hasMore ? result.rows.slice(0, pageLimit) : result.rows;
+
+      // Generate next cursor
+      let nextCursor = null;
+      if (hasMore && items.length > 0) {
+        const lastItem = items[items.length - 1];
+        nextCursor = encodeCursor(lastItem, validSortField);
+      }
+
+      res.json({
+        items,
+        pagination: {
+          limit: pageLimit,
+          nextCursor,
+          hasMore
+        },
+        meta: {
+          count: items.length,
+          sortField: validSortField,
+          sortOrder: validSortOrder
+        }
+      });
+    } else {
+      // Backward compatibility: return array for non-cursor pagination
+      res.json(result.rows);
+    }
   } catch (error) {
     console.error('Error fetching products:', error);
     res.status(500).json({ error: 'Error fetching products' });
