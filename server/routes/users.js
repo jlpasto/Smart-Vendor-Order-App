@@ -1,4 +1,5 @@
 import express from 'express';
+import bcrypt from 'bcrypt';
 import { query } from '../config/database.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
 
@@ -67,17 +68,20 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
     // Use provided password or generate random one
     const finalPassword = password || generatePassword();
 
+    // Hash the password with bcrypt before storing
+    const hashedPassword = await bcrypt.hash(finalPassword, 10);
+
     const result = await query(
       `INSERT INTO users (name, email, password, id_no, role)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING id, name, email, id_no, role, created_at`,
-      [name, email, finalPassword, id_no, 'user']
+      [name, email, hashedPassword, id_no, 'user']
     );
 
-    // Return the created user with the password
+    // Return the created user with the PLAINTEXT password (only in response, not stored)
     res.status(201).json({
       ...result.rows[0],
-      password: finalPassword // Include password in response so admin can share it
+      password: finalPassword // Include plaintext password in response so admin can share it
     });
   } catch (error) {
     console.error('Error creating user:', error);
@@ -123,8 +127,10 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
     }
 
     if (password !== undefined) {
+      // Hash the password with bcrypt before storing
+      const hashedPassword = await bcrypt.hash(password, 10);
       updates.push(`password = $${paramCount}`);
-      values.push(password);
+      values.push(hashedPassword);
       paramCount++;
     }
 

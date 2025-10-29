@@ -82,7 +82,13 @@ const AdminUsers = () => {
       if (editingUser) {
         // Update existing user
         await api.put(`/api/users/${editingUser.id}`, formData);
-        alert('User updated successfully!');
+
+        // Show different message if password was reset
+        if (generatedPassword) {
+          alert(`User updated successfully!\n\nNEW PASSWORD: ${generatedPassword}\n\nPlease save this password and share it with the user. It won't be shown again.`);
+        } else {
+          alert('User updated successfully!');
+        }
       } else {
         // Create new user
         const response = await api.post('/api/users', formData);
@@ -299,17 +305,68 @@ const AdminUsers = () => {
               )}
 
               {editingUser && (
-                <div>
-                  <label className="block text-lg font-semibold text-gray-700 mb-2">Role</label>
-                  <select
-                    value={formData.role || 'user'}
-                    onChange={(e) => handleInputChange('role', e.target.value)}
-                    className="input"
-                  >
-                    <option value="user">User</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                </div>
+                <>
+                  <div>
+                    <label className="block text-lg font-semibold text-gray-700 mb-2">Role</label>
+                    <select
+                      value={formData.role || 'user'}
+                      onChange={(e) => handleInputChange('role', e.target.value)}
+                      className="input"
+                    >
+                      <option value="user">User</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-lg font-semibold text-gray-700 mb-2">
+                      Reset Password
+                    </label>
+                    {!generatedPassword ? (
+                      <button
+                        type="button"
+                        onClick={handleRegeneratePassword}
+                        className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-semibold w-full"
+                      >
+                        🔑 Generate New Password
+                      </button>
+                    ) : (
+                      <div>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={generatedPassword}
+                            readOnly
+                            className="input flex-1 bg-green-50 border-green-300"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(generatedPassword);
+                              alert('Password copied to clipboard!');
+                            }}
+                            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold"
+                          >
+                            📋 Copy
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleRegeneratePassword}
+                            className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-semibold"
+                          >
+                            🔄
+                          </button>
+                        </div>
+                        <p className="text-sm text-green-700 mt-2 font-semibold">
+                          ✓ New password generated! Make sure to copy it before saving.
+                        </p>
+                      </div>
+                    )}
+                    <p className="text-sm text-gray-600 mt-1">
+                      Generate a new password for this user. They will need to use the new password to login.
+                    </p>
+                  </div>
+                </>
               )}
             </div>
 
