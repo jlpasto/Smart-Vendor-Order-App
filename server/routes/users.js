@@ -75,7 +75,7 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
       `INSERT INTO users (name, email, password, id_no, role)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING id, name, email, id_no, role, created_at`,
-      [name, email, hashedPassword, id_no, 'user']
+      [name, email, hashedPassword, id_no, 'buyer']
     );
 
     // Return the created user with the PLAINTEXT password (only in response, not stored)

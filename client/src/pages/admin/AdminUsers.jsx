@@ -48,7 +48,7 @@ const AdminUsers = () => {
       email: '',
       id_no: '',
       password: randomPassword,
-      role: 'user'
+      role: 'buyer'
     });
     setShowModal(true);
   };
@@ -139,21 +139,23 @@ const AdminUsers = () => {
     );
   }
 
-  // Filter users based on global search term
+  // Filter users based on global search term and hide admin users
   const filteredUsers = users.filter(user =>
-    user.name?.toLowerCase().includes(globalSearchTerm.toLowerCase()) ||
-    user.email?.toLowerCase().includes(globalSearchTerm.toLowerCase()) ||
-    user.id_no?.toLowerCase().includes(globalSearchTerm.toLowerCase()) ||
-    user.role?.toLowerCase().includes(globalSearchTerm.toLowerCase()) ||
-    user.id.toString().includes(globalSearchTerm)
+    user.role !== 'admin' && (
+      user.name?.toLowerCase().includes(globalSearchTerm.toLowerCase()) ||
+      user.email?.toLowerCase().includes(globalSearchTerm.toLowerCase()) ||
+      user.id_no?.toLowerCase().includes(globalSearchTerm.toLowerCase()) ||
+      user.role?.toLowerCase().includes(globalSearchTerm.toLowerCase()) ||
+      user.id.toString().includes(globalSearchTerm)
+    )
   );
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="page-title mb-0">Manage Users</h1>
+        <h1 className="page-title mb-0">Manage Buyers</h1>
         <button onClick={openCreateModal} className="btn-primary">
-          + Add New User
+          + Add New Buyer
         </button>
       </div>
 
@@ -185,7 +187,7 @@ const AdminUsers = () => {
                       ? 'bg-purple-100 text-purple-800'
                       : 'bg-blue-100 text-blue-800'
                   }`}>
-                    {user.role}
+                    {user.role === 'buyer' ? 'Buyer' : user.role === 'admin' ? 'Admin' : user.role}
                   </span>
                 </td>
                 <td className="py-3 px-4">
@@ -309,11 +311,11 @@ const AdminUsers = () => {
                   <div>
                     <label className="block text-lg font-semibold text-gray-700 mb-2">Role</label>
                     <select
-                      value={formData.role || 'user'}
+                      value={formData.role || 'buyer'}
                       onChange={(e) => handleInputChange('role', e.target.value)}
                       className="input"
                     >
-                      <option value="user">User</option>
+                      <option value="buyer">Buyer</option>
                       <option value="admin">Admin</option>
                     </select>
                   </div>

@@ -43,7 +43,7 @@ const Layout = () => {
     { path: '/admin/products', label: 'Manage Products', icon: '📦' },
     { path: '/admin/vendors', label: 'Manage Vendors', icon: '🏪' },
     { path: '/admin/orders', label: 'Manage Orders', icon: '📋' },
-    { path: '/admin/users', label: 'Manage Users', icon: '👥' },
+    { path: '/admin/users', label: 'Manage Buyers', icon: '👥' },
     { path: '/products', label: 'Browse Products', icon: '🛍️' },
     { path: '/settings', label: 'Settings', icon: '⚙️' },
   ];
@@ -174,7 +174,7 @@ const Layout = () => {
                       type="text"
                       placeholder={
                         location.pathname === '/admin/vendors' ? 'Search Vendors' :
-                        location.pathname === '/admin/users' ? 'Search Users' :
+                        location.pathname === '/admin/users' ? 'Search Buyers' :
                         'Search Products'
                       }
                       value={globalSearchTerm}
