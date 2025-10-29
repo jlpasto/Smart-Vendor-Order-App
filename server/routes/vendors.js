@@ -140,8 +140,8 @@ router.post('/bulk-import', authenticate, requireAdmin, async (req, res) => {
   }
 });
 
-// Get all vendors (public - anyone can view)
-router.get('/', async (req, res) => {
+// Get all vendors (Admin only)
+router.get('/', authenticate, requireAdmin, async (req, res) => {
   try {
     const { search, state, territory } = req.query;
 
@@ -180,8 +180,8 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Get single vendor (public)
-router.get('/:id', async (req, res) => {
+// Get single vendor (Admin only)
+router.get('/:id', authenticate, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const result = await query('SELECT * FROM vendors WHERE id = $1', [id]);
@@ -197,8 +197,8 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Get unique states (for filters)
-router.get('/filters/states', async (req, res) => {
+// Get unique states (for filters) - Admin only
+router.get('/filters/states', authenticate, requireAdmin, async (req, res) => {
   try {
     const result = await query(
       'SELECT DISTINCT state FROM vendors WHERE state IS NOT NULL ORDER BY state'
@@ -210,8 +210,8 @@ router.get('/filters/states', async (req, res) => {
   }
 });
 
-// Get unique territories (for filters)
-router.get('/filters/territories', async (req, res) => {
+// Get unique territories (for filters) - Admin only
+router.get('/filters/territories', authenticate, requireAdmin, async (req, res) => {
   try {
     const result = await query(
       'SELECT DISTINCT territory FROM vendors WHERE territory IS NOT NULL ORDER BY territory'

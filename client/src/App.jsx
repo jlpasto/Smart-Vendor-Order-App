@@ -42,7 +42,14 @@ function App() {
               <Route path="products" element={<ProductsPage />} />
               <Route path="cart" element={<CartPage />} />
               <Route path="orders" element={<OrdersPage />} />
-              <Route path="vendors" element={<VendorsPage />} />
+              <Route
+                path="vendors"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <VendorsPage />
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Admin routes */}
               <Route
