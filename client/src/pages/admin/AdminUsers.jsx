@@ -11,6 +11,8 @@ const AdminUsers = () => {
   const [formData, setFormData] = useState({});
   const [saving, setSaving] = useState(false);
   const [generatedPassword, setGeneratedPassword] = useState('');
+  const [showVendorModal, setShowVendorModal] = useState(false);
+  const [vendorModalUser, setVendorModalUser] = useState(null);
 
   useEffect(() => {
     fetchUsers();
@@ -113,6 +115,16 @@ const AdminUsers = () => {
     setFormData({ ...formData, password: newPassword });
   };
 
+  const openVendorModal = (user) => {
+    setVendorModalUser(user);
+    setShowVendorModal(true);
+  };
+
+  const closeVendorModal = () => {
+    setShowVendorModal(false);
+    setVendorModalUser(null);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -149,6 +161,7 @@ const AdminUsers = () => {
               <th className="text-left py-3 px-4 font-semibold text-gray-700">Email</th>
               <th className="text-left py-3 px-4 font-semibold text-gray-700">ID No</th>
               <th className="text-left py-3 px-4 font-semibold text-gray-700">Role</th>
+              <th className="text-left py-3 px-4 font-semibold text-gray-700">Assigned Vendors</th>
               <th className="text-left py-3 px-4 font-semibold text-gray-700">Created At</th>
               <th className="text-left py-3 px-4 font-semibold text-gray-700">Actions</th>
             </tr>
@@ -168,6 +181,21 @@ const AdminUsers = () => {
                   }`}>
                     {user.role}
                   </span>
+                </td>
+                <td className="py-3 px-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-700">
+                      {user.assigned_vendor_ids && user.assigned_vendor_ids.length > 0
+                        ? `${user.assigned_vendor_ids.length} vendor${user.assigned_vendor_ids.length !== 1 ? 's' : ''}`
+                        : 'All vendors'}
+                    </span>
+                    <button
+                      onClick={() => openVendorModal(user)}
+                      className="px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-xs"
+                    >
+                      View Vendors
+                    </button>
+                  </div>
                 </td>
                 <td className="py-3 px-4">
                   {new Date(user.created_at).toLocaleDateString()}
@@ -304,6 +332,175 @@ const AdminUsers = () => {
           </div>
         </div>
       )}
+
+      {/* Vendor Assignment Modal */}
+      {showVendorModal && vendorModalUser && (
+        <VendorAssignmentModal
+          user={vendorModalUser}
+          onClose={closeVendorModal}
+          onSave={fetchUsers}
+        />
+      )}
+    </div>
+  );
+};
+
+// Vendor Assignment Modal Component
+const VendorAssignmentModal = ({ user, onClose, onSave }) => {
+  const [allVendors, setAllVendors] = useState([]);
+  const [selectedVendorIds, setSelectedVendorIds] = useState(user.assigned_vendor_ids || []);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetchVendors();
+  }, []);
+
+  const fetchVendors = async () => {
+    try {
+      const response = await api.get('/api/vendors');
+      // Sort by name
+      const sortedVendors = response.data.sort((a, b) => a.name.localeCompare(b.name));
+      setAllVendors(sortedVendors);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching vendors:', error);
+      setLoading(false);
+    }
+  };
+
+  const handleToggleVendor = (vendorId) => {
+    setSelectedVendorIds(prev =>
+      prev.includes(vendorId)
+        ? prev.filter(id => id !== vendorId)
+        : [...prev, vendorId]
+    );
+  };
+
+  const handleSelectAll = () => {
+    const filtered = getFilteredVendors();
+    const filteredIds = filtered.map(v => v.id);
+    setSelectedVendorIds([...new Set([...selectedVendorIds, ...filteredIds])]);
+  };
+
+  const handleClearAll = () => {
+    setSelectedVendorIds([]);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await api.put(`/api/users/${user.id}`, {
+        assigned_vendors: selectedVendorIds
+      });
+      alert('Vendor assignments updated successfully!');
+      onSave();
+      onClose();
+    } catch (error) {
+      alert('Error updating vendors: ' + (error.response?.data?.error || 'Unknown error'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const getFilteredVendors = () => {
+    return allVendors.filter(vendor =>
+      vendor.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  };
+
+  const filteredVendors = getFilteredVendors();
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-xl max-w-3xl w-full p-8 max-h-[90vh] overflow-y-auto">
+        <h2 className="text-3xl font-bold text-gray-900 mb-2">
+          Assign Vendors
+        </h2>
+        <p className="text-gray-600 mb-6">
+          Managing vendors for: <span className="font-semibold">{user.name || user.email}</span>
+        </p>
+
+        {/* Search and Actions */}
+        <div className="mb-4 space-y-3">
+          <input
+            type="text"
+            placeholder="Search vendors..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="input w-full"
+          />
+          <div className="flex gap-2 justify-between items-center">
+            <div className="text-sm text-gray-600">
+              <span className="font-semibold">{selectedVendorIds.length}</span> of{' '}
+              <span className="font-semibold">{allVendors.length}</span> vendors selected
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleSelectAll}
+                className="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 font-semibold text-sm"
+              >
+                Select All Shown
+              </button>
+              <button
+                onClick={handleClearAll}
+                className="px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 font-semibold text-sm"
+              >
+                Clear All
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Vendor List */}
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="spinner w-12 h-12 border-4 border-primary-600 border-t-transparent rounded-full"></div>
+          </div>
+        ) : (
+          <div className="border border-gray-200 rounded-lg max-h-96 overflow-y-auto mb-6">
+            {filteredVendors.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                {searchTerm ? 'No vendors found matching your search.' : 'No vendors available.'}
+              </div>
+            ) : (
+              filteredVendors.map((vendor) => (
+                <label
+                  key={vendor.id}
+                  className="flex items-center px-4 py-3 cursor-pointer hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedVendorIds.includes(vendor.id)}
+                    onChange={() => handleToggleVendor(vendor.id)}
+                    className="w-5 h-5 mr-3 cursor-pointer"
+                  />
+                  <span className="text-base text-gray-800">{vendor.name}</span>
+                </label>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className="flex gap-4">
+          <button
+            onClick={handleSave}
+            disabled={saving || loading}
+            className="btn-primary flex-1"
+          >
+            {saving ? 'Saving...' : 'Save Assignments'}
+          </button>
+          <button
+            onClick={onClose}
+            disabled={saving}
+            className="btn-secondary flex-1"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

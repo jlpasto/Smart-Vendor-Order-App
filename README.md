@@ -9,7 +9,29 @@
 
 ---
 
-## ⚡ NEW: Infinite Scrolling Feature
+## ⚡ NEW FEATURES
+
+### 🎯 Vendor Assignment System (2025-10-29) **USES VENDOR IDS**
+
+Control which vendors buyers can see! Administrators can now assign specific vendors to each buyer using proper vendor ID relationships.
+
+**📋 Setup Required:** Run the vendor relationship migration first!
+
+```bash
+# Using pgAdmin (Recommended - See VENDOR_ASSIGNMENT_UPDATED.md)
+# Open: server/migrations/add_vendor_relationships.sql
+```
+
+**Resources:**
+- **[VENDOR_ASSIGNMENT_UPDATED.md](VENDOR_ASSIGNMENT_UPDATED.md)** - ⭐ **READ THIS FIRST** - Uses vendor IDs (not names)
+- **[VENDOR_ASSIGNMENT_GUIDE.md](VENDOR_ASSIGNMENT_GUIDE.md)** - User guide (older - uses names)
+- **[VENDOR_ASSIGNMENT_IMPLEMENTATION_SUMMARY.md](VENDOR_ASSIGNMENT_IMPLEMENTATION_SUMMARY.md)** - Technical summary (older)
+
+**Key Feature:** Uses vendor IDs - vendor name changes won't break assignments!
+
+**Benefits:** Territory-based access control, improved buyer experience, streamlined product catalogs, future-proof design!
+
+### 📜 Infinite Scrolling Feature
 
 **Deploying to production?** You must run the database migration script first!
 

@@ -30,7 +30,7 @@
 - ✅ Empty cart validation
 
 #### Order Management
-- ✅ Submit orders as batches with auto-generated batch numbers (BATCH-2025-XXXXXX)
+- ✅ Submit orders as batches
 - ✅ Email confirmation upon order submission
 - ✅ View order history grouped by month
 - ✅ Collapsible batch view
@@ -79,6 +79,21 @@
 - ✅ Real-time GM% calculation
 - ✅ Stock level management
 
+### 👥 User Management (Admin)
+
+- ✅ View all users with details
+- ✅ Create new users with auto-generated passwords
+- ✅ Edit user information
+- ✅ Delete users (with confirmation)
+- ✅ **Vendor Assignment System** 🆕
+  - Assign specific vendors to buyers
+  - Search and select vendors via modal interface
+  - Uses vendor IDs (name changes don't break assignments)
+  - Buyers only see products from assigned vendors
+  - Admins see all products (no restrictions)
+  - Select All / Clear All functionality
+  - Visual vendor count display
+
 ### 👤 Authentication & Security
 
 - ✅ User signup with email and password
@@ -89,6 +104,7 @@
 - ✅ Session persistence
 - ✅ **Optional login toggle for testing** (ENABLE_LOGIN=false)
 - ✅ Secure API endpoints with middleware
+- ✅ **Vendor-based access control** (buyers restricted to assigned vendors)
 
 ### 📧 Email Notifications
 

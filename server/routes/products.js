@@ -23,7 +23,7 @@ const decodeCursor = (cursor) => {
 };
 
 // Get all products with optional filters
-router.get('/', async (req, res) => {
+router.get('/', authenticate, async (req, res) => {
   try {
     const {
       search,
@@ -75,6 +75,33 @@ router.get('/', async (req, res) => {
     let queryText = 'SELECT * FROM products WHERE 1=1';
     const queryParams = [];
     let paramCount = 1;
+
+    // Apply vendor filtering for non-admin users (buyers)
+    if (req.user && req.user.role !== 'admin') {
+      // Get user's assigned vendor IDs
+      const userResult = await query(
+        'SELECT assigned_vendor_ids FROM users WHERE id = $1',
+        [req.user.id]
+      );
+
+      if (userResult.rows.length > 0) {
+        const assignedVendorIds = userResult.rows[0].assigned_vendor_ids;
+
+        // If user has assigned vendor IDs, filter products by those vendor IDs
+        if (assignedVendorIds && assignedVendorIds.length > 0) {
+          queryText += ` AND vendor_id = ANY($${paramCount})`;
+          queryParams.push(assignedVendorIds);
+          paramCount++;
+        } else {
+          // If no vendors assigned, return empty result set
+          return res.json(useCursorPagination ? {
+            items: [],
+            pagination: { limit: pageLimit, nextCursor: null, hasMore: false },
+            meta: { count: 0, sortField: sort || 'vendor_name', sortOrder: order || 'asc' }
+          } : []);
+        }
+      }
+    }
 
     // Decode and apply cursor if provided
     if (cursor) {
