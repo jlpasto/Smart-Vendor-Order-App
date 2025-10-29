@@ -100,10 +100,22 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    // Clear all authentication data
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('demoUser');
+
+    // Clear session storage as well
+    sessionStorage.clear();
+
+    // Remove Authorization header from API requests
     delete api.defaults.headers.common['Authorization'];
+
+    // Clear user state
     setUser(null);
+
+    // Optional: Clear any other app-specific data
+    // localStorage.removeItem('cart'); // Uncomment if you want to clear cart on logout
   };
 
   const isAdmin = () => {

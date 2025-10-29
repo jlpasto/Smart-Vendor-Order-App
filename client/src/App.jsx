@@ -33,7 +33,11 @@ function App() {
             <Route path="/signup" element={<SignupPage />} />
 
             {/* Protected routes with layout */}
-            <Route path="/" element={<Layout />}>
+            <Route path="/" element={
+              <ProtectedRoute>
+                <Layout />
+              </ProtectedRoute>
+            }>
               <Route index element={<HomePage />} />
               <Route path="products" element={<ProductsPage />} />
               <Route path="cart" element={<CartPage />} />

@@ -1,4 +1,4 @@
-import { Outlet, Link, useLocation } from 'react-router-dom';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useSearch } from '../context/SearchContext';
@@ -10,8 +10,14 @@ const Layout = () => {
   const { getCartCount } = useCart();
   const { globalSearchTerm, setGlobalSearchTerm } = useSearch();
   const location = useLocation();
+  const navigate = useNavigate();
   const cartCount = getCartCount();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   const isActive = (path) => {
     // Special case for /admin - only match exact path, not sub-routes
@@ -214,7 +220,7 @@ const Layout = () => {
                   </div>
                   {user && (
                     <button
-                      onClick={logout}
+                      onClick={handleLogout}
                       className="hidden sm:block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg font-semibold transition-colors"
                     >
                       Logout
