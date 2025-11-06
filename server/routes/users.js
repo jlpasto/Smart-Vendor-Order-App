@@ -20,7 +20,7 @@ const generatePassword = () => {
 router.get('/', authenticate, requireAdmin, async (req, res) => {
   try {
     const result = await query(
-      'SELECT id, name, email, id_no, role, assigned_vendor_ids, created_at FROM users ORDER BY created_at DESC'
+      'SELECT id, name, email, id_no, role, assigned_vendor_ids, assigned_product_ids, created_at FROM users ORDER BY created_at DESC'
     );
     res.json(result.rows);
   } catch (error) {
@@ -34,7 +34,7 @@ router.get('/:id', authenticate, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const result = await query(
-      'SELECT id, name, email, id_no, role, assigned_vendor_ids, created_at FROM users WHERE id = $1',
+      'SELECT id, name, email, id_no, role, assigned_vendor_ids, assigned_product_ids, created_at FROM users WHERE id = $1',
       [id]
     );
 
@@ -93,7 +93,7 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
 router.put('/:id', authenticate, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, id_no, password, role, assigned_vendors } = req.body;
+    const { name, email, id_no, password, role, assigned_vendors, assigned_products } = req.body;
 
     // Build dynamic update query
     const updates = [];
@@ -163,6 +163,29 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
       paramCount++;
     }
 
+    if (assigned_products !== undefined) {
+      // Validate product IDs exist in products table
+      if (Array.isArray(assigned_products) && assigned_products.length > 0) {
+        const productCheck = await query(
+          'SELECT id FROM products WHERE id = ANY($1)',
+          [assigned_products]
+        );
+
+        const validProductIds = productCheck.rows.map(row => row.id);
+        const invalidProductIds = assigned_products.filter(id => !validProductIds.includes(id));
+
+        if (invalidProductIds.length > 0) {
+          return res.status(400).json({
+            error: `Invalid product IDs: ${invalidProductIds.join(', ')}`
+          });
+        }
+      }
+
+      updates.push(`assigned_product_ids = $${paramCount}`);
+      values.push(assigned_products || []);
+      paramCount++;
+    }
+
     if (updates.length === 0) {
       return res.status(400).json({ error: 'No fields to update' });
     }
@@ -171,7 +194,7 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
     const result = await query(
       `UPDATE users SET ${updates.join(', ')}
        WHERE id = $${paramCount}
-       RETURNING id, name, email, id_no, role, assigned_vendor_ids, created_at`,
+       RETURNING id, name, email, id_no, role, assigned_vendor_ids, assigned_product_ids, created_at`,
       values
     );
 

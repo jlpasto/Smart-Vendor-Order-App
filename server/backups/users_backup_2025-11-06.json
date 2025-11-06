@@ -1,0 +1,29 @@
+{
+  "backup_date": "2025-11-06T17:59:27.557Z",
+  "database": "wholesale_app_4csh",
+  "total_users": 2,
+  "users": [
+    {
+      "id": 1,
+      "name": "Admin User",
+      "email": "admin@demo.com",
+      "id_no": null,
+      "role": "admin",
+      "assigned_vendor_ids": [],
+      "created_at": "2025-10-26T10:13:12.916Z"
+    },
+    {
+      "id": 2,
+      "name": "AVA",
+      "email": "ava@demo.com",
+      "id_no": "",
+      "role": "user",
+      "assigned_vendor_ids": [
+        1,
+        2,
+        4
+      ],
+      "created_at": "2025-10-26T10:13:13.083Z"
+    }
+  ]
+}

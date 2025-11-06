@@ -76,24 +76,24 @@ router.get('/', authenticate, async (req, res) => {
     const queryParams = [];
     let paramCount = 1;
 
-    // Apply vendor filtering for non-admin users (buyers)
+    // Apply product filtering for non-admin users (buyers)
     if (req.user && req.user.role !== 'admin') {
-      // Get user's assigned vendor IDs
+      // Get user's assigned product IDs
       const userResult = await query(
-        'SELECT assigned_vendor_ids FROM users WHERE id = $1',
+        'SELECT assigned_product_ids FROM users WHERE id = $1',
         [req.user.id]
       );
 
       if (userResult.rows.length > 0) {
-        const assignedVendorIds = userResult.rows[0].assigned_vendor_ids;
+        const assignedProductIds = userResult.rows[0].assigned_product_ids;
 
-        // If user has assigned vendor IDs, filter products by those vendor IDs
-        if (assignedVendorIds && assignedVendorIds.length > 0) {
-          queryText += ` AND vendor_id = ANY($${paramCount})`;
-          queryParams.push(assignedVendorIds);
+        // If user has assigned product IDs, filter products by those product IDs
+        if (assignedProductIds && assignedProductIds.length > 0) {
+          queryText += ` AND id = ANY($${paramCount})`;
+          queryParams.push(assignedProductIds);
           paramCount++;
         } else {
-          // If no vendors assigned, return empty result set
+          // If no products assigned, return empty result set
           return res.json(useCursorPagination ? {
             items: [],
             pagination: { limit: pageLimit, nextCursor: null, hasMore: false },
@@ -616,7 +616,78 @@ router.get('/ids', authenticate, requireAdmin, async (req, res) => {
   }
 });
 
+// Get products grouped by vendor (for product assignment UI)
+// IMPORTANT: This must come BEFORE /:id route to avoid matching "grouped-by-vendor" as an ID
+router.get('/grouped-by-vendor', authenticate, requireAdmin, async (req, res) => {
+  try {
+    // Get all products grouped by vendor_name
+    const productsResult = await query(`
+      SELECT
+        id,
+        product_name,
+        vendor_name,
+        vendor_connect_id,
+        size,
+        wholesale_case_price,
+        wholesale_unit_price,
+        retail_unit_price,
+        product_image,
+        main_category,
+        sub_category
+      FROM products
+      WHERE vendor_name IS NOT NULL AND vendor_name != ''
+      ORDER BY vendor_name ASC, product_name ASC
+    `);
+
+    // Group products by vendor_name
+    const vendorMap = new Map();
+
+    productsResult.rows.forEach(product => {
+      const vendorName = product.vendor_name;
+
+      if (!vendorMap.has(vendorName)) {
+        vendorMap.set(vendorName, {
+          id: vendorName, // Use vendor_name as ID since we're grouping by name
+          name: vendorName,
+          logo_url: null,
+          website_url: null,
+          products: [],
+          product_count: 0
+        });
+      }
+
+      const vendor = vendorMap.get(vendorName);
+      vendor.products.push({
+        id: product.id,
+        product_name: product.product_name,
+        vendor_connect_id: product.vendor_connect_id,
+        size: product.size,
+        wholesale_case_price: product.wholesale_case_price,
+        wholesale_unit_price: product.wholesale_unit_price,
+        retail_unit_price: product.retail_unit_price,
+        product_image: product.product_image,
+        main_category: product.main_category,
+        sub_category: product.sub_category
+      });
+      vendor.product_count++;
+    });
+
+    // Convert map to array
+    const vendors = Array.from(vendorMap.values());
+
+    res.json({
+      vendors: vendors,
+      total_vendors: vendors.length,
+      total_products: productsResult.rows.length
+    });
+  } catch (error) {
+    console.error('Error fetching products grouped by vendor:', error);
+    res.status(500).json({ error: 'Error fetching products grouped by vendor' });
+  }
+});
+
 // Get single product
+// IMPORTANT: This must come AFTER specific routes like /grouped-by-vendor
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;

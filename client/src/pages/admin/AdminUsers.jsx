@@ -169,7 +169,7 @@ const AdminUsers = () => {
               <th className="text-left py-3 px-4 font-semibold text-gray-700">Email</th>
               <th className="text-left py-3 px-4 font-semibold text-gray-700">ID No</th>
               <th className="text-left py-3 px-4 font-semibold text-gray-700">Role</th>
-              <th className="text-left py-3 px-4 font-semibold text-gray-700">Assigned Vendors</th>
+              <th className="text-left py-3 px-4 font-semibold text-gray-700">Assigned Products</th>
               <th className="text-left py-3 px-4 font-semibold text-gray-700">Created At</th>
               <th className="text-left py-3 px-4 font-semibold text-gray-700">Actions</th>
             </tr>
@@ -193,15 +193,15 @@ const AdminUsers = () => {
                 <td className="py-3 px-4">
                   <div className="flex items-center gap-2">
                     <span className="text-gray-700">
-                      {user.assigned_vendor_ids && user.assigned_vendor_ids.length > 0
-                        ? `${user.assigned_vendor_ids.length} vendor${user.assigned_vendor_ids.length !== 1 ? 's' : ''}`
-                        : 'All vendors'}
+                      {user.assigned_product_ids && user.assigned_product_ids.length > 0
+                        ? `${user.assigned_product_ids.length} product${user.assigned_product_ids.length !== 1 ? 's' : ''}`
+                        : 'No products'}
                     </span>
                     <button
                       onClick={() => openVendorModal(user)}
                       className="px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-xs"
                     >
-                      View Vendors
+                      Manage Products
                     </button>
                   </div>
                 </td>
@@ -404,107 +404,193 @@ const AdminUsers = () => {
   );
 };
 
-// Vendor Assignment Modal Component
+// Product Assignment Modal Component (with collapsible vendors)
 const VendorAssignmentModal = ({ user, onClose, onSave }) => {
-  const [allVendors, setAllVendors] = useState([]);
-  const [selectedVendorIds, setSelectedVendorIds] = useState(user.assigned_vendor_ids || []);
+  const [vendorsWithProducts, setVendorsWithProducts] = useState([]);
+  const [selectedProductIds, setSelectedProductIds] = useState(user.assigned_product_ids || []);
+  const [expandedVendors, setExpandedVendors] = useState(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetchVendors();
+    fetchVendorsWithProducts();
   }, []);
 
-  const fetchVendors = async () => {
+  const fetchVendorsWithProducts = async () => {
     try {
-      const response = await api.get('/api/vendors');
-      // Sort by name
-      const sortedVendors = response.data.sort((a, b) => a.name.localeCompare(b.name));
-      setAllVendors(sortedVendors);
+      const response = await api.get('/api/products/grouped-by-vendor');
+      setVendorsWithProducts(response.data.vendors);
       setLoading(false);
     } catch (error) {
-      console.error('Error fetching vendors:', error);
+      console.error('Error fetching vendors with products:', error);
       setLoading(false);
     }
   };
 
+  // Toggle vendor expansion
   const handleToggleVendor = (vendorId) => {
-    setSelectedVendorIds(prev =>
-      prev.includes(vendorId)
-        ? prev.filter(id => id !== vendorId)
-        : [...prev, vendorId]
+    setExpandedVendors(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(vendorId)) {
+        newSet.delete(vendorId);
+      } else {
+        newSet.add(vendorId);
+      }
+      return newSet;
+    });
+  };
+
+  // Toggle vendor checkbox (selects/deselects ALL products under vendor)
+  const handleVendorCheckbox = (vendor) => {
+    const vendorProductIds = vendor.products.map(p => p.id);
+    const allSelected = vendorProductIds.every(id => selectedProductIds.includes(id));
+
+    if (allSelected) {
+      // Deselect all products from this vendor
+      setSelectedProductIds(prev =>
+        prev.filter(id => !vendorProductIds.includes(id))
+      );
+    } else {
+      // Select all products from this vendor
+      setSelectedProductIds(prev =>
+        [...new Set([...prev, ...vendorProductIds])]
+      );
+    }
+  };
+
+  // Toggle individual product checkbox
+  const handleProductCheckbox = (productId) => {
+    setSelectedProductIds(prev =>
+      prev.includes(productId)
+        ? prev.filter(id => id !== productId)
+        : [...prev, productId]
     );
   };
 
+  // Calculate vendor checkbox state (none, all, or partial)
+  const getVendorCheckboxState = (vendor) => {
+    const vendorProductIds = vendor.products.map(p => p.id);
+    const selectedCount = vendorProductIds.filter(id =>
+      selectedProductIds.includes(id)
+    ).length;
+
+    if (selectedCount === 0) return 'none';
+    if (selectedCount === vendorProductIds.length) return 'all';
+    return 'partial'; // indeterminate state
+  };
+
+  // Select all products (from all vendors)
   const handleSelectAll = () => {
-    const filtered = getFilteredVendors();
-    const filteredIds = filtered.map(v => v.id);
-    setSelectedVendorIds([...new Set([...selectedVendorIds, ...filteredIds])]);
+    const allProductIds = filteredVendors.flatMap(v => v.products.map(p => p.id));
+    setSelectedProductIds([...new Set([...selectedProductIds, ...allProductIds])]);
   };
 
+  // Clear all selections
   const handleClearAll = () => {
-    setSelectedVendorIds([]);
+    setSelectedProductIds([]);
   };
 
+  // Expand all vendors
+  const handleExpandAll = () => {
+    const allVendorIds = filteredVendors.map(v => v.id);
+    setExpandedVendors(new Set(allVendorIds));
+  };
+
+  // Collapse all vendors
+  const handleCollapseAll = () => {
+    setExpandedVendors(new Set());
+  };
+
+  // Save assignments
   const handleSave = async () => {
     setSaving(true);
     try {
       await api.put(`/api/users/${user.id}`, {
-        assigned_vendors: selectedVendorIds
+        assigned_products: selectedProductIds
       });
-      alert('Vendor assignments updated successfully!');
+      alert('Product assignments updated successfully!');
       onSave();
       onClose();
     } catch (error) {
-      alert('Error updating vendors: ' + (error.response?.data?.error || 'Unknown error'));
+      alert('Error updating products: ' + (error.response?.data?.error || 'Unknown error'));
     } finally {
       setSaving(false);
     }
   };
 
+  // Filter vendors and products by search term
   const getFilteredVendors = () => {
-    return allVendors.filter(vendor =>
-      vendor.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    if (!searchTerm.trim()) return vendorsWithProducts;
+
+    return vendorsWithProducts.map(vendor => {
+      const matchesVendor = vendor.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const filteredProducts = vendor.products.filter(product =>
+        product.product_name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+
+      // Include vendor if name matches or if any products match
+      if (matchesVendor || filteredProducts.length > 0) {
+        return {
+          ...vendor,
+          products: matchesVendor ? vendor.products : filteredProducts
+        };
+      }
+      return null;
+    }).filter(v => v !== null);
   };
 
   const filteredVendors = getFilteredVendors();
+  const totalProducts = vendorsWithProducts.reduce((sum, v) => sum + v.product_count, 0);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl max-w-3xl w-full p-8 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-xl max-w-5xl w-full p-8 max-h-[90vh] flex flex-col">
         <h2 className="text-3xl font-bold text-gray-900 mb-2">
-          Assign Vendors
+          Assign Products
         </h2>
         <p className="text-gray-600 mb-6">
-          Managing vendors for: <span className="font-semibold">{user.name || user.email}</span>
+          Managing product access for: <span className="font-semibold">{user.name || user.email}</span>
         </p>
 
-        {/* Search and Actions */}
+        {/* Search and Stats */}
         <div className="mb-4 space-y-3">
           <input
             type="text"
-            placeholder="Search vendors..."
+            placeholder="Search vendors or products..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="input w-full"
           />
-          <div className="flex gap-2 justify-between items-center">
+          <div className="flex gap-2 justify-between items-center flex-wrap">
             <div className="text-sm text-gray-600">
-              <span className="font-semibold">{selectedVendorIds.length}</span> of{' '}
-              <span className="font-semibold">{allVendors.length}</span> vendors selected
+              <span className="font-semibold text-primary-600">{selectedProductIds.length}</span> of{' '}
+              <span className="font-semibold">{totalProducts}</span> products selected
+              {' '}across{' '}
+              <span className="font-semibold">{vendorsWithProducts.length}</span> vendors
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={handleExpandAll}
+                className="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-semibold text-xs"
+              >
+                Expand All
+              </button>
+              <button
+                onClick={handleCollapseAll}
+                className="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-semibold text-xs"
+              >
+                Collapse All
+              </button>
               <button
                 onClick={handleSelectAll}
-                className="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 font-semibold text-sm"
+                className="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 font-semibold text-xs"
               >
-                Select All Shown
+                Select All
               </button>
               <button
                 onClick={handleClearAll}
-                className="px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 font-semibold text-sm"
+                className="px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 font-semibold text-xs"
               >
                 Clear All
               </button>
@@ -512,32 +598,104 @@ const VendorAssignmentModal = ({ user, onClose, onSave }) => {
           </div>
         </div>
 
-        {/* Vendor List */}
+        {/* Vendor List with Products */}
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <div className="spinner w-12 h-12 border-4 border-primary-600 border-t-transparent rounded-full"></div>
           </div>
         ) : (
-          <div className="border border-gray-200 rounded-lg max-h-96 overflow-y-auto mb-6">
+          <div className="border border-gray-200 rounded-lg overflow-hidden flex-1 overflow-y-auto mb-6">
             {filteredVendors.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
-                {searchTerm ? 'No vendors found matching your search.' : 'No vendors available.'}
+                {searchTerm ? 'No vendors or products found matching your search.' : 'No vendors with products available.'}
               </div>
             ) : (
-              filteredVendors.map((vendor) => (
-                <label
-                  key={vendor.id}
-                  className="flex items-center px-4 py-3 cursor-pointer hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedVendorIds.includes(vendor.id)}
-                    onChange={() => handleToggleVendor(vendor.id)}
-                    className="w-5 h-5 mr-3 cursor-pointer"
-                  />
-                  <span className="text-base text-gray-800">{vendor.name}</span>
-                </label>
-              ))
+              <div className="divide-y divide-gray-200">
+                {filteredVendors.map((vendor) => {
+                  const isExpanded = expandedVendors.has(vendor.id);
+                  const checkboxState = getVendorCheckboxState(vendor);
+                  const selectedCount = vendor.products.filter(p =>
+                    selectedProductIds.includes(p.id)
+                  ).length;
+
+                  return (
+                    <div key={vendor.id} className="bg-white">
+                      {/* Vendor Header */}
+                      <div className="flex items-center px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors">
+                        {/* Expand/Collapse Button */}
+                        <button
+                          onClick={() => handleToggleVendor(vendor.id)}
+                          className="mr-2 text-gray-600 hover:text-gray-800 transition-colors"
+                        >
+                          {isExpanded ? (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          ) : (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          )}
+                        </button>
+
+                        {/* Vendor Checkbox */}
+                        <input
+                          type="checkbox"
+                          checked={checkboxState === 'all'}
+                          ref={el => {
+                            if (el) el.indeterminate = checkboxState === 'partial';
+                          }}
+                          onChange={() => handleVendorCheckbox(vendor)}
+                          className="w-5 h-5 mr-3 cursor-pointer"
+                        />
+
+                        {/* Vendor Name */}
+                        <div className="flex-1">
+                          <span className="text-base font-semibold text-gray-900">{vendor.name}</span>
+                          <span className="text-sm text-gray-500 ml-2">
+                            ({vendor.product_count} product{vendor.product_count !== 1 ? 's' : ''})
+                          </span>
+                        </div>
+
+                        {/* Selection Badge */}
+                        {selectedCount > 0 && (
+                          <span className="px-2 py-1 bg-primary-100 text-primary-700 rounded-full text-xs font-semibold">
+                            {selectedCount} of {vendor.product_count} selected
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Collapsible Product List */}
+                      {isExpanded && (
+                        <div className="bg-white">
+                          {vendor.products.map(product => (
+                            <label
+                              key={product.id}
+                              className="flex items-center px-4 py-2 pl-12 cursor-pointer hover:bg-gray-50 border-t border-gray-100"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedProductIds.includes(product.id)}
+                                onChange={() => handleProductCheckbox(product.id)}
+                                className="w-4 h-4 mr-3 cursor-pointer"
+                              />
+                              <div className="flex-1">
+                                <span className="text-sm text-gray-800">{product.product_name}</span>
+                                <span className="text-xs text-gray-500 ml-2">(#{product.id})</span>
+                              </div>
+                              {product.wholesale_case_price && (
+                                <span className="text-xs text-gray-600">
+                                  ${parseFloat(product.wholesale_case_price).toFixed(2)}
+                                </span>
+                              )}
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
         )}
