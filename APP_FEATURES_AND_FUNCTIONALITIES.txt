@@ -1,0 +1,441 @@
+SMART VENDOR ORDER APP - FEATURES AND FUNCTIONALITIES
+
+SYSTEM OVERVIEW
+A Progressive Web Application (PWA) for wholesale ordering with role-based access control (Admin and Buyer roles), built with React frontend and Express/PostgreSQL backend.
+
+================================================================================
+
+1. USER AUTHENTICATION & MANAGEMENT
+
+Authentication System:
+- Secure login with JWT (JSON Web Token) based authentication
+- Password reset functionality via email
+- Bcrypt password hashing for security
+- Session persistence with automatic token refresh
+- Protected routes requiring authentication
+
+User Management (Admin Only):
+- Create new buyer accounts with auto-generated secure passwords
+- Edit user profiles (name, email, ID number)
+- Password reset/regeneration feature for buyers
+- Role assignment (Admin/Buyer)
+- Delete user accounts (with self-deletion prevention)
+- View all buyers in the system
+- Manual password generation with copy-to-clipboard functionality
+
+SPECIAL LOGIC - Vendor Assignment System:
+- Admins can assign specific vendors to each buyer
+- Buyers only see products from their assigned vendors
+- If no vendors are assigned to a buyer, they see all vendors
+- Vendor assignment modal with searchable vendor list
+- Select all/clear all functionality for quick assignment
+- Real-time display of assigned vendor count per buyer
+
+================================================================================
+
+2. PRODUCT CATALOG & MANAGEMENT
+
+Product Display (Buyer View):
+- Infinite scroll pagination for smooth browsing (loads 20 products at a time)
+- Products grouped by vendor for easy navigation
+- Compact product cards showing:
+  - Product image
+  - Product ID badge
+  - Product name
+  - Wholesale unit price
+  - Wholesale case price
+  - MSRP (Retail unit price)
+  - Gross margin percentage (GM%)
+- Quick "Add to Cart" button on each product card
+- Visual feedback when items are added to cart
+- Product detail modal with full information
+- Navigation between products in modal view
+
+Product Filtering & Search:
+- Global search across product names, descriptions, vendors
+- Advanced filtering system with 15+ filter criteria:
+  - Product ID
+  - Vendor Connect ID
+  - Product Name (partial match)
+  - Vendor (single select)
+  - State (single select)
+  - Main Category (multi-select)
+  - Sub-Category (multi-select)
+  - Allergens (multi-select with "match any" logic)
+  - Dietary Preferences (multi-select)
+  - Cuisine Type
+  - Seasonal/Featured status
+  - Size (partial match)
+  - UPC (exact match)
+  - Case Pack (min/max range)
+  - Wholesale Case Price (min/max range)
+  - Wholesale Unit Price (min/max range)
+  - MSRP (min/max range)
+  - Gross Margin % (min/max range)
+  - Case Minimum (min/max range)
+  - Shelf Life (partial match)
+  - Delivery Info (partial match)
+  - Notes (partial match)
+
+Sorting Options:
+- Sort by Product Name (A-Z or Z-A)
+- Sort by Vendor Name (A-Z or Z-A)
+- Toggle between ascending/descending order
+
+Product Management (Admin Only):
+- Create new products with comprehensive data entry form
+- Edit existing products
+- Delete individual products
+- Bulk delete products with:
+  - Select all on current page
+  - Select all across all pages (with filter support)
+  - Visual confirmation of selected count
+- Bulk import products via CSV or Excel files
+- Downloadable import template with sample data
+- Import results showing created/updated/failed counts
+- Support for both creating new and updating existing products via import
+
+Product Data Fields:
+- Vendor Connect ID
+- Vendor Name
+- Product Name
+- Product Description/Notes
+- Main Category
+- Sub-Category
+- Allergens (comma-separated)
+- Dietary Preferences (comma-separated)
+- Cuisine Type
+- Seasonal and Featured designation
+- Size
+- Case Pack
+- UPC code
+- Wholesale Case Price
+- Wholesale Unit Price
+- Retail Unit Price (MSRP)
+- Gross Margin % (auto-calculated)
+- Case Minimum order quantity
+- Shelf Life information
+- State/Territory
+- Delivery Information
+- Product Image URL
+- Stock Level
+- Featured/Popular/New/Seasonal flags
+
+SPECIAL LOGIC - Cursor-Based Pagination:
+- Efficient infinite scroll using cursor-based pagination
+- Prevents duplicate items during concurrent data changes
+- Smooth loading experience with "scroll for more" indicator
+- "Back to top" button when reaching end of results
+- Load indicator showing current progress
+
+================================================================================
+
+3. SHOPPING CART & ORDERING
+
+Shopping Cart Features:
+- Add products to cart with specified quantities
+- Visual feedback when items added ("✓ Added")
+- View cart organized by vendor
+- Adjust quantities with +/- buttons or direct input
+- Remove individual items from cart
+- Real-time cart total calculation
+- Cart badge showing item count in navigation
+- Persistent cart (survives page refreshes)
+
+Cart Display:
+- Products grouped by vendor for organized ordering
+- Vendor subtotals displayed
+- Individual item totals
+- Order summary sidebar with:
+  - Total item count
+  - Total units
+  - Breakdown by vendor
+  - Grand total
+  - Current user email confirmation
+
+Order Submission:
+- One-click order submission
+- Automatic batch order number generation (format: BATCH-YYYYMMDD-XXXX)
+- All items in cart submitted as a single batch order
+- Email confirmation sent upon submission
+- Cart automatically cleared after successful submission
+- Redirect to orders page after submission
+
+================================================================================
+
+4. ORDER MANAGEMENT & TRACKING
+
+Order Tracking (Buyer View):
+- View all past orders organized by month/year
+- Date range filtering
+- Order batches displayed with:
+  - Batch order number
+  - Submission date
+  - Item count
+  - Total amount
+  - Current status (Pending/Completed/Cancelled)
+  - Admin notes (if any)
+- Expandable order details showing:
+  - Individual products
+  - Quantities ordered
+  - Prices per item
+  - Vendor information
+
+Order Reordering Features:
+- "Buy Again" button to reorder entire batch
+- Checks product availability before reordering
+- Adds all available items to cart at original quantities
+- Alerts user about unavailable products
+- Individual "Add to Cart" for single items from past orders
+- Automatic navigation to cart after reorder
+
+Order PDF Export:
+- Download order receipts as PDF
+- Professional formatting with order details
+- Itemized list with quantities and prices
+- Batch total and admin notes included
+
+Order Management (Admin View):
+- View all orders from all buyers
+- Filter by:
+  - Vendor
+  - Status (Pending/Completed/Cancelled)
+  - Date range (start/end dates)
+- Orders grouped by batch number
+- Batch-level information display
+- Order statistics dashboard showing:
+  - Total orders
+  - Pending orders count
+  - Completed orders count
+  - Total revenue
+
+Order Status Updates (Admin Only):
+- Update order status (Pending/Completed/Cancelled)
+- Add admin notes visible to customers
+- Automatic email notification sent to buyer upon status change
+- Notes displayed in buyer's order history
+
+SPECIAL LOGIC - Batch Ordering System:
+- All items in a cart are submitted as a single "batch" order
+- Each batch gets a unique identifier (BATCH-YYYYMMDD-XXXX)
+- Batch contains multiple line items (products)
+- Status changes affect the entire batch
+- Buyers can view and reorder entire batches
+
+================================================================================
+
+5. VENDOR MANAGEMENT
+
+Vendor Display:
+- Grid view of all vendors with logos
+- Vendor cards showing:
+  - Company logo
+  - Vendor name
+  - Website link
+- Click to view full vendor details
+- Search vendors by name, state, city, description
+
+Vendor Management (Admin Only):
+- Create new vendors
+- Edit vendor information
+- Delete vendors
+- Bulk import vendors via CSV/Excel
+- Downloadable vendor import template
+- Three-dot menu for quick edit/delete access
+
+Vendor Information:
+- Vendor Connect ID (internal reference)
+- Company Name
+- Website URL
+- Logo URL
+- Phone number
+- Email address
+- Physical address
+- State/Territory
+- Service territory
+
+SPECIAL LOGIC - Vendor-Product Relationship:
+- Products reference vendors by name (not foreign key)
+- Flexible vendor assignments allow historical data preservation
+- Buyers' vendor assignments control product visibility
+- Admin can view all vendors regardless of assignment
+
+================================================================================
+
+6. ADMIN DASHBOARD
+
+Dashboard Overview:
+- Quick access cards for:
+  - Manage Orders
+  - Manage Products
+- Real-time statistics:
+  - Total orders count
+  - Pending orders count
+  - Completed orders count
+  - Total revenue
+- Recent orders table (5 most recent)
+- Quick navigation to detailed management pages
+
+Navigation Structure:
+- Admin-only menu items:
+  - Dashboard
+  - Manage Orders
+  - Manage Products
+  - Manage Vendors
+  - Manage Buyers
+- Buyer menu items:
+  - Products
+  - Cart
+  - Orders
+
+================================================================================
+
+7. ADVANCED FEATURES & USER EXPERIENCE
+
+Global Search:
+- Search bar accessible from all pages
+- Real-time search across products
+- Searches product names, vendor names, descriptions, categories
+
+Filter System:
+- Modal-based filter interface
+- Two-step selection (choose field, then set criteria)
+- Multiple active filters simultaneously
+- Filter indicator showing active filter count
+- Clear all filters option
+- Filters persist across pagination
+- Applied filters shown in detail panel
+
+Responsive Design:
+- Mobile-first approach
+- Optimized for tablets and desktop
+- Touch-friendly interface
+- Adaptive layouts for different screen sizes
+
+Performance Optimization:
+- Infinite scroll reduces initial load time
+- Lazy loading of images
+- Efficient database queries with indexed fields
+- Cursor-based pagination prevents N+1 queries
+- Memoized calculations for cart totals
+
+Email Notifications:
+- Order confirmation emails upon submission
+- Order status update emails
+- Password reset emails
+- Emails sent via Nodemailer
+
+Progressive Web App (PWA) Features:
+- Installable on mobile devices
+- Works offline (cached resources)
+- App-like experience
+- Fast load times
+
+================================================================================
+
+8. SECURITY & DATA MANAGEMENT
+
+Security Features:
+- Password hashing with bcrypt (10 salt rounds)
+- JWT token-based authentication
+- Protected API routes with authentication middleware
+- Role-based access control (RBAC)
+- SQL injection prevention via parameterized queries
+- CORS configuration for secure cross-origin requests
+- XSS protection
+
+Data Import/Export:
+- CSV and Excel file support (.csv, .xlsx, .xls)
+- Bulk product import with validation
+- Bulk vendor import
+- Template downloads with sample data
+- Import error reporting
+- Create or update logic (based on ID presence)
+- Price formatting cleanup (removes $ and commas)
+
+Data Validation:
+- Required field validation on forms
+- Email format validation
+- Duplicate email prevention
+- Vendor ID validation on assignment
+- Price range validations
+- Quantity minimum of 1 for cart items
+
+================================================================================
+
+9. SPECIAL BUSINESS LOGIC
+
+Gross Margin Calculation:
+- Automatically calculated: ((MSRP - Wholesale Unit Price) / MSRP) × 100
+- Displayed as percentage with one decimal
+- Color-coded display (green for positive margins)
+
+Price Display:
+- Wholesale Case Price (price per full case)
+- Wholesale Unit Price (price per individual unit)
+- MSRP (suggested retail price)
+- All prices displayed with 2 decimal places
+- Currency formatting with $ symbol
+
+Inventory Tracking:
+- Stock levels displayed for each product
+- Low stock visual indicators
+- Stock level editable by admins
+
+Order Quantity Management:
+- Case Minimum field defines minimum order quantity
+- Buyers can order in any quantity (cases)
+- Cart tracks quantities independently per product
+
+Vendor Filtering for Buyers:
+- Backend enforcement of vendor assignments
+- Buyers cannot access products outside assigned vendors
+- Empty assignment array means access to all vendors
+- Query-level filtering for security
+
+================================================================================
+
+10. TECHNICAL CAPABILITIES
+
+Backend API Endpoints:
+- RESTful API architecture
+- Authentication endpoints (login, signup, password reset)
+- Product CRUD operations
+- Order submission and retrieval
+- User management
+- Vendor management
+- Bulk operations (import, delete)
+- Filter value endpoints (for populating dropdowns)
+
+Database:
+- PostgreSQL relational database
+- Indexed fields for fast queries
+- JSONB fields for flexible data (assigned_vendor_ids)
+- Timestamp tracking (created_at, updated_at)
+- Batch number uniqueness enforcement
+
+Frontend Technologies:
+- React with Hooks
+- React Router for navigation
+- Context API for state management (Auth, Cart, Search, Filter)
+- Axios for API calls
+- TailwindCSS for styling
+- jsPDF for PDF generation
+- PapaParse for CSV parsing
+- XLSX for Excel file handling
+
+================================================================================
+
+SUMMARY
+
+This comprehensive system provides a complete wholesale ordering solution with sophisticated vendor-buyer relationships, advanced filtering, efficient cart management, and streamlined order processing. The special vendor assignment logic ensures buyers only see relevant products, while the batch ordering system keeps orders organized and manageable.
+
+Key Differentiators:
+1. Vendor-specific product visibility per buyer
+2. Batch ordering system for organized order management
+3. Infinite scroll with cursor-based pagination
+4. Advanced multi-criteria filtering
+5. Bulk import/export capabilities
+6. Complete order reordering workflow
+7. Real-time statistics and reporting
+8. Mobile-responsive PWA design
