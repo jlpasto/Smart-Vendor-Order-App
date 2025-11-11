@@ -47,8 +47,8 @@ export const CartProvider = ({ children }) => {
             : item
         );
       } else {
-        // Add new item to cart
-        return [...prevCart, { ...product, quantity }];
+        // Add new item to cart with default pricing mode
+        return [...prevCart, { ...product, quantity, pricing_mode: 'case' }];
       }
     });
   };
@@ -72,13 +72,25 @@ export const CartProvider = ({ children }) => {
     );
   };
 
+  const updatePricingMode = (productId, mode) => {
+    setCart(prevCart =>
+      prevCart.map(item =>
+        item.id === productId
+          ? { ...item, pricing_mode: mode }
+          : item
+      )
+    );
+  };
+
   const clearCart = () => {
     setCart([]);
   };
 
   const getCartTotal = () => {
     return cart.reduce((total, item) => {
-      const price = item.wholesale_case_price || item.wholesale_unit_price || 0;
+      const price = item.pricing_mode === 'unit'
+        ? (item.wholesale_unit_price || 0)
+        : (item.wholesale_case_price || 0);
       return total + (price * item.quantity);
     }, 0);
   };
@@ -92,6 +104,7 @@ export const CartProvider = ({ children }) => {
     addToCart,
     removeFromCart,
     updateQuantity,
+    updatePricingMode,
     clearCart,
     getCartTotal,
     getCartCount

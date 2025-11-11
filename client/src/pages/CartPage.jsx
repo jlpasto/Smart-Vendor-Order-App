@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../config/api';
 
 const CartPage = () => {
-  const { cart, removeFromCart, updateQuantity, clearCart, getCartTotal } = useCart();
+  const { cart, removeFromCart, updateQuantity, updatePricingMode, clearCart, getCartTotal } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
@@ -93,7 +93,9 @@ const CartPage = () => {
   // Calculate subtotal for each vendor
   const getVendorSubtotal = (items) => {
     return items.reduce((total, item) => {
-      const price = item.wholesale_case_price || item.wholesale_unit_price || 0;
+      const price = item.pricing_mode === 'unit'
+        ? (item.wholesale_unit_price || 0)
+        : (item.wholesale_case_price || 0);
       return total + (price * item.quantity);
     }, 0);
   };
@@ -129,7 +131,9 @@ const CartPage = () => {
 
                 {/* Items for this vendor */}
                 {items.map(item => {
-                  const price = item.wholesale_case_price || item.wholesale_unit_price || 0;
+                  const price = item.pricing_mode === 'unit'
+                    ? (item.wholesale_unit_price || 0)
+                    : (item.wholesale_case_price || 0);
                   const itemTotal = price * item.quantity;
 
                   return (
@@ -145,9 +149,25 @@ const CartPage = () => {
                         {/* Product Info */}
                         <div className="flex-1">
                           <h3 className="text-base font-bold text-gray-900 mb-1">{item.product_name}</h3>
-                          <p className="text-sm font-semibold text-primary-600 mb-2">
-                            ${parseFloat(price).toFixed(2)} per case
-                          </p>
+
+                          {/* Pricing Mode Dropdown */}
+                          <div className="flex items-center gap-3 mb-2 flex-wrap">
+                            <label htmlFor={`pricing-mode-${item.id}`} className="text-sm text-gray-600">
+                              Order by:
+                            </label>
+                            <select
+                              id={`pricing-mode-${item.id}`}
+                              className="border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                              value={item.pricing_mode || 'case'}
+                              onChange={(e) => updatePricingMode(item.id, e.target.value)}
+                            >
+                              <option value="case">By Case</option>
+                              <option value="unit">By Unit</option>
+                            </select>
+                            <span className="text-sm font-semibold text-primary-600">
+                              ${parseFloat(price).toFixed(2)} per {item.pricing_mode === 'unit' ? 'unit' : 'case'}
+                            </span>
+                          </div>
 
                           {/* Quantity Controls */}
                           <div className="flex items-center gap-3 flex-wrap">
@@ -168,7 +188,7 @@ const CartPage = () => {
                                   min="1"
                                   value={item.quantity}
                                   onChange={(e) => handleQuantityChange(item.id, e.target.value)}
-                                  className="w-14 text-center input text-sm py-1"
+                                  className="w-20 text-center input text-sm py-1"
                                 />
                                 <button
                                   onClick={() => updateQuantity(item.id, item.quantity + 1)}
