@@ -52,7 +52,7 @@ export const initDatabase = async () => {
         email VARCHAR(255) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
         id_no VARCHAR(100),
-        role VARCHAR(20) DEFAULT 'user' CHECK (role IN ('user', 'admin')),
+        role VARCHAR(20) DEFAULT 'buyer' CHECK (role IN ('buyer', 'admin')),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
@@ -67,6 +67,23 @@ export const initDatabase = async () => {
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='id_no') THEN
           ALTER TABLE users ADD COLUMN id_no VARCHAR(100);
         END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='assigned_vendor_ids') THEN
+          ALTER TABLE users ADD COLUMN assigned_vendor_ids INTEGER[] DEFAULT '{}';
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='assigned_product_ids') THEN
+          ALTER TABLE users ADD COLUMN assigned_product_ids INTEGER[] DEFAULT '{}';
+        END IF;
+      END $$;
+    `);
+
+    // Update role constraint if needed
+    await query(`
+      DO $$
+      BEGIN
+        ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+        ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('buyer', 'admin'));
+      EXCEPTION
+        WHEN OTHERS THEN NULL;
       END $$;
     `);
 
@@ -74,9 +91,12 @@ export const initDatabase = async () => {
     await query(`
       CREATE TABLE IF NOT EXISTS vendors (
         id SERIAL PRIMARY KEY,
+        vendor_connect_id VARCHAR(100) UNIQUE,
         name VARCHAR(255) NOT NULL,
         state VARCHAR(100),
         city VARCHAR(100),
+        address TEXT,
+        territory VARCHAR(100),
         website_url VARCHAR(500),
         logo_url VARCHAR(500),
         description TEXT,
@@ -87,10 +107,27 @@ export const initDatabase = async () => {
       );
     `);
 
+    // Add vendor columns if they don't exist (migration)
+    await query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='vendors' AND column_name='vendor_connect_id') THEN
+          ALTER TABLE vendors ADD COLUMN vendor_connect_id VARCHAR(100) UNIQUE;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='vendors' AND column_name='address') THEN
+          ALTER TABLE vendors ADD COLUMN address TEXT;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='vendors' AND column_name='territory') THEN
+          ALTER TABLE vendors ADD COLUMN territory VARCHAR(100);
+        END IF;
+      END $$;
+    `);
+
     // Create Products table
     await query(`
       CREATE TABLE IF NOT EXISTS products (
         id SERIAL PRIMARY KEY,
+        vendor_id INTEGER,
         vendor_name VARCHAR(255) NOT NULL,
         state VARCHAR(100),
         product_name VARCHAR(255) NOT NULL,
@@ -116,8 +153,20 @@ export const initDatabase = async () => {
         new BOOLEAN DEFAULT false,
         category VARCHAR(100),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT fk_products_vendor FOREIGN KEY (vendor_id) REFERENCES vendors(id) ON DELETE SET NULL
       );
+    `);
+
+    // Add vendor_id column if it doesn't exist (migration)
+    await query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='vendor_id') THEN
+          ALTER TABLE products ADD COLUMN vendor_id INTEGER;
+          ALTER TABLE products ADD CONSTRAINT fk_products_vendor FOREIGN KEY (vendor_id) REFERENCES vendors(id) ON DELETE SET NULL;
+        END IF;
+      END $$;
     `);
 
     // Create Orders table
@@ -143,6 +192,7 @@ export const initDatabase = async () => {
     // Create indexes for better performance
     await query(`
       CREATE INDEX IF NOT EXISTS idx_products_vendor ON products(vendor_name);
+      CREATE INDEX IF NOT EXISTS idx_products_vendor_id ON products(vendor_id);
       CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
       CREATE INDEX IF NOT EXISTS idx_products_popular ON products(popular);
       CREATE INDEX IF NOT EXISTS idx_products_seasonal ON products(seasonal);
@@ -156,6 +206,22 @@ export const initDatabase = async () => {
       CREATE INDEX IF NOT EXISTS idx_vendors_name ON vendors(name);
       CREATE INDEX IF NOT EXISTS idx_vendors_state ON vendors(state);
       CREATE INDEX IF NOT EXISTS idx_vendors_city ON vendors(city);
+    `);
+
+    // Create composite indexes for cursor-based pagination
+    await query(`
+      CREATE INDEX IF NOT EXISTS idx_products_vendor_name_id ON products(vendor_name, id);
+      CREATE INDEX IF NOT EXISTS idx_products_name_id ON products(product_name, id);
+      CREATE INDEX IF NOT EXISTS idx_products_case_price_id ON products(wholesale_case_price, id);
+      CREATE INDEX IF NOT EXISTS idx_products_unit_price_id ON products(wholesale_unit_price, id);
+      CREATE INDEX IF NOT EXISTS idx_products_retail_price_id ON products(retail_unit_price, id);
+      CREATE INDEX IF NOT EXISTS idx_products_gm_id ON products(gm_percent, id);
+    `);
+
+    // Create indexes for user assignments
+    await query(`
+      CREATE INDEX IF NOT EXISTS idx_users_assigned_vendor_ids ON users USING GIN(assigned_vendor_ids);
+      CREATE INDEX IF NOT EXISTS idx_users_assigned_product_ids ON users USING GIN(assigned_product_ids);
     `);
 
     console.log('✅ Database tables initialized successfully');

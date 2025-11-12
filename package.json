@@ -11,6 +11,11 @@
     "build": "cd client && npm run build",
     "start": "node server/init-and-start.js",
     "seed": "node server/seed.js",
+    "seed-admin": "node server/seed-admin.js",
+    "reset-db": "node server/reset-database.js",
+    "extract-schema": "node server/extract-schema.js",
+    "extract-data": "node server/extract-data.js",
+    "migrate-db": "node server/migrate-database.js",
     "server:only": "node server/index.js"
   },
   "keywords": ["wholesale", "ordering", "pwa", "postgresql"],
