@@ -554,9 +554,10 @@ const AdminProducts = () => {
           </div>
 
           <FilterIcon onClick={handleFilterIconClick} />
-          <button onClick={openImportModal} className="btn-secondary">
+          {/* Temporarily disabled - Import Products button */}
+          {/* <button onClick={openImportModal} className="btn-secondary">
             📥 Import Products
-          </button>
+          </button> */}
           <button onClick={openCreateModal} className="btn-primary">
             + Add New Product
           </button>

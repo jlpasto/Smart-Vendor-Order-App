@@ -265,9 +265,10 @@ const AdminVendors = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="page-title mb-0">Manage Vendors</h1>
         <div className="flex gap-3">
-          <button onClick={openImportModal} className="btn-secondary">
+          {/* Temporarily disabled - Import Vendors button */}
+          {/* <button onClick={openImportModal} className="btn-secondary">
             📥 Import Vendors
-          </button>
+          </button> */}
           <button onClick={openCreateModal} className="btn-primary">
             + Add New Vendor
           </button>

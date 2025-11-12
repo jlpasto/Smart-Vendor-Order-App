@@ -15,7 +15,7 @@ The database has been successfully migrated from the old database (`wholesale_ap
 - **Database**: cureate_db
 - **User**: cureate_db_user
 
-## Migration Scripts Created
+## Migration Scripts
 
 ### 1. Schema Extraction (`extract-schema.js`)
 - Extracts complete database schema from source database
@@ -28,29 +28,24 @@ The database has been successfully migrated from the old database (`wholesale_ap
 - Includes proper sequence resets
 - Usage: `npm run extract-data`
 
-### 3. Drop Tables - Local (`drop-all-tables.js`)
-- Safely drops all tables in correct order (local database)
-- Requires typing "DROP" to confirm
-- Usage: `npm run drop-tables`
-
-### 4. Drop Tables - Render (`drop-render-tables.js`)
+### 3. Drop Render Tables (`drop-render-tables.js`)
 - Safely drops all tables in Render database
 - Can auto-confirm with `--yes` flag
-- Usage: `node server/drop-render-tables.js --yes`
+- Usage: `node server/drop-render-tables.js --yes` or `npm run drop-render-tables`
 
-### 5. Migration to Render (`migrate-to-render.js`)
+### 4. Migrate to Render (`migrate-to-render.js`)
 - Applies extracted schema and data to Render database
 - Automatically fixes common migration issues:
   - Removes `session_replication_role` commands (not allowed on Render)
   - Casts empty arrays to proper type (`ARRAY[]::integer[]`)
   - Converts JavaScript timestamp format to ISO format
 - Can auto-confirm with `--yes` flag
-- Usage: `node server/migrate-to-render.js --yes`
+- Usage: `node server/migrate-to-render.js --yes` or `npm run migrate-to-render`
 
-### 6. General Migration (`migrate-database.js`)
-- Generic migration script that uses .env configuration
-- Can migrate to any PostgreSQL database
-- Usage: `npm run migrate-db`
+### 5. Seed Admin User (`seed-admin.js`)
+- Creates an admin user in the database
+- Useful for setting up initial access
+- Usage: `npm run seed-admin`
 
 ## Complete Migration Process
 
@@ -108,10 +103,9 @@ npm run extract-schema && npm run extract-data && node server/drop-render-tables
 {
   "extract-schema": "node server/extract-schema.js",
   "extract-data": "node server/extract-data.js",
-  "drop-tables": "node server/drop-all-tables.js",
   "drop-render-tables": "node server/drop-render-tables.js",
-  "migrate-db": "node server/migrate-database.js",
-  "migrate-to-render": "node server/migrate-to-render.js"
+  "migrate-to-render": "node server/migrate-to-render.js",
+  "seed-admin": "node server/seed-admin.js"
 }
 ```
 
@@ -142,7 +136,19 @@ If you need to extract fresh data from the source:
 
 ## Files Generated
 
-- `server/extracted-schema.sql` - Complete database schema
-- `server/extracted-data.sql` - Complete database data dump
+- `server/extracted-schema.sql` - Complete database schema (8.4KB)
+- `server/extracted-data.sql` - Complete database data dump (4.6KB)
 
 These files should be added to `.gitignore` and not committed to version control.
+
+## Cleanup Completed
+
+The following old/redundant files and folders have been removed:
+- ❌ `server/migrations/` - Old incremental migration files (no longer needed)
+- ❌ `server/scripts/` - Old migration scripts for local/production databases
+- ❌ `server/drop-all-tables.js` - Redundant local drop script
+- ❌ `server/migrate-database.js` - Generic migration script (replaced)
+- ❌ `server/reset-database.js` - Old reset script
+- ❌ `server/seed.js` - Old seed script
+
+The project now has only the essential Render migration scripts (5 files, ~22KB total).
