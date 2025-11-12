@@ -3,7 +3,7 @@ services:
   - type: pserv
     name: wholesale-app-db
     env: docker
-    plan: free
+    plan: starter
     autoDeploy: false
     envVars:
       - key: POSTGRES_DB
@@ -17,7 +17,7 @@ services:
   - type: web
     name: wholesale-app-api
     env: node
-    plan: free
+    plan: starter
     region: oregon
     buildCommand: npm install
     startCommand: npm start
