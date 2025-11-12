@@ -15,7 +15,10 @@
     "reset-db": "node server/reset-database.js",
     "extract-schema": "node server/extract-schema.js",
     "extract-data": "node server/extract-data.js",
+    "drop-tables": "node server/drop-all-tables.js",
+    "drop-render-tables": "node server/drop-render-tables.js",
     "migrate-db": "node server/migrate-database.js",
+    "migrate-to-render": "node server/migrate-to-render.js",
     "server:only": "node server/index.js"
   },
   "keywords": ["wholesale", "ordering", "pwa", "postgresql"],

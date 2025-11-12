@@ -15,6 +15,10 @@ const pool = new Pool({
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
+  // Enable SSL for Render and other cloud databases
+  ssl: process.env.DB_HOST?.includes('render') || process.env.DB_HOST?.includes('amazonaws') ? {
+    rejectUnauthorized: false
+  } : false
 });
 
 // Test database connection

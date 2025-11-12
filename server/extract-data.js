@@ -8,7 +8,7 @@ const __dirname = path.dirname(__filename);
 
 // Source database configuration
 const sourcePool = new pg.Pool({
-  host: 'dpg-d3jjrr7fte5s73frlnig-a',
+  host: 'dpg-d3jjrr7fte5s73frlnig-a.oregon-postgres.render.com',
   port: 5432,
   database: 'wholesale_app_4csh',
   user: 'wholesale_app_4csh_user',

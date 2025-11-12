@@ -8,7 +8,7 @@ const __dirname = path.dirname(__filename);
 
 // Source database configuration
 const sourcePool = new pg.Pool({
-  host: 'dpg-d3jjrr7fte5s73frlnig-a',
+  host: 'dpg-d3jjrr7fte5s73frlnig-a.oregon-postgres.render.com',
   port: 5432,
   database: 'wholesale_app_4csh',
   user: 'wholesale_app_4csh_user',
@@ -17,6 +17,55 @@ const sourcePool = new pg.Pool({
     rejectUnauthorized: false
   }
 });
+
+// Function to sort tables by foreign key dependencies
+const sortTablesByDependencies = (tables, constraints) => {
+  const graph = {};
+  const inDegree = {};
+
+  // Initialize graph
+  tables.forEach(table => {
+    graph[table] = [];
+    inDegree[table] = 0;
+  });
+
+  // Build dependency graph
+  // If table A references table B, then B must be created before A
+  // So B has an edge pointing to A (B → A)
+  constraints.forEach(constraint => {
+    if (constraint.table_name !== constraint.referenced_table) {
+      graph[constraint.referenced_table] = graph[constraint.referenced_table] || [];
+      graph[constraint.referenced_table].push(constraint.table_name);
+      inDegree[constraint.table_name]++;
+    }
+  });
+
+  // Topological sort
+  const sorted = [];
+  const queue = tables.filter(table => inDegree[table] === 0);
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    sorted.push(current);
+
+    graph[current].forEach(dependent => {
+      inDegree[dependent]--;
+      if (inDegree[dependent] === 0) {
+        queue.push(dependent);
+      }
+    });
+  }
+
+  // If not all tables are sorted, there might be circular dependencies
+  // Add remaining tables
+  tables.forEach(table => {
+    if (!sorted.includes(table)) {
+      sorted.push(table);
+    }
+  });
+
+  return sorted;
+};
 
 const extractSchema = async () => {
   try {
@@ -33,14 +82,34 @@ const extractSchema = async () => {
 
     console.log(`✅ Found ${tablesResult.rows.length} tables`);
 
+    // Get all foreign key relationships
+    console.log('🔗 Analyzing foreign key dependencies...');
+    const fkResult = await sourcePool.query(`
+      SELECT
+        tc.table_name,
+        ccu.table_name AS referenced_table
+      FROM information_schema.table_constraints AS tc
+      JOIN information_schema.constraint_column_usage AS ccu
+        ON tc.constraint_name = ccu.constraint_name
+      WHERE tc.constraint_type = 'FOREIGN KEY'
+      AND tc.table_schema = 'public';
+    `);
+
+    // Sort tables by dependencies
+    const tableNames = tablesResult.rows.map(r => r.table_name);
+    const sortedTables = sortTablesByDependencies(tableNames, fkResult.rows);
+
+    console.log('📋 Table creation order:', sortedTables.join(' → '));
+    console.log('');
+
     let schema = '';
     schema += '-- Database Schema Export\n';
     schema += `-- Generated: ${new Date().toISOString()}\n`;
-    schema += '-- Source Database: wholesale_app_4csh\n\n';
+    schema += '-- Source Database: wholesale_app_4csh\n';
+    schema += `-- Table Creation Order: ${sortedTables.join(' → ')}\n\n`;
 
-    // For each table, get the CREATE TABLE statement
-    for (const table of tablesResult.rows) {
-      const tableName = table.table_name;
+    // For each table in dependency order, get the CREATE TABLE statement
+    for (const tableName of sortedTables) {
       console.log(`  📋 Extracting schema for: ${tableName}`);
 
       // Get columns
@@ -147,6 +216,14 @@ const extractSchema = async () => {
       schema += '\n';
     }
 
+    // Get all constraint names (to exclude their auto-generated indexes)
+    const constraintNamesResult = await sourcePool.query(`
+      SELECT conname
+      FROM pg_constraint
+      WHERE connamespace = 'public'::regnamespace;
+    `);
+    const constraintNames = new Set(constraintNamesResult.rows.map(r => r.conname));
+
     // Get indexes
     console.log('  📊 Extracting indexes...');
     const indexesResult = await sourcePool.query(`
@@ -163,7 +240,10 @@ const extractSchema = async () => {
 
     schema += '-- Indexes\n';
     for (const idx of indexesResult.rows) {
-      schema += `${idx.indexdef};\n`;
+      // Skip indexes that are automatically created by constraints
+      if (!constraintNames.has(idx.indexname)) {
+        schema += `${idx.indexdef};\n`;
+      }
     }
     schema += '\n';
 
