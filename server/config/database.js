@@ -70,6 +70,23 @@ export const initDatabase = async () => {
       END $$;
     `);
 
+    // Create Vendors table
+    await query(`
+      CREATE TABLE IF NOT EXISTS vendors (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        state VARCHAR(100),
+        city VARCHAR(100),
+        website_url VARCHAR(500),
+        logo_url VARCHAR(500),
+        description TEXT,
+        email VARCHAR(255),
+        phone VARCHAR(50),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
     // Create Products table
     await query(`
       CREATE TABLE IF NOT EXISTS products (
@@ -119,23 +136,6 @@ export const initDatabase = async () => {
         user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
         notes TEXT,
         date_submitted TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-
-    // Create Vendors table
-    await query(`
-      CREATE TABLE IF NOT EXISTS vendors (
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
-        state VARCHAR(100),
-        city VARCHAR(100),
-        website_url VARCHAR(500),
-        logo_url VARCHAR(500),
-        description TEXT,
-        email VARCHAR(255),
-        phone VARCHAR(50),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
