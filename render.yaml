@@ -1,0 +1,79 @@
+services:
+  # PostgreSQL Database
+  - type: pserv
+    name: wholesale-app-db
+    env: docker
+    plan: free
+    autoDeploy: false
+    envVars:
+      - key: POSTGRES_DB
+        value: wholesale_app
+      - key: POSTGRES_USER
+        generateValue: true
+      - key: POSTGRES_PASSWORD
+        generateValue: true
+
+  # Backend API Server
+  - type: web
+    name: wholesale-app-api
+    env: node
+    plan: free
+    region: oregon
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: DB_HOST
+        fromService:
+          type: pserv
+          name: wholesale-app-db
+          property: host
+      - key: DB_PORT
+        fromService:
+          type: pserv
+          name: wholesale-app-db
+          property: port
+      - key: DB_NAME
+        fromService:
+          type: pserv
+          name: wholesale-app-db
+          envVarKey: POSTGRES_DB
+      - key: DB_USER
+        fromService:
+          type: pserv
+          name: wholesale-app-db
+          envVarKey: POSTGRES_USER
+      - key: DB_PASSWORD
+        fromService:
+          type: pserv
+          name: wholesale-app-db
+          envVarKey: POSTGRES_PASSWORD
+      - key: JWT_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        value: https://wholesale-app-frontend.onrender.com
+      - key: ENABLE_LOGIN
+        value: true
+
+  # Frontend Static Site
+  - type: web
+    name: wholesale-app-frontend
+    env: static
+    plan: free
+    region: oregon
+    buildCommand: cd client && npm install && npm run build
+    staticPublishPath: ./client/dist
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: public, max-age=0, must-revalidate
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+    envVars:
+      - key: VITE_API_URL
+        value: https://wholesale-app-api.onrender.com
