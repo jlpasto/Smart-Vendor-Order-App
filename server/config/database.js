@@ -72,7 +72,7 @@ export const initDatabase = async () => {
           ALTER TABLE users ADD COLUMN id_no VARCHAR(100);
         END IF;
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='assigned_vendor_ids') THEN
-          ALTER TABLE users ADD COLUMN assigned_vendor_ids VARCHAR(100)[] DEFAULT '{}';
+          ALTER TABLE users ADD COLUMN assigned_vendor_ids INTEGER[] DEFAULT '{}';
         END IF;
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='assigned_product_ids') THEN
           ALTER TABLE users ADD COLUMN assigned_product_ids INTEGER[] DEFAULT '{}';
@@ -95,7 +95,7 @@ export const initDatabase = async () => {
     await query(`
       CREATE TABLE IF NOT EXISTS vendors (
         id SERIAL,
-        vendor_connect_id VARCHAR(100) PRIMARY KEY,
+        vendor_connect_id INTEGER PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
         state VARCHAR(100),
         city VARCHAR(100),
@@ -116,7 +116,7 @@ export const initDatabase = async () => {
       DO $$
       BEGIN
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='vendors' AND column_name='vendor_connect_id') THEN
-          ALTER TABLE vendors ADD COLUMN vendor_connect_id VARCHAR(100) UNIQUE;
+          ALTER TABLE vendors ADD COLUMN vendor_connect_id INTEGER UNIQUE;
         END IF;
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='vendors' AND column_name='address') THEN
           ALTER TABLE vendors ADD COLUMN address TEXT;
@@ -137,7 +137,7 @@ export const initDatabase = async () => {
     await query(`
       CREATE TABLE IF NOT EXISTS products (
         id SERIAL PRIMARY KEY,
-        vendor_connect_id VARCHAR(100),
+        vendor_connect_id INTEGER,
         vendor_name VARCHAR(255) NOT NULL,
         state VARCHAR(100),
         product_name VARCHAR(255) NOT NULL,
@@ -173,7 +173,7 @@ export const initDatabase = async () => {
       DO $$
       BEGIN
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='vendor_connect_id') THEN
-          ALTER TABLE products ADD COLUMN vendor_connect_id VARCHAR(100);
+          ALTER TABLE products ADD COLUMN vendor_connect_id INTEGER;
           ALTER TABLE products ADD CONSTRAINT fk_products_vendor FOREIGN KEY (vendor_connect_id) REFERENCES vendors(vendor_connect_id) ON DELETE SET NULL;
         END IF;
       END $$;
@@ -186,7 +186,7 @@ export const initDatabase = async () => {
         batch_order_number VARCHAR(50) NOT NULL,
         product_id INTEGER REFERENCES products(id) ON DELETE SET NULL,
         product_name VARCHAR(255) NOT NULL,
-        vendor_connect_id VARCHAR(100) REFERENCES vendors(vendor_connect_id) ON DELETE SET NULL,
+        vendor_connect_id INTEGER REFERENCES vendors(vendor_connect_id) ON DELETE SET NULL,
         vendor_name VARCHAR(255),
         quantity INTEGER NOT NULL,
         amount DECIMAL(10, 2) NOT NULL,

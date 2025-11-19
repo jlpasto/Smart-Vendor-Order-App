@@ -225,7 +225,7 @@ const AdminVendors = () => {
   const downloadTemplate = () => {
     const template = [
       {
-        'Vendor Connect ID': '',
+        'Vendor Connect ID': '1001',
         'Vendor Name': 'Example Vendor',
         'URL': 'https://example.com',
         'Logo': 'https://example.com/logo.png',
@@ -529,10 +529,10 @@ const AdminVendors = () => {
 
       {/* Detail Modal */}
       {showDetailModal && selectedVendor && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl max-w-2xl w-full p-8">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-xl max-w-5xl w-full p-8 my-8">
             <div className="flex justify-between items-start mb-6">
-              <h2 className="text-3xl font-bold text-gray-900">Vendor Details</h2>
+              <h2 className="text-2xl font-bold text-gray-900">Vendor Profile</h2>
               <button
                 onClick={closeDetailModal}
                 className="text-gray-500 hover:text-gray-700"
@@ -543,72 +543,108 @@ const AdminVendors = () => {
               </button>
             </div>
 
-            <div className="space-y-4">
-              {/* Logo */}
-              <div className="flex justify-center mb-6">
+            <div className="max-h-[70vh] overflow-y-auto pr-2">
+              {/* Header Section with Logo and Basic Info */}
+              <div className="flex items-start gap-6 mb-6 pb-6 border-b border-gray-200">
                 <img
                   src={selectedVendor.logo_url || 'https://via.placeholder.com/150/CCCCCC/666666?text=No+Logo'}
                   alt={selectedVendor.name}
-                  className="w-32 h-32 object-cover rounded-lg"
+                  className="w-24 h-24 object-cover rounded-lg flex-shrink-0"
                 />
-              </div>
-
-              {/* Details */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-semibold text-gray-500">Name</p>
-                  <p className="text-lg text-gray-900">{selectedVendor.name}</p>
-                </div>
-
-                <div>
-                  <p className="text-sm font-semibold text-gray-500">Vendor Connect ID</p>
-                  <p className="text-lg text-gray-900">{selectedVendor.vendor_connect_id || 'N/A'}</p>
-                </div>
-
-                <div>
-                  <p className="text-sm font-semibold text-gray-500">Email</p>
-                  <p className="text-lg text-gray-900">{selectedVendor.email || 'N/A'}</p>
-                </div>
-
-                <div>
-                  <p className="text-sm font-semibold text-gray-500">Phone</p>
-                  <p className="text-lg text-gray-900">{selectedVendor.phone || 'N/A'}</p>
-                </div>
-
-                <div>
-                  <p className="text-sm font-semibold text-gray-500">State</p>
-                  <p className="text-lg text-gray-900">{selectedVendor.state || 'N/A'}</p>
-                </div>
-
-                <div>
-                  <p className="text-sm font-semibold text-gray-500">Territory</p>
-                  <p className="text-lg text-gray-900">{selectedVendor.territory || 'N/A'}</p>
-                </div>
-
-                <div className="col-span-2">
-                  <p className="text-sm font-semibold text-gray-500">Website</p>
-                  {selectedVendor.website_url ? (
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">{selectedVendor.name}</h3>
+                  {selectedVendor.website_url && (
                     <a
                       href={selectedVendor.website_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-lg text-primary-600 hover:text-primary-700"
+                      className="text-sm text-primary-600 hover:text-primary-700 inline-flex items-center gap-1"
                     >
-                      {selectedVendor.website_url}
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                      {selectedVendor.website_url.replace(/^https?:\/\/(www\.)?/, '')}
                     </a>
-                  ) : (
-                    <p className="text-lg text-gray-900">N/A</p>
+                  )}
+                  <div className="mt-2">
+                    <span className="text-xs font-semibold text-gray-500">ID: </span>
+                    <span className="text-sm text-gray-700">{selectedVendor.vendor_connect_id || 'N/A'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* About Section */}
+              {selectedVendor.about && (
+                <div className="mb-6">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wide">About</h4>
+                  <p className="text-sm text-gray-600 leading-relaxed">{selectedVendor.about}</p>
+                </div>
+              )}
+
+              {/* Story Section */}
+              {selectedVendor.story && (
+                <div className="mb-6">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wide">Story</h4>
+                  <p className="text-sm text-gray-600 leading-relaxed">{selectedVendor.story}</p>
+                </div>
+              )}
+
+              {/* Contact Information */}
+              <div className="mb-6">
+                <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Contact Information</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  {selectedVendor.email && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 mb-1">Email</p>
+                      <a href={`mailto:${selectedVendor.email}`} className="text-sm text-primary-600 hover:text-primary-700">
+                        {selectedVendor.email}
+                      </a>
+                    </div>
+                  )}
+                  {selectedVendor.phone && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 mb-1">Phone</p>
+                      <a href={`tel:${selectedVendor.phone}`} className="text-sm text-gray-700 hover:text-primary-600">
+                        {selectedVendor.phone}
+                      </a>
+                    </div>
                   )}
                 </div>
+              </div>
 
-                <div className="col-span-2">
-                  <p className="text-sm font-semibold text-gray-500">Address</p>
-                  <p className="text-gray-900">{selectedVendor.address || 'N/A'}</p>
+              {/* Location Information */}
+              <div className="mb-6">
+                <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Location</h4>
+                <div className="grid grid-cols-3 gap-4">
+                  {selectedVendor.city && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 mb-1">City</p>
+                      <p className="text-sm text-gray-700">{selectedVendor.city}</p>
+                    </div>
+                  )}
+                  {selectedVendor.state && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 mb-1">State</p>
+                      <p className="text-sm text-gray-700">{selectedVendor.state}</p>
+                    </div>
+                  )}
+                  {selectedVendor.territory && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 mb-1">Territory</p>
+                      <p className="text-sm text-gray-700">{selectedVendor.territory}</p>
+                    </div>
+                  )}
                 </div>
+                {selectedVendor.address && (
+                  <div className="mt-3">
+                    <p className="text-xs font-semibold text-gray-500 mb-1">Address</p>
+                    <p className="text-sm text-gray-700">{selectedVendor.address}</p>
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className="flex gap-4 mt-8">
+            <div className="flex gap-4 mt-6 pt-6 border-t border-gray-200">
               <button
                 onClick={() => {
                   closeDetailModal();

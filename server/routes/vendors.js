@@ -24,7 +24,7 @@ router.post('/bulk-import', authenticate, requireAdmin, async (req, res) => {
       try {
         // Map Excel column names to database fields
         const vendorData = {
-          vendor_connect_id: vendor['Vendor Connect ID'] || null,
+          vendor_connect_id: vendor['Vendor Connect ID'] ? parseInt(vendor['Vendor Connect ID']) : null,
           name: vendor['Vendor Name'] || null,
           website_url: vendor['URL'] || null,
           logo_url: vendor['Logo'] || null,
@@ -52,8 +52,8 @@ router.post('/bulk-import', authenticate, requireAdmin, async (req, res) => {
           continue;
         }
 
-        if (!vendorData.vendor_connect_id || vendorData.vendor_connect_id.trim() === '') {
-          errors.push(`Row ${i + 1}: Vendor Connect ID is required`);
+        if (!vendorData.vendor_connect_id || isNaN(vendorData.vendor_connect_id)) {
+          errors.push(`Row ${i + 1}: Vendor Connect ID is required and must be a valid integer`);
           failed++;
           continue;
         }
@@ -243,12 +243,15 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
       return res.status(400).json({ error: 'Vendor name is required' });
     }
 
+    // Convert vendor_connect_id to integer if provided
+    const vendorConnectIdInt = vendor_connect_id ? parseInt(vendor_connect_id) : null;
+
     const result = await query(
       `INSERT INTO vendors (
         vendor_connect_id, name, website_url, logo_url, phone, email, address, city, state, territory, about, story
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING *`,
-      [vendor_connect_id, name, website_url, logo_url, phone, email, address, city, state, territory, about, story]
+      [vendorConnectIdInt, name, website_url, logo_url, phone, email, address, city, state, territory, about, story]
     );
 
     res.status(201).json(result.rows[0]);
@@ -277,6 +280,9 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
       story
     } = req.body;
 
+    // Convert vendor_connect_id to integer if provided
+    const vendorConnectIdInt = vendor_connect_id ? parseInt(vendor_connect_id) : null;
+
     const result = await query(
       `UPDATE vendors SET
         vendor_connect_id = $1, name = $2, website_url = $3, logo_url = $4,
@@ -284,7 +290,7 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
         about = $11, story = $12, updated_at = CURRENT_TIMESTAMP
       WHERE id = $13
       RETURNING *`,
-      [vendor_connect_id, name, website_url, logo_url, phone, email, address, city, state, territory, about, story, id]
+      [vendorConnectIdInt, name, website_url, logo_url, phone, email, address, city, state, territory, about, story, id]
     );
 
     if (result.rows.length === 0) {
