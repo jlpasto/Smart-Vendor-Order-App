@@ -225,7 +225,6 @@ const AdminVendors = () => {
   const downloadTemplate = () => {
     const template = [
       {
-        'ID': '',
         'Vendor Connect ID': '',
         'Vendor Name': 'Example Vendor',
         'URL': 'https://example.com',
@@ -233,8 +232,11 @@ const AdminVendors = () => {
         'Phone': '(555) 123-4567',
         'Email': 'contact@example.com',
         'Address': '123 Main St, Suite 100',
+        'City': 'Los Angeles',
         'State': 'CA',
-        'Territory': 'West Coast'
+        'Territory': 'West Coast',
+        'About': 'Brief description about the vendor',
+        'Story': 'The vendor\'s story and background'
       }
     ];
 
@@ -265,10 +267,9 @@ const AdminVendors = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="page-title mb-0">Manage Vendors</h1>
         <div className="flex gap-3">
-          {/* Temporarily disabled - Import Vendors button */}
-          {/* <button onClick={openImportModal} className="btn-secondary">
+          <button onClick={openImportModal} className="btn-secondary">
             📥 Import Vendors
-          </button> */}
+          </button>
           <button onClick={openCreateModal} className="btn-primary">
             + Add New Vendor
           </button>
@@ -469,6 +470,39 @@ const AdminVendors = () => {
                   className="input"
                   rows="3"
                   placeholder="Full address"
+                />
+              </div>
+
+              <div>
+                <label className="block text-lg font-semibold text-gray-700 mb-2">City</label>
+                <input
+                  type="text"
+                  value={formData.city || ''}
+                  onChange={(e) => handleInputChange('city', e.target.value)}
+                  className="input"
+                  placeholder="e.g., Los Angeles"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-lg font-semibold text-gray-700 mb-2">About</label>
+                <textarea
+                  value={formData.about || ''}
+                  onChange={(e) => handleInputChange('about', e.target.value)}
+                  className="input"
+                  rows="3"
+                  placeholder="Brief description about the vendor"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-lg font-semibold text-gray-700 mb-2">Story</label>
+                <textarea
+                  value={formData.story || ''}
+                  onChange={(e) => handleInputChange('story', e.target.value)}
+                  className="input"
+                  rows="4"
+                  placeholder="The vendor's story and background"
                 />
               </div>
             </div>

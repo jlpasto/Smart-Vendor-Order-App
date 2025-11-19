@@ -24,7 +24,6 @@ router.post('/bulk-import', authenticate, requireAdmin, async (req, res) => {
       try {
         // Map Excel column names to database fields
         const vendorData = {
-          id: vendor['ID'] || null,
           vendor_connect_id: vendor['Vendor Connect ID'] || null,
           name: vendor['Vendor Name'] || null,
           website_url: vendor['URL'] || null,
@@ -32,8 +31,11 @@ router.post('/bulk-import', authenticate, requireAdmin, async (req, res) => {
           phone: vendor['Phone'] || null,
           email: vendor['Email'] || null,
           address: vendor['Address'] || null,
+          city: vendor['City'] || null,
           state: vendor['State'] || null,
-          territory: vendor['Territory'] || null
+          territory: vendor['Territory'] || null,
+          about: vendor['About'] || null,
+          story: vendor['Story'] || null
         };
 
         // Debug log for first row to help troubleshoot
@@ -50,28 +52,18 @@ router.post('/bulk-import', authenticate, requireAdmin, async (req, res) => {
           continue;
         }
 
-        // Check if vendor exists by ID, vendor_connect_id, or name
+        if (!vendorData.vendor_connect_id || vendorData.vendor_connect_id.trim() === '') {
+          errors.push(`Row ${i + 1}: Vendor Connect ID is required`);
+          failed++;
+          continue;
+        }
+
+        // Check if vendor exists by vendor_connect_id
         let existingVendor = null;
 
-        if (vendorData.id && vendorData.id !== '') {
-          // Check by ID first
-          const checkResult = await query('SELECT id FROM vendors WHERE id = $1', [vendorData.id]);
-          if (checkResult.rows.length > 0) {
-            existingVendor = checkResult.rows[0];
-          }
-        }
-
-        if (!existingVendor && vendorData.vendor_connect_id) {
-          // Check by vendor_connect_id
-          const checkResult = await query('SELECT id FROM vendors WHERE vendor_connect_id = $1', [vendorData.vendor_connect_id]);
-          if (checkResult.rows.length > 0) {
-            existingVendor = checkResult.rows[0];
-          }
-        }
-
-        if (!existingVendor) {
-          // Check by name (case-insensitive)
-          const checkResult = await query('SELECT id FROM vendors WHERE LOWER(name) = LOWER($1)', [vendorData.name]);
+        if (vendorData.vendor_connect_id) {
+          // Check by vendor_connect_id (primary key)
+          const checkResult = await query('SELECT vendor_connect_id FROM vendors WHERE vendor_connect_id = $1', [vendorData.vendor_connect_id]);
           if (checkResult.rows.length > 0) {
             existingVendor = checkResult.rows[0];
           }
@@ -81,21 +73,23 @@ router.post('/bulk-import', authenticate, requireAdmin, async (req, res) => {
           // Vendor exists - update it
           await query(
             `UPDATE vendors SET
-              vendor_connect_id = $1, name = $2, website_url = $3, logo_url = $4,
-              phone = $5, email = $6, address = $7, state = $8, territory = $9,
-              updated_at = CURRENT_TIMESTAMP
-            WHERE id = $10`,
+              name = $1, website_url = $2, logo_url = $3,
+              phone = $4, email = $5, address = $6, city = $7, state = $8, territory = $9,
+              about = $10, story = $11, updated_at = CURRENT_TIMESTAMP
+            WHERE vendor_connect_id = $12`,
             [
-              vendorData.vendor_connect_id,
               vendorData.name,
               vendorData.website_url,
               vendorData.logo_url,
               vendorData.phone,
               vendorData.email,
               vendorData.address,
+              vendorData.city,
               vendorData.state,
               vendorData.territory,
-              existingVendor.id
+              vendorData.about,
+              vendorData.story,
+              vendorData.vendor_connect_id
             ]
           );
           updated++;
@@ -103,8 +97,8 @@ router.post('/bulk-import', authenticate, requireAdmin, async (req, res) => {
           // Vendor doesn't exist - create new one
           await query(
             `INSERT INTO vendors (
-              vendor_connect_id, name, website_url, logo_url, phone, email, address, state, territory
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+              vendor_connect_id, name, website_url, logo_url, phone, email, address, city, state, territory, about, story
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
             [
               vendorData.vendor_connect_id,
               vendorData.name,
@@ -113,8 +107,11 @@ router.post('/bulk-import', authenticate, requireAdmin, async (req, res) => {
               vendorData.phone,
               vendorData.email,
               vendorData.address,
+              vendorData.city,
               vendorData.state,
-              vendorData.territory
+              vendorData.territory,
+              vendorData.about,
+              vendorData.story
             ]
           );
           created++;
@@ -234,8 +231,11 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
       phone,
       email,
       address,
+      city,
       state,
-      territory
+      territory,
+      about,
+      story
     } = req.body;
 
     // Validate required fields
@@ -245,10 +245,10 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
 
     const result = await query(
       `INSERT INTO vendors (
-        vendor_connect_id, name, website_url, logo_url, phone, email, address, state, territory
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        vendor_connect_id, name, website_url, logo_url, phone, email, address, city, state, territory, about, story
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING *`,
-      [vendor_connect_id, name, website_url, logo_url, phone, email, address, state, territory]
+      [vendor_connect_id, name, website_url, logo_url, phone, email, address, city, state, territory, about, story]
     );
 
     res.status(201).json(result.rows[0]);
@@ -270,18 +270,21 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
       phone,
       email,
       address,
+      city,
       state,
-      territory
+      territory,
+      about,
+      story
     } = req.body;
 
     const result = await query(
       `UPDATE vendors SET
         vendor_connect_id = $1, name = $2, website_url = $3, logo_url = $4,
-        phone = $5, email = $6, address = $7, state = $8, territory = $9,
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = $10
+        phone = $5, email = $6, address = $7, city = $8, state = $9, territory = $10,
+        about = $11, story = $12, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $13
       RETURNING *`,
-      [vendor_connect_id, name, website_url, logo_url, phone, email, address, state, territory, id]
+      [vendor_connect_id, name, website_url, logo_url, phone, email, address, city, state, territory, about, story, id]
     );
 
     if (result.rows.length === 0) {
