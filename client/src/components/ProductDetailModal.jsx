@@ -4,6 +4,8 @@ import { useCart } from '../context/CartContext';
 const ProductDetailModal = ({ product, isOpen, onClose, onNext, onPrev, onEdit, onDelete }) => {
   const [isMaximized, setIsMaximized] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
+  const [showVendorTooltip, setShowVendorTooltip] = useState(false);
+  const [vendorTooltipPinned, setVendorTooltipPinned] = useState(false);
   const { addToCart } = useCart();
 
   useEffect(() => {
@@ -11,8 +13,25 @@ const ProductDetailModal = ({ product, isOpen, onClose, onNext, onPrev, onEdit, 
       // Reset maximized state when modal opens
       setIsMaximized(false);
       setAddedToCart(false);
+      setVendorTooltipPinned(false);
+      setShowVendorTooltip(false);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    // Close tooltip when clicking outside
+    const handleClickOutside = (e) => {
+      if (vendorTooltipPinned && !e.target.closest('.vendor-tooltip-container')) {
+        setVendorTooltipPinned(false);
+        setShowVendorTooltip(false);
+      }
+    };
+
+    if (vendorTooltipPinned) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [vendorTooltipPinned]);
 
   useEffect(() => {
     // Handle escape key to close modal
@@ -224,7 +243,32 @@ const ProductDetailModal = ({ product, isOpen, onClose, onNext, onPrev, onEdit, 
 
             {/* Vendor Name */}
             <div className="border-b border-gray-200 pb-4">
-              <label className="block text-sm font-semibold text-gray-500 mb-1">Vendor Name</label>
+              <div className="flex items-center gap-2 mb-1">
+                <label className="block text-sm font-semibold text-gray-500">Vendor Name</label>
+                {product.vendor_about && (
+                  <div className="relative vendor-tooltip-container">
+                    <svg
+                      className="w-4 h-4 text-gray-400 hover:text-gray-600 cursor-pointer"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                      onMouseEnter={() => !vendorTooltipPinned && setShowVendorTooltip(true)}
+                      onMouseLeave={() => !vendorTooltipPinned && setShowVendorTooltip(false)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setVendorTooltipPinned(!vendorTooltipPinned);
+                        setShowVendorTooltip(!vendorTooltipPinned);
+                      }}
+                    >
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                    {showVendorTooltip && (
+                      <div className="absolute left-0 top-6 z-50 w-80 p-3 bg-white rounded-lg shadow-lg border border-gray-200">
+                        <p className="text-sm text-gray-600 leading-relaxed">{product.vendor_about}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
               <p className="text-lg text-gray-900">{product.vendor_name}</p>
             </div>
 

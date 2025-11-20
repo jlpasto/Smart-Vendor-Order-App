@@ -72,7 +72,7 @@ router.get('/', authenticate, async (req, res) => {
     const pageLimit = limit ? Math.min(parseInt(limit), 100) : null; // Max 100 items per request
     const useCursorPagination = cursor !== undefined || limit !== undefined;
 
-    let queryText = 'SELECT * FROM products WHERE 1=1';
+    let queryText = 'SELECT p.*, v.about as vendor_about FROM products p LEFT JOIN vendors v ON p.vendor_connect_id = v.vendor_connect_id WHERE 1=1';
     const queryParams = [];
     let paramCount = 1;
 
@@ -89,7 +89,7 @@ router.get('/', authenticate, async (req, res) => {
 
         // If user has assigned product IDs, filter products by those product IDs
         if (assignedProductIds && assignedProductIds.length > 0) {
-          queryText += ` AND id = ANY($${paramCount})`;
+          queryText += ` AND p.id = ANY($${paramCount})`;
           queryParams.push(assignedProductIds);
           paramCount++;
         } else {
@@ -116,95 +116,95 @@ router.get('/', authenticate, async (req, res) => {
       const operator = sortOrder.toLowerCase() === 'asc' ? '>' : '<';
 
       // Apply cursor condition
-      queryText += ` AND (${sortField}, id) ${operator} ($${paramCount}, $${paramCount + 1})`;
+      queryText += ` AND (p.${sortField}, p.id) ${operator} ($${paramCount}, $${paramCount + 1})`;
       queryParams.push(cursorData[sortField], cursorData.id);
       paramCount += 2;
     }
 
     // Add search filter
     if (search) {
-      queryText += ` AND (product_name ILIKE $${paramCount} OR product_description ILIKE $${paramCount} OR vendor_name ILIKE $${paramCount})`;
+      queryText += ` AND (p.product_name ILIKE $${paramCount} OR p.product_description ILIKE $${paramCount} OR p.vendor_name ILIKE $${paramCount})`;
       queryParams.push(`%${search}%`);
       paramCount++;
     }
 
     // Text exact match filters
     if (id) {
-      queryText += ` AND id = $${paramCount}`;
+      queryText += ` AND p.id = $${paramCount}`;
       queryParams.push(id);
       paramCount++;
     }
 
     if (vendor_connect_id) {
-      queryText += ` AND vendor_connect_id = $${paramCount}`;
+      queryText += ` AND p.vendor_connect_id = $${paramCount}`;
       queryParams.push(vendor_connect_id);
       paramCount++;
     }
 
     if (upc) {
-      queryText += ` AND upc = $${paramCount}`;
+      queryText += ` AND p.upc = $${paramCount}`;
       queryParams.push(upc);
       paramCount++;
     }
 
     // Text contains filters
     if (product_name) {
-      queryText += ` AND product_name ILIKE $${paramCount}`;
+      queryText += ` AND p.product_name ILIKE $${paramCount}`;
       queryParams.push(`%${product_name}%`);
       paramCount++;
     }
 
     if (size) {
-      queryText += ` AND size ILIKE $${paramCount}`;
+      queryText += ` AND p.size ILIKE $${paramCount}`;
       queryParams.push(`%${size}%`);
       paramCount++;
     }
 
     if (shelf_life) {
-      queryText += ` AND shelf_life ILIKE $${paramCount}`;
+      queryText += ` AND p.shelf_life ILIKE $${paramCount}`;
       queryParams.push(`%${shelf_life}%`);
       paramCount++;
     }
 
     if (delivery_info) {
-      queryText += ` AND delivery_info ILIKE $${paramCount}`;
+      queryText += ` AND p.delivery_info ILIKE $${paramCount}`;
       queryParams.push(`%${delivery_info}%`);
       paramCount++;
     }
 
     if (notes) {
-      queryText += ` AND notes ILIKE $${paramCount}`;
+      queryText += ` AND p.notes ILIKE $${paramCount}`;
       queryParams.push(`%${notes}%`);
       paramCount++;
     }
 
     // Single select filters
     if (vendor) {
-      queryText += ` AND vendor_name = $${paramCount}`;
+      queryText += ` AND p.vendor_name = $${paramCount}`;
       queryParams.push(vendor);
       paramCount++;
     }
 
     if (state) {
-      queryText += ` AND state = $${paramCount}`;
+      queryText += ` AND p.state = $${paramCount}`;
       queryParams.push(state);
       paramCount++;
     }
 
     if (category) {
-      queryText += ` AND category = $${paramCount}`;
+      queryText += ` AND p.category = $${paramCount}`;
       queryParams.push(category);
       paramCount++;
     }
 
     if (cuisine_type) {
-      queryText += ` AND cuisine_type = $${paramCount}`;
+      queryText += ` AND p.cuisine_type = $${paramCount}`;
       queryParams.push(cuisine_type);
       paramCount++;
     }
 
     if (seasonal_featured) {
-      queryText += ` AND seasonal_featured = $${paramCount}`;
+      queryText += ` AND p.seasonal_featured = $${paramCount}`;
       queryParams.push(seasonal_featured);
       paramCount++;
     }
@@ -214,7 +214,7 @@ router.get('/', authenticate, async (req, res) => {
       try {
         const categoriesArray = JSON.parse(main_categories);
         if (categoriesArray.length > 0) {
-          queryText += ` AND main_category = ANY($${paramCount})`;
+          queryText += ` AND p.main_category = ANY($${paramCount})`;
           queryParams.push(categoriesArray);
           paramCount++;
         }
@@ -227,7 +227,7 @@ router.get('/', authenticate, async (req, res) => {
       try {
         const subCategoriesArray = JSON.parse(sub_categories);
         if (subCategoriesArray.length > 0) {
-          queryText += ` AND sub_category = ANY($${paramCount})`;
+          queryText += ` AND p.sub_category = ANY($${paramCount})`;
           queryParams.push(subCategoriesArray);
           paramCount++;
         }
@@ -242,7 +242,7 @@ router.get('/', authenticate, async (req, res) => {
         const allergensArray = JSON.parse(allergens);
         if (allergensArray.length > 0) {
           const allergenConditions = allergensArray.map(() => {
-            const condition = `allergens ILIKE $${paramCount}`;
+            const condition = `p.allergens ILIKE $${paramCount}`;
             paramCount++;
             return condition;
           });
@@ -260,7 +260,7 @@ router.get('/', authenticate, async (req, res) => {
         const dietaryArray = JSON.parse(dietary_preferences);
         if (dietaryArray.length > 0) {
           const dietaryConditions = dietaryArray.map(() => {
-            const condition = `dietary_preferences ILIKE $${paramCount}`;
+            const condition = `p.dietary_preferences ILIKE $${paramCount}`;
             paramCount++;
             return condition;
           });
@@ -274,49 +274,49 @@ router.get('/', authenticate, async (req, res) => {
 
     // Range filters
     if (case_pack_min) {
-      queryText += ` AND CAST(case_pack AS NUMERIC) >= $${paramCount}`;
+      queryText += ` AND CAST(p.case_pack AS NUMERIC) >= $${paramCount}`;
       queryParams.push(case_pack_min);
       paramCount++;
     }
 
     if (case_pack_max) {
-      queryText += ` AND CAST(case_pack AS NUMERIC) <= $${paramCount}`;
+      queryText += ` AND CAST(p.case_pack AS NUMERIC) <= $${paramCount}`;
       queryParams.push(case_pack_max);
       paramCount++;
     }
 
     if (price_min) {
-      queryText += ` AND wholesale_case_price >= $${paramCount}`;
+      queryText += ` AND p.wholesale_case_price >= $${paramCount}`;
       queryParams.push(price_min);
       paramCount++;
     }
 
     if (price_max) {
-      queryText += ` AND wholesale_case_price <= $${paramCount}`;
+      queryText += ` AND p.wholesale_case_price <= $${paramCount}`;
       queryParams.push(price_max);
       paramCount++;
     }
 
     if (unit_price_min) {
-      queryText += ` AND wholesale_unit_price >= $${paramCount}`;
+      queryText += ` AND p.wholesale_unit_price >= $${paramCount}`;
       queryParams.push(unit_price_min);
       paramCount++;
     }
 
     if (unit_price_max) {
-      queryText += ` AND wholesale_unit_price <= $${paramCount}`;
+      queryText += ` AND p.wholesale_unit_price <= $${paramCount}`;
       queryParams.push(unit_price_max);
       paramCount++;
     }
 
     if (msrp_min) {
-      queryText += ` AND retail_unit_price >= $${paramCount}`;
+      queryText += ` AND p.retail_unit_price >= $${paramCount}`;
       queryParams.push(msrp_min);
       paramCount++;
     }
 
     if (msrp_max) {
-      queryText += ` AND retail_unit_price <= $${paramCount}`;
+      queryText += ` AND p.retail_unit_price <= $${paramCount}`;
       queryParams.push(msrp_max);
       paramCount++;
     }
@@ -347,15 +347,15 @@ router.get('/', authenticate, async (req, res) => {
 
     // Boolean filters
     if (popular === 'true') {
-      queryText += ` AND popular = true`;
+      queryText += ` AND p.popular = true`;
     }
 
     if (seasonal === 'true') {
-      queryText += ` AND seasonal = true`;
+      queryText += ` AND p.seasonal = true`;
     }
 
     if (isNew === 'true') {
-      queryText += ` AND new = true`;
+      queryText += ` AND p.new = true`;
     }
 
     // Sorting
@@ -370,7 +370,7 @@ router.get('/', authenticate, async (req, res) => {
     const validSortOrder = (sortOrder === 'desc') ? 'DESC' : 'ASC';
 
     // Add ORDER BY with id as tiebreaker for cursor pagination
-    queryText += ` ORDER BY ${validSortField} ${validSortOrder}, id ${validSortOrder}`;
+    queryText += ` ORDER BY p.${validSortField} ${validSortOrder}, p.id ${validSortOrder}`;
 
     // Add LIMIT for cursor pagination (request one extra to check if there are more)
     if (useCursorPagination && pageLimit) {
@@ -529,15 +529,15 @@ router.get('/ids', authenticate, requireAdmin, async (req, res) => {
 
     // Boolean filters
     if (popular === 'true') {
-      queryText += ` AND popular = true`;
+      queryText += ` AND p.popular = true`;
     }
 
     if (seasonal === 'true') {
-      queryText += ` AND seasonal = true`;
+      queryText += ` AND p.seasonal = true`;
     }
 
     if (isNew === 'true') {
-      queryText += ` AND new = true`;
+      queryText += ` AND p.new = true`;
     }
 
     // Multi-select filters

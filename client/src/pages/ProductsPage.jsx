@@ -27,6 +27,8 @@ const ProductsPage = () => {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [selectedFilterField, setSelectedFilterField] = useState(null);
+  const [hoveredVendor, setHoveredVendor] = useState(null);
+  const [pinnedVendor, setPinnedVendor] = useState(null);
 
   // Use filter context
   const { globalSearchTerm } = useSearch();
@@ -56,6 +58,21 @@ const ProductsPage = () => {
   useEffect(() => {
     loadFavorites();
   }, []);
+
+  // Handle click outside to close pinned tooltip
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (pinnedVendor && !e.target.closest('.vendor-tooltip-container')) {
+        setPinnedVendor(null);
+        setHoveredVendor(null);
+      }
+    };
+
+    if (pinnedVendor) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [pinnedVendor]);
 
   const resetAndLoadProducts = useCallback(async () => {
     setProducts([]);
@@ -303,14 +320,46 @@ const ProductsPage = () => {
       )}
 
       {/* Product Grid by Vendor */}
-      {Object.entries(groupedProducts).map(([vendor, vendorProducts]) => (
-        <div key={vendor} className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-gray-800">{vendor}</h2>
-            <span className="text-sm text-gray-500">
-              {vendorProducts.length} items
-            </span>
-          </div>
+      {Object.entries(groupedProducts).map(([vendor, vendorProducts]) => {
+        const vendorAbout = vendorProducts[0]?.vendor_about;
+        return (
+          <div key={vendor} className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-bold text-gray-800">{vendor}</h2>
+                {vendorAbout && (
+                  <div className="relative vendor-tooltip-container">
+                    <svg
+                      className="w-4 h-4 text-gray-400 hover:text-gray-600 cursor-pointer"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                      onMouseEnter={() => pinnedVendor !== vendor && setHoveredVendor(vendor)}
+                      onMouseLeave={() => pinnedVendor !== vendor && setHoveredVendor(null)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (pinnedVendor === vendor) {
+                          setPinnedVendor(null);
+                          setHoveredVendor(null);
+                        } else {
+                          setPinnedVendor(vendor);
+                          setHoveredVendor(vendor);
+                        }
+                      }}
+                    >
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                    {hoveredVendor === vendor && (
+                      <div className="absolute left-0 top-6 z-50 w-96 p-3 bg-white rounded-lg shadow-lg border border-gray-200">
+                        <p className="text-sm text-gray-600 leading-relaxed">{vendorAbout}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              <span className="text-sm text-gray-500">
+                {vendorProducts.length} items
+              </span>
+            </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
             {vendorProducts.map(product => (
@@ -378,7 +427,8 @@ const ProductsPage = () => {
             ))}
           </div>
         </div>
-      ))}
+        );
+      })}
 
       {/* Loading More Indicator */}
       {loadingMore && (
