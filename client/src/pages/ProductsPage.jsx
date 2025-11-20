@@ -4,6 +4,7 @@ import { useCart } from '../context/CartContext';
 import { useSearch } from '../context/SearchContext';
 import { useFilter } from '../context/FilterContext';
 import ProductDetailModal from '../components/ProductDetailModal';
+import AddToOrderModal from '../components/AddToOrderModal';
 import FilterIcon from '../components/FilterIcon';
 import FilterModal from '../components/FilterModal';
 import FilterDetailPanel from '../components/FilterDetailPanel';
@@ -22,6 +23,10 @@ const ProductsPage = () => {
   // Modal state
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Add to Order Modal state
+  const [showAddToOrderModal, setShowAddToOrderModal] = useState(false);
+  const [productToAdd, setProductToAdd] = useState(null);
 
   // Filter modal state
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -167,12 +172,22 @@ const ProductsPage = () => {
     setSelectedFilterField(null);
   };
 
-  const handleAddToCart = (product) => {
-    addToCart(product, 1);
+  const handleAddToCart = (product, quantity = 1, pricingMode = 'case', unavailableAction = 'remove') => {
+    addToCart(product, quantity, pricingMode, unavailableAction);
     setAddedToCart({ ...addedToCart, [product.id]: true });
     setTimeout(() => {
       setAddedToCart({ ...addedToCart, [product.id]: false });
     }, 2000);
+  };
+
+  const handleOpenAddToOrderModal = (product) => {
+    setProductToAdd(product);
+    setShowAddToOrderModal(true);
+  };
+
+  const handleCloseAddToOrderModal = () => {
+    setShowAddToOrderModal(false);
+    setTimeout(() => setProductToAdd(null), 300); // Wait for animation
   };
 
   const handleProductClick = (product) => {
@@ -410,7 +425,7 @@ const ProductsPage = () => {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleAddToCart(product);
+                          handleOpenAddToOrderModal(product);
                         }}
                         disabled={addedToCart[product.id]}
                         className={`w-full py-1.5 rounded-md text-xs font-semibold transition-colors mt-auto ${
@@ -418,7 +433,7 @@ const ProductsPage = () => {
                             ? 'bg-green-500 text-white'
                             : 'bg-primary-600 hover:bg-primary-700 text-white'
                     }`}
-                        aria-label="Add to cart"
+                        aria-label="Add to order"
                       >
                         {addedToCart[product.id] ? '✓ Added' : '+ Add to Order'}
                       </button>
@@ -518,6 +533,14 @@ const ProductsPage = () => {
         field={selectedFilterField}
         isOpen={showFilterPanel}
         onBack={handleBackToFilterModal}
+      />
+
+      {/* Add to Order Modal */}
+      <AddToOrderModal
+        product={productToAdd}
+        isOpen={showAddToOrderModal}
+        onClose={handleCloseAddToOrderModal}
+        onAddToOrder={handleAddToCart}
       />
     </div>
   );

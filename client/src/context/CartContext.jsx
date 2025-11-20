@@ -35,7 +35,7 @@ export const CartProvider = ({ children }) => {
     localStorage.setItem(cartKey, JSON.stringify(cart));
   }, [cart, user]);
 
-  const addToCart = (product, quantity = 1) => {
+  const addToCart = (product, quantity = 1, pricingMode = 'case', unavailableAction = 'remove') => {
     setCart(prevCart => {
       const existingItem = prevCart.find(item => item.id === product.id);
 
@@ -43,12 +43,12 @@ export const CartProvider = ({ children }) => {
         // Update quantity if item already in cart
         return prevCart.map(item =>
           item.id === product.id
-            ? { ...item, quantity: item.quantity + quantity }
+            ? { ...item, quantity: item.quantity + quantity, pricing_mode: pricingMode, unavailable_action: unavailableAction }
             : item
         );
       } else {
-        // Add new item to cart with default pricing mode
-        return [...prevCart, { ...product, quantity, pricing_mode: 'case' }];
+        // Add new item to cart with pricing mode and unavailable action
+        return [...prevCart, { ...product, quantity, pricing_mode: pricingMode, unavailable_action: unavailableAction }];
       }
     });
   };
