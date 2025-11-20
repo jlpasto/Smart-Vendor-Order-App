@@ -1,9 +1,13 @@
 import { useState, useEffect } from 'react';
+import api from '../config/api';
 
 const AddToOrderModal = ({ product, isOpen, onClose, onAddToOrder }) => {
   const [quantity, setQuantity] = useState(1);
   const [pricingMode, setPricingMode] = useState('case');
   const [unavailableAction, setUnavailableAction] = useState('remove');
+  const [similarProducts, setSimilarProducts] = useState([]);
+  const [loadingSimilar, setLoadingSimilar] = useState(false);
+  const [selectedReplacement, setSelectedReplacement] = useState(null);
 
   // Reset state when modal opens with new product
   useEffect(() => {
@@ -11,8 +15,30 @@ const AddToOrderModal = ({ product, isOpen, onClose, onAddToOrder }) => {
       setQuantity(1);
       setPricingMode('case');
       setUnavailableAction('remove');
+      setSimilarProducts([]);
+      setSelectedReplacement(null);
     }
   }, [isOpen, product]);
+
+  // Fetch similar products when "replace" is selected
+  useEffect(() => {
+    const fetchSimilarProducts = async () => {
+      if (unavailableAction === 'replace' && product && isOpen) {
+        setLoadingSimilar(true);
+        try {
+          const response = await api.get(`/api/products/${product.id}/similar?limit=10`);
+          setSimilarProducts(response.data.similarProducts || []);
+        } catch (error) {
+          console.error('Error fetching similar products:', error);
+          setSimilarProducts([]);
+        } finally {
+          setLoadingSimilar(false);
+        }
+      }
+    };
+
+    fetchSimilarProducts();
+  }, [unavailableAction, product, isOpen]);
 
   // Close on ESC key
   useEffect(() => {
@@ -52,7 +78,12 @@ const AddToOrderModal = ({ product, isOpen, onClose, onAddToOrder }) => {
   };
 
   const handleAddToOrder = () => {
-    onAddToOrder(product, quantity, pricingMode, unavailableAction);
+    // Pass replacement product ID if "replace" is selected and a replacement is chosen
+    const replacementProductId = unavailableAction === 'replace' && selectedReplacement
+      ? selectedReplacement.id
+      : null;
+
+    onAddToOrder(product, quantity, pricingMode, unavailableAction, replacementProductId);
     onClose();
   };
 
@@ -129,13 +160,78 @@ const AddToOrderModal = ({ product, isOpen, onClose, onAddToOrder }) => {
               id="unavailable-action"
               className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
               value={unavailableAction}
-              onChange={(e) => setUnavailableAction(e.target.value)}
+              onChange={(e) => {
+                setUnavailableAction(e.target.value);
+                setSelectedReplacement(null);
+              }}
             >
               <option value="remove">Remove it from my order</option>
               <option value="replace">Replace with similar item</option>
               <option value="curate">Cureate to suggest if sold out</option>
             </select>
           </div>
+
+          {/* Similar Products Selection */}
+          {unavailableAction === 'replace' && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Choose replacement product:
+              </label>
+
+              {loadingSimilar && (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                </div>
+              )}
+
+              {!loadingSimilar && similarProducts.length === 0 && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-800">
+                  No similar products found in the same category.
+                </div>
+              )}
+
+              {!loadingSimilar && similarProducts.length > 0 && (
+                <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
+                  {similarProducts.map((similarProduct) => (
+                    <div
+                      key={similarProduct.id}
+                      onClick={() => setSelectedReplacement(similarProduct)}
+                      className={`flex gap-3 p-3 cursor-pointer hover:bg-gray-50 transition-colors border-b last:border-b-0 ${
+                        selectedReplacement?.id === similarProduct.id ? 'bg-primary-50 border-primary-200' : ''
+                      }`}
+                    >
+                      <div className="flex-shrink-0">
+                        {selectedReplacement?.id === similarProduct.id && (
+                          <svg className="w-5 h-5 text-primary-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </div>
+                      <img
+                        src={similarProduct.product_image || 'https://via.placeholder.com/60'}
+                        alt={similarProduct.product_name}
+                        className="w-16 h-16 object-cover rounded"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-semibold text-gray-900 truncate">
+                          {similarProduct.product_name}
+                        </h4>
+                        <p className="text-xs text-gray-600">{similarProduct.vendor_name}</p>
+                        <div className="mt-1 flex gap-3 text-xs">
+                          <span className="text-gray-700">
+                            Case: <span className="font-semibold">${parseFloat(similarProduct.wholesale_case_price || 0).toFixed(2)}</span>
+                          </span>
+                          <span className="text-gray-700">
+                            Unit: <span className="font-semibold">${parseFloat(similarProduct.wholesale_unit_price || 0).toFixed(2)}</span>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Quantity Selector */}
           <div className="mb-6">

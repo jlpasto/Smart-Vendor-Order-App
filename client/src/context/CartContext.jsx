@@ -35,7 +35,7 @@ export const CartProvider = ({ children }) => {
     localStorage.setItem(cartKey, JSON.stringify(cart));
   }, [cart, user]);
 
-  const addToCart = (product, quantity = 1, pricingMode = 'case', unavailableAction = 'remove') => {
+  const addToCart = (product, quantity = 1, pricingMode = 'case', unavailableAction = 'remove', replacementProductId = null) => {
     setCart(prevCart => {
       const existingItem = prevCart.find(item => item.id === product.id);
 
@@ -43,12 +43,24 @@ export const CartProvider = ({ children }) => {
         // Update quantity if item already in cart
         return prevCart.map(item =>
           item.id === product.id
-            ? { ...item, quantity: item.quantity + quantity, pricing_mode: pricingMode, unavailable_action: unavailableAction }
+            ? {
+                ...item,
+                quantity: item.quantity + quantity,
+                pricing_mode: pricingMode,
+                unavailable_action: unavailableAction,
+                replacement_product_id: replacementProductId
+              }
             : item
         );
       } else {
-        // Add new item to cart with pricing mode and unavailable action
-        return [...prevCart, { ...product, quantity, pricing_mode: pricingMode, unavailable_action: unavailableAction }];
+        // Add new item to cart with pricing mode, unavailable action, and replacement product ID
+        return [...prevCart, {
+          ...product,
+          quantity,
+          pricing_mode: pricingMode,
+          unavailable_action: unavailableAction,
+          replacement_product_id: replacementProductId
+        }];
       }
     });
   };

@@ -686,8 +686,68 @@ router.get('/grouped-by-vendor', authenticate, requireAdmin, async (req, res) =>
   }
 });
 
+// Get similar products by category
+router.get('/:id/similar', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { limit = 10 } = req.query;
+
+    // First, get the original product to find its categories
+    const productResult = await query(
+      'SELECT id, sub_category, main_category FROM products WHERE id = $1',
+      [id]
+    );
+
+    if (productResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    const product = productResult.rows[0];
+    let similarProducts = [];
+
+    // Try to find products with same sub_category first
+    if (product.sub_category) {
+      const subCategoryResult = await query(
+        `SELECT p.*, v.about as vendor_about, v.story as vendor_story, v.logo_url as vendor_logo, v.website_url as vendor_website
+         FROM products p
+         LEFT JOIN vendors v ON p.vendor_connect_id = v.vendor_connect_id
+         WHERE p.sub_category = $1 AND p.id != $2
+         ORDER BY p.product_name ASC
+         LIMIT $3`,
+        [product.sub_category, id, parseInt(limit)]
+      );
+      similarProducts = subCategoryResult.rows;
+    }
+
+    // If no products found with sub_category, try main_category
+    if (similarProducts.length === 0 && product.main_category) {
+      const mainCategoryResult = await query(
+        `SELECT p.*, v.about as vendor_about, v.story as vendor_story, v.logo_url as vendor_logo, v.website_url as vendor_website
+         FROM products p
+         LEFT JOIN vendors v ON p.vendor_connect_id = v.vendor_connect_id
+         WHERE p.main_category = $1 AND p.id != $2
+         ORDER BY p.product_name ASC
+         LIMIT $3`,
+        [product.main_category, id, parseInt(limit)]
+      );
+      similarProducts = mainCategoryResult.rows;
+    }
+
+    res.json({
+      originalProduct: product,
+      similarProducts,
+      matchedBy: similarProducts.length > 0
+        ? (product.sub_category && similarProducts.length > 0 ? 'sub_category' : 'main_category')
+        : null
+    });
+  } catch (error) {
+    console.error('Error fetching similar products:', error);
+    res.status(500).json({ error: 'Error fetching similar products' });
+  }
+});
+
 // Get single product
-// IMPORTANT: This must come AFTER specific routes like /grouped-by-vendor
+// IMPORTANT: This must come AFTER specific routes like /grouped-by-vendor and /:id/similar
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;

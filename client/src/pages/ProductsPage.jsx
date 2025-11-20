@@ -157,8 +157,8 @@ const ProductsPage = () => {
     setSelectedFilterField(null);
   };
 
-  const handleAddToCart = (product, quantity = 1, pricingMode = 'case', unavailableAction = 'remove') => {
-    addToCart(product, quantity, pricingMode, unavailableAction);
+  const handleAddToCart = (product, quantity = 1, pricingMode = 'case', unavailableAction = 'remove', replacementProductId = null) => {
+    addToCart(product, quantity, pricingMode, unavailableAction, replacementProductId);
     setAddedToCart({ ...addedToCart, [product.id]: true });
     setTimeout(() => {
       setAddedToCart({ ...addedToCart, [product.id]: false });
