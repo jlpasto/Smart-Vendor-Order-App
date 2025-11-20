@@ -32,8 +32,8 @@ const ProductsPage = () => {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [selectedFilterField, setSelectedFilterField] = useState(null);
-  const [hoveredVendor, setHoveredVendor] = useState(null);
-  const [pinnedVendor, setPinnedVendor] = useState(null);
+  const [showVendorModal, setShowVendorModal] = useState(false);
+  const [selectedVendorInfo, setSelectedVendorInfo] = useState(null);
 
   // Use filter context
   const { globalSearchTerm } = useSearch();
@@ -63,21 +63,6 @@ const ProductsPage = () => {
   useEffect(() => {
     loadFavorites();
   }, []);
-
-  // Handle click outside to close pinned tooltip
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (pinnedVendor && !e.target.closest('.vendor-tooltip-container')) {
-        setPinnedVendor(null);
-        setHoveredVendor(null);
-      }
-    };
-
-    if (pinnedVendor) {
-      document.addEventListener('click', handleClickOutside);
-      return () => document.removeEventListener('click', handleClickOutside);
-    }
-  }, [pinnedVendor]);
 
   const resetAndLoadProducts = useCallback(async () => {
     setProducts([]);
@@ -336,39 +321,56 @@ const ProductsPage = () => {
 
       {/* Product Grid by Vendor */}
       {Object.entries(groupedProducts).map(([vendor, vendorProducts]) => {
-        const vendorAbout = vendorProducts[0]?.vendor_about;
+        const firstProduct = vendorProducts[0];
+        const hasVendorInfo = firstProduct?.vendor_about || firstProduct?.vendor_story;
         return (
           <div key={vendor} className="mb-8">
             <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <h2 className="text-lg font-bold text-gray-800">{vendor}</h2>
-                {vendorAbout && (
-                  <div className="relative vendor-tooltip-container">
+                {hasVendorInfo && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedVendorInfo({
+                        name: vendor,
+                        vendor_connect_id: firstProduct.vendor_connect_id,
+                        logo_url: firstProduct.vendor_logo,
+                        website_url: firstProduct.vendor_website,
+                        about: firstProduct.vendor_about,
+                        story: firstProduct.vendor_story
+                      });
+                      setShowVendorModal(true);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-2
+                               bg-primary-50 hover:bg-primary-100
+                               border-2 border-primary-600
+                               rounded-lg transition-all duration-200
+                               focus:outline-none focus:ring-4 focus:ring-primary-300
+                               min-h-[44px]
+                               shadow-sm hover:shadow-md"
+                    aria-label={`View ${vendor} vendor information`}
+                    title="View vendor information"
+                    type="button"
+                  >
                     <svg
-                      className="w-4 h-4 text-gray-400 hover:text-gray-600 cursor-pointer"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                      onMouseEnter={() => pinnedVendor !== vendor && setHoveredVendor(vendor)}
-                      onMouseLeave={() => pinnedVendor !== vendor && setHoveredVendor(null)}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (pinnedVendor === vendor) {
-                          setPinnedVendor(null);
-                          setHoveredVendor(null);
-                        } else {
-                          setPinnedVendor(vendor);
-                          setHoveredVendor(vendor);
-                        }
-                      }}
+                      className="w-5 h-5 text-primary-700"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
                     >
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+                      />
                     </svg>
-                    {hoveredVendor === vendor && (
-                      <div className="absolute left-0 top-6 z-50 w-96 p-3 bg-white rounded-lg shadow-lg border border-gray-200">
-                        <p className="text-sm text-gray-600 leading-relaxed">{vendorAbout}</p>
-                      </div>
-                    )}
-                  </div>
+                    <span className="text-sm font-semibold text-primary-900">
+                      About
+                    </span>
+                  </button>
                 )}
               </div>
               <span className="text-sm text-gray-500">
@@ -520,6 +522,81 @@ const ProductsPage = () => {
         onEdit={handleEdit}
         onDelete={handleDelete}
       />
+
+      {/* Vendor Info Modal */}
+      {showVendorModal && selectedVendorInfo && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-xl max-w-4xl w-full p-8 my-8">
+            <div className="flex justify-between items-start mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Vendor Profile</h2>
+              <button
+                onClick={() => setShowVendorModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="max-h-[70vh] overflow-y-auto pr-2">
+              {/* Header Section with Logo and Basic Info */}
+              <div className="flex items-start gap-6 mb-6 pb-6 border-b border-gray-200">
+                <img
+                  src={selectedVendorInfo.logo_url || 'https://via.placeholder.com/150/CCCCCC/666666?text=No+Logo'}
+                  alt={selectedVendorInfo.name}
+                  className="w-24 h-24 object-cover rounded-lg flex-shrink-0"
+                />
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">{selectedVendorInfo.name}</h3>
+                  {selectedVendorInfo.website_url && (
+                    <a
+                      href={selectedVendorInfo.website_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-primary-600 hover:text-primary-700 inline-flex items-center gap-1"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                      {selectedVendorInfo.website_url.replace(/^https?:\/\/(www\.)?/, '')}
+                    </a>
+                  )}
+                  <div className="mt-2">
+                    <span className="text-xs font-semibold text-gray-500">ID: </span>
+                    <span className="text-sm text-gray-700">{selectedVendorInfo.vendor_connect_id || 'N/A'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* About Section */}
+              {selectedVendorInfo.about && (
+                <div className="mb-6">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wide">About</h4>
+                  <p className="text-sm text-gray-600 leading-relaxed">{selectedVendorInfo.about}</p>
+                </div>
+              )}
+
+              {/* Story Section */}
+              {selectedVendorInfo.story && (
+                <div className="mb-6">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wide">Story</h4>
+                  <p className="text-sm text-gray-600 leading-relaxed">{selectedVendorInfo.story}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-4 mt-6 pt-6 border-t border-gray-200">
+              <button
+                onClick={() => setShowVendorModal(false)}
+                className="btn-secondary flex-1"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Filter Modal */}
       <FilterModal

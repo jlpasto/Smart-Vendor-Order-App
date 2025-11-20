@@ -72,7 +72,7 @@ router.get('/', authenticate, async (req, res) => {
     const pageLimit = limit ? Math.min(parseInt(limit), 100) : null; // Max 100 items per request
     const useCursorPagination = cursor !== undefined || limit !== undefined;
 
-    let queryText = 'SELECT p.*, v.about as vendor_about FROM products p LEFT JOIN vendors v ON p.vendor_connect_id = v.vendor_connect_id WHERE 1=1';
+    let queryText = 'SELECT p.*, v.about as vendor_about, v.story as vendor_story, v.logo_url as vendor_logo, v.website_url as vendor_website FROM products p LEFT JOIN vendors v ON p.vendor_connect_id = v.vendor_connect_id WHERE 1=1';
     const queryParams = [];
     let paramCount = 1;
 

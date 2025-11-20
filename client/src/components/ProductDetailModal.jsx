@@ -4,8 +4,7 @@ import { useCart } from '../context/CartContext';
 const ProductDetailModal = ({ product, isOpen, onClose, onNext, onPrev, onEdit, onDelete }) => {
   const [isMaximized, setIsMaximized] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
-  const [showVendorTooltip, setShowVendorTooltip] = useState(false);
-  const [vendorTooltipPinned, setVendorTooltipPinned] = useState(false);
+  const [showVendorModal, setShowVendorModal] = useState(false);
   const { addToCart } = useCart();
 
   useEffect(() => {
@@ -13,25 +12,9 @@ const ProductDetailModal = ({ product, isOpen, onClose, onNext, onPrev, onEdit, 
       // Reset maximized state when modal opens
       setIsMaximized(false);
       setAddedToCart(false);
-      setVendorTooltipPinned(false);
-      setShowVendorTooltip(false);
+      setShowVendorModal(false);
     }
   }, [isOpen]);
-
-  useEffect(() => {
-    // Close tooltip when clicking outside
-    const handleClickOutside = (e) => {
-      if (vendorTooltipPinned && !e.target.closest('.vendor-tooltip-container')) {
-        setVendorTooltipPinned(false);
-        setShowVendorTooltip(false);
-      }
-    };
-
-    if (vendorTooltipPinned) {
-      document.addEventListener('click', handleClickOutside);
-      return () => document.removeEventListener('click', handleClickOutside);
-    }
-  }, [vendorTooltipPinned]);
 
   useEffect(() => {
     // Handle escape key to close modal
@@ -243,30 +226,43 @@ const ProductDetailModal = ({ product, isOpen, onClose, onNext, onPrev, onEdit, 
 
             {/* Vendor Name */}
             <div className="border-b border-gray-200 pb-4">
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-3 mb-1">
                 <label className="block text-sm font-semibold text-gray-500">Vendor Name</label>
-                {product.vendor_about && (
-                  <div className="relative vendor-tooltip-container">
+                {(product.vendor_about || product.vendor_story) && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowVendorModal(true);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5
+                               bg-primary-50 hover:bg-primary-100
+                               border-2 border-primary-600
+                               rounded-md transition-all duration-200
+                               focus:outline-none focus:ring-3 focus:ring-primary-300
+                               min-h-[36px]
+                               shadow-sm hover:shadow-md"
+                    aria-label={`View ${product.vendor_name} vendor profile`}
+                    title="View vendor profile"
+                    type="button"
+                  >
                     <svg
-                      className="w-4 h-4 text-gray-400 hover:text-gray-600 cursor-pointer"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                      onMouseEnter={() => !vendorTooltipPinned && setShowVendorTooltip(true)}
-                      onMouseLeave={() => !vendorTooltipPinned && setShowVendorTooltip(false)}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setVendorTooltipPinned(!vendorTooltipPinned);
-                        setShowVendorTooltip(!vendorTooltipPinned);
-                      }}
+                      className="w-4 h-4 text-primary-700"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
                     >
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+                      />
                     </svg>
-                    {showVendorTooltip && (
-                      <div className="absolute left-0 top-6 z-50 w-80 p-3 bg-white rounded-lg shadow-lg border border-gray-200">
-                        <p className="text-sm text-gray-600 leading-relaxed">{product.vendor_about}</p>
-                      </div>
-                    )}
-                  </div>
+                    <span className="text-xs font-semibold text-primary-900">
+                      About
+                    </span>
+                  </button>
                 )}
               </div>
               <p className="text-lg text-gray-900">{product.vendor_name}</p>
@@ -435,6 +431,81 @@ const ProductDetailModal = ({ product, isOpen, onClose, onNext, onPrev, onEdit, 
           </div>
         </div>
       </div>
+
+      {/* Vendor Info Modal */}
+      {showVendorModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]" onClick={() => setShowVendorModal(false)}>
+          <div className="bg-white rounded-xl max-w-4xl w-full p-8 my-8" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-start mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Vendor Profile</h2>
+              <button
+                onClick={() => setShowVendorModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="max-h-[70vh] overflow-y-auto pr-2">
+              {/* Header Section with Logo and Basic Info */}
+              <div className="flex items-start gap-6 mb-6 pb-6 border-b border-gray-200">
+                <img
+                  src={product.vendor_logo || 'https://via.placeholder.com/150/CCCCCC/666666?text=No+Logo'}
+                  alt={product.vendor_name}
+                  className="w-24 h-24 object-cover rounded-lg flex-shrink-0"
+                />
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">{product.vendor_name}</h3>
+                  {product.vendor_website && (
+                    <a
+                      href={product.vendor_website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-primary-600 hover:text-primary-700 inline-flex items-center gap-1"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                      {product.vendor_website.replace(/^https?:\/\/(www\.)?/, '')}
+                    </a>
+                  )}
+                  <div className="mt-2">
+                    <span className="text-xs font-semibold text-gray-500">ID: </span>
+                    <span className="text-sm text-gray-700">{product.vendor_connect_id || 'N/A'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* About Section */}
+              {product.vendor_about && (
+                <div className="mb-6">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wide">About</h4>
+                  <p className="text-sm text-gray-600 leading-relaxed">{product.vendor_about}</p>
+                </div>
+              )}
+
+              {/* Story Section */}
+              {product.vendor_story && (
+                <div className="mb-6">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wide">Story</h4>
+                  <p className="text-sm text-gray-600 leading-relaxed">{product.vendor_story}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-4 mt-6 pt-6 border-t border-gray-200">
+              <button
+                onClick={() => setShowVendorModal(false)}
+                className="btn-secondary flex-1"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
