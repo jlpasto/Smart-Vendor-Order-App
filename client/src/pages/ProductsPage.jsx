@@ -420,7 +420,7 @@ const ProductsPage = () => {
                     }`}
                         aria-label="Add to cart"
                       >
-                        {addedToCart[product.id] ? '✓ Added' : '+ Add to Cart'}
+                        {addedToCart[product.id] ? '✓ Added' : '+ Add to Order'}
                       </button>
                     </div>
                   </div>
