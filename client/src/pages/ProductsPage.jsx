@@ -389,12 +389,12 @@ const ProductsPage = () => {
 
                       <div className="space-y-0.5 text-xs text-gray-600 mb-2">
                         <div className="flex justify-between">
-                          <span className="text-gray-500">Unit:</span>
-                          <span className="font-semibold">${parseFloat(product.wholesale_unit_price || 0).toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between">
                           <span className="text-gray-500">Case:</span>
                           <span className="font-semibold">${parseFloat(product.wholesale_case_price || 0).toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Unit:</span>
+                          <span className="font-semibold">${parseFloat(product.wholesale_unit_price || 0).toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-500">MSRP:</span>
