@@ -165,9 +165,9 @@ const AddToOrderModal = ({ product, isOpen, onClose, onAddToOrder }) => {
                 setSelectedReplacement(null);
               }}
             >
-              <option value="remove">Remove it from my order</option>
-              <option value="replace">Replace with similar item</option>
               <option value="curate">Cureate to replace if sold out</option>
+              <option value="replace">Replace with similar item</option>
+              <option value="remove">Remove it from my order</option>
             </select>
           </div>
 
