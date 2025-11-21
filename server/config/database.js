@@ -202,7 +202,7 @@ export const initDatabase = async () => {
     // Create indexes for better performance
     await query(`
       CREATE INDEX IF NOT EXISTS idx_products_vendor ON products(vendor_name);
-      CREATE INDEX IF NOT EXISTS idx_products_vendor_id ON products(vendor_id);
+      CREATE INDEX IF NOT EXISTS idx_products_vendor_connect_id ON products(vendor_connect_id);
       CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
       CREATE INDEX IF NOT EXISTS idx_products_popular ON products(popular);
       CREATE INDEX IF NOT EXISTS idx_products_seasonal ON products(seasonal);
@@ -211,7 +211,7 @@ export const initDatabase = async () => {
       CREATE INDEX IF NOT EXISTS idx_orders_user_email ON orders(user_email);
       CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
       CREATE INDEX IF NOT EXISTS idx_orders_date ON orders(date_submitted);
-      CREATE INDEX IF NOT EXISTS idx_orders_vendor_id ON orders(vendor_id);
+      CREATE INDEX IF NOT EXISTS idx_orders_vendor_connect_id ON orders(vendor_connect_id);
       CREATE INDEX IF NOT EXISTS idx_orders_vendor_name ON orders(vendor_name);
       CREATE INDEX IF NOT EXISTS idx_vendors_name ON vendors(name);
       CREATE INDEX IF NOT EXISTS idx_vendors_state ON vendors(state);
