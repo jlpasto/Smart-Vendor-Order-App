@@ -4,7 +4,7 @@ import api from '../config/api';
 const AddToOrderModal = ({ product, isOpen, onClose, onAddToOrder }) => {
   const [quantity, setQuantity] = useState(1);
   const [pricingMode, setPricingMode] = useState('case');
-  const [unavailableAction, setUnavailableAction] = useState('remove');
+  const [unavailableAction, setUnavailableAction] = useState('curate');
   const [similarProducts, setSimilarProducts] = useState([]);
   const [loadingSimilar, setLoadingSimilar] = useState(false);
   const [selectedReplacement, setSelectedReplacement] = useState(null);
@@ -14,7 +14,7 @@ const AddToOrderModal = ({ product, isOpen, onClose, onAddToOrder }) => {
     if (isOpen && product) {
       setQuantity(1);
       setPricingMode('case');
-      setUnavailableAction('remove');
+      setUnavailableAction('curate');
       setSimilarProducts([]);
       setSelectedReplacement(null);
     }

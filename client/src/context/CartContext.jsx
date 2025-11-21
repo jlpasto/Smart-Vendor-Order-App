@@ -35,7 +35,7 @@ export const CartProvider = ({ children }) => {
     localStorage.setItem(cartKey, JSON.stringify(cart));
   }, [cart, user]);
 
-  const addToCart = (product, quantity = 1, pricingMode = 'case', unavailableAction = 'remove', replacementProductId = null) => {
+  const addToCart = (product, quantity = 1, pricingMode = 'case', unavailableAction = 'curate', replacementProductId = null) => {
     setCart(prevCart => {
       const existingItem = prevCart.find(item => item.id === product.id);
 
