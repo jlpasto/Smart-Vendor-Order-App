@@ -76,6 +76,7 @@ const AdminProducts = () => {
   const openCreateModal = () => {
     setEditingProduct(null);
     setFormData({
+      product_connect_id: '',
       vendor_name: '',
       state: '',
       product_name: '',
@@ -358,6 +359,7 @@ const AdminProducts = () => {
     const template = [
       {
         'ID': '',
+        'Product Connect ID': 10001,
         'Vendor Connect ID': '',
         'Vendor Name': 'Example Vendor',
         'Product Name': 'Sample Product',
@@ -387,6 +389,46 @@ const AdminProducts = () => {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Products');
     XLSX.writeFile(wb, 'product_import_template.xlsx');
+  };
+
+  const exportProducts = () => {
+    // Use filtered products for export
+    const productsToExport = filteredProducts.map(product => ({
+      'ID': product.id || '',
+      'Product Connect ID': product.product_connect_id || '',
+      'Vendor Connect ID': product.vendor_connect_id || '',
+      'Vendor Name': product.vendor_name || '',
+      'Product Name': product.product_name || '',
+      'Main Category': product.main_category || '',
+      'Sub-Category': product.sub_category || '',
+      'Allergens': product.allergens || '',
+      'Dietary Preferences': product.dietary_preferences || '',
+      'Cuisine Type': product.cuisine_type || '',
+      'Seasonal and Featured': product.seasonal_and_featured || '',
+      'Size': product.size || '',
+      'Case Pack': product.case_pack || '',
+      'Wholesale Case Price': product.wholesale_case_price || '',
+      'Wholesale Unit Price': product.wholesale_unit_price || '',
+      'Retail Unit Price (MSRP)': product.retail_unit_price || '',
+      'GM%': product.gm_percent ? `${product.gm_percent}%` : '',
+      'Case Minimum': product.case_minimum || '',
+      'Shelf Life': product.shelf_life || '',
+      'UPC': product.upc || '',
+      'State': product.state || '',
+      'Delivery Info': product.delivery_info || '',
+      'Notes': product.notes || '',
+      'Image': product.product_image || ''
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(productsToExport);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Products');
+
+    // Generate filename with timestamp
+    const timestamp = new Date().toISOString().split('T')[0];
+    const filename = `products_export_${timestamp}.xlsx`;
+
+    XLSX.writeFile(wb, filename);
   };
 
   // Filter handlers
@@ -557,6 +599,13 @@ const AdminProducts = () => {
           <button onClick={openImportModal} className="btn-secondary">
             📥 Import Products
           </button>
+          <button
+            onClick={exportProducts}
+            className="btn-secondary"
+            title={`Export ${filteredProducts.length} product(s) to Excel`}
+          >
+            📤 Export Products ({filteredProducts.length})
+          </button>
           <button onClick={openCreateModal} className="btn-primary">
             + Add New Product
           </button>
@@ -701,6 +750,17 @@ const AdminProducts = () => {
             </h2>
 
             <div className="grid md:grid-cols-2 gap-6 max-h-[60vh] overflow-y-auto pr-4">
+              <div>
+                <label className="block text-lg font-semibold text-gray-700 mb-2">Product Connect ID</label>
+                <input
+                  type="number"
+                  value={formData.product_connect_id || ''}
+                  onChange={(e) => handleInputChange('product_connect_id', e.target.value)}
+                  className="input"
+                  placeholder="e.g., 10001"
+                />
+              </div>
+
               <div>
                 <label className="block text-lg font-semibold text-gray-700 mb-2">Vendor Connect ID</label>
                 <input
@@ -1019,7 +1079,9 @@ const AdminProducts = () => {
                 <h3 className="font-semibold text-blue-900 mb-2">📋 Import Instructions:</h3>
                 <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
                   <li>Upload a CSV or Excel file (.csv, .xlsx, .xls)</li>
-                  <li>Leave <strong>id</strong> empty for new products, or include existing id to update</li>
+                  <li><strong>To create new products:</strong> Leave both <strong>ID</strong> and <strong>Product Connect ID</strong> empty</li>
+                  <li><strong>To update existing products:</strong> Include either <strong>ID</strong> or <strong>Product Connect ID</strong> (preferred)</li>
+                  <li><strong>Product Connect ID</strong> is the primary relationship key used in orders and should be used for updates</li>
                   <li>Required fields: product_name, vendor_name, wholesale_case_price, wholesale_unit_price, retail_unit_price</li>
                   <li>Boolean fields (popular, seasonal, new) should be: true, false, 1, or 0</li>
                 </ul>

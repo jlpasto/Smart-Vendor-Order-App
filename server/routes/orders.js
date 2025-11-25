@@ -146,10 +146,11 @@ router.get('/batch/:batchNumber/products', authenticate, async (req, res) => {
     // Get all orders in the batch with current product details
     const result = await query(
       `SELECT
-        o.product_id,
+        o.product_connect_id,
         o.product_name as ordered_product_name,
         o.quantity as quantity_ordered,
         p.id,
+        p.product_connect_id,
         p.product_name,
         p.vendor_name,
         p.wholesale_case_price,
@@ -166,7 +167,7 @@ router.get('/batch/:batchNumber/products', authenticate, async (req, res) => {
         p.sub_category,
         p.state
       FROM orders o
-      LEFT JOIN products p ON o.product_id = p.id
+      LEFT JOIN products p ON o.product_connect_id = p.product_connect_id
       WHERE o.batch_order_number = $1 AND o.user_email = $2
       ORDER BY o.id`,
       [batchNumber, userEmail]
@@ -201,7 +202,7 @@ router.get('/batch/:batchNumber/products', authenticate, async (req, res) => {
       } else {
         // Product no longer exists
         unavailable.push({
-          product_id: row.product_id,
+          product_connect_id: row.product_connect_id,
           product_name: row.ordered_product_name,
           reason: 'Product no longer available in catalog'
         });
@@ -279,13 +280,13 @@ router.post('/submit', authenticate, async (req, res) => {
       console.log(`💾 Inserting order into database...`);
       const result = await query(
         `INSERT INTO orders (
-          batch_order_number, product_id, product_name, vendor_id, vendor_name,
+          batch_order_number, product_connect_id, product_name, vendor_id, vendor_name,
           quantity, amount, status, user_email, user_id, date_submitted
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP)
         RETURNING *`,
         [
           batchNumber,
-          item.id,
+          item.product_connect_id,
           item.product_name,
           vendorId,
           vendorName,
@@ -339,7 +340,7 @@ router.get('/all', authenticate, requireAdmin, async (req, res) => {
     let queryText = `
       SELECT o.*, p.category
       FROM orders o
-      LEFT JOIN products p ON o.product_id = p.id
+      LEFT JOIN products p ON o.product_connect_id = p.product_connect_id
       WHERE 1=1
     `;
     const queryParams = [];

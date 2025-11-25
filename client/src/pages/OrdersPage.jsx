@@ -175,8 +175,9 @@ const OrdersPage = () => {
     setAddingItem(order.id);
 
     try {
-      // Fetch current product details
-      const response = await api.get(`/api/products/${order.product_id}`);
+      // Fetch current product details using product_connect_id
+      const productId = order.product_connect_id || order.product_id; // Fallback for backwards compatibility
+      const response = await api.get(`/api/products/${productId}`);
       const product = response.data;
 
       // Add to cart with original quantity

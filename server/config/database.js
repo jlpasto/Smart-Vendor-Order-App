@@ -137,6 +137,7 @@ export const initDatabase = async () => {
     await query(`
       CREATE TABLE IF NOT EXISTS products (
         id SERIAL PRIMARY KEY,
+        product_connect_id INTEGER UNIQUE NOT NULL,
         vendor_connect_id INTEGER,
         vendor_name VARCHAR(255) NOT NULL,
         state VARCHAR(100),
@@ -184,7 +185,7 @@ export const initDatabase = async () => {
       CREATE TABLE IF NOT EXISTS orders (
         id SERIAL PRIMARY KEY,
         batch_order_number VARCHAR(50) NOT NULL,
-        product_id INTEGER REFERENCES products(id) ON DELETE SET NULL,
+        product_connect_id INTEGER REFERENCES products(product_connect_id) ON DELETE SET NULL,
         product_name VARCHAR(255) NOT NULL,
         vendor_connect_id INTEGER REFERENCES vendors(vendor_connect_id) ON DELETE SET NULL,
         vendor_name VARCHAR(255),
@@ -201,6 +202,7 @@ export const initDatabase = async () => {
 
     // Create indexes for better performance
     await query(`
+      CREATE INDEX IF NOT EXISTS idx_products_product_connect_id ON products(product_connect_id);
       CREATE INDEX IF NOT EXISTS idx_products_vendor ON products(vendor_name);
       CREATE INDEX IF NOT EXISTS idx_products_vendor_connect_id ON products(vendor_connect_id);
       CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
@@ -208,6 +210,7 @@ export const initDatabase = async () => {
       CREATE INDEX IF NOT EXISTS idx_products_seasonal ON products(seasonal);
       CREATE INDEX IF NOT EXISTS idx_products_new ON products(new);
       CREATE INDEX IF NOT EXISTS idx_orders_batch ON orders(batch_order_number);
+      CREATE INDEX IF NOT EXISTS idx_orders_product_connect_id ON orders(product_connect_id);
       CREATE INDEX IF NOT EXISTS idx_orders_user_email ON orders(user_email);
       CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
       CREATE INDEX IF NOT EXISTS idx_orders_date ON orders(date_submitted);

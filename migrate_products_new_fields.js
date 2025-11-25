@@ -17,11 +17,11 @@ async function migrate() {
   try {
     console.log('Adding new columns to products table...');
 
-    // Add app_id - unique identifier for product
+    // Add product_connect_id - unique numeric identifier for product
     await pool.query(`
-      ALTER TABLE products ADD COLUMN IF NOT EXISTS app_id VARCHAR(50);
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS product_connect_id INTEGER;
     `);
-    console.log('✅ Added app_id column');
+    console.log('✅ Added product_connect_id column');
 
     // Add vendor_connect_id
     await pool.query(`
@@ -94,7 +94,7 @@ async function migrate() {
 
     console.log('\n✅ Migration completed successfully!');
     console.log('\nNew columns added:');
-    console.log('- app_id (VARCHAR)');
+    console.log('- product_connect_id (INTEGER)');
     console.log('- vendor_connect_id (VARCHAR)');
     console.log('- main_category (VARCHAR)');
     console.log('- sub_category (VARCHAR)');

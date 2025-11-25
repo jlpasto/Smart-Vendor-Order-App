@@ -4,8 +4,8 @@
 
 | Excel Column | Database Column | Type | Notes |
 |---|---|---|---|
-| App ID | app_id | VARCHAR(50) | Unique product identifier (e.g., I0000001) |
-| ID | id | SERIAL PRIMARY KEY | Auto-generated in database |
+| Product Connect ID | product_connect_id | INTEGER UNIQUE NOT NULL | Primary key for relationships - used in orders and user assignments (e.g., 10001) |
+| ID | id | SERIAL PRIMARY KEY | Internal database ID - kept for backwards compatibility |
 | Vendor Connect ID | vendor_connect_id | VARCHAR(50) | Vendor's internal ID |
 | Vendor Name | vendor_name | VARCHAR(255) | Vendor name |
 | Product Name | product_name | VARCHAR(255) | Product name |
@@ -48,15 +48,42 @@
 When importing CSV/Excel files, use these exact column headers:
 
 ```
-App ID, ID, Vendor Connect ID, Vendor Name, Product Name, Main Category, Sub-Category,
+Product Connect ID, ID, Vendor Connect ID, Vendor Name, Product Name, Main Category, Sub-Category,
 Allergens, Dietary Preferences, Cuisine Type, Seasonal and Featured, Size, Case Pack,
 Wholesale Case Price, Wholesale Unit Price, Retail Unit Price (MSRP), GM%, Case Minimum,
 Shelf Life, UPC, State, Delivery Info, Notes, Image
 ```
 
+## Database Relationships
+
+### Foreign Keys Using product_connect_id
+
+**IMPORTANT**: As of the latest migration, all product relationships use `product_connect_id` (not `id`) as the foreign key.
+
+#### Orders Table
+- **Foreign Key**: `orders.product_connect_id`
+- **References**: `products.product_connect_id`
+- **Behavior**: ON DELETE SET NULL
+- **Purpose**: Links orders to products using the external product identifier
+
+#### Users Table (Access Control)
+- **Field**: `users.assigned_product_ids` (INTEGER[] array)
+- **Contains**: Array of `product_connect_id` values
+- **Purpose**: Controls which products buyers can see and order
+
+### Why product_connect_id?
+
+The `product_connect_id` field is now the primary relationship key because:
+1. **Stable Identifier**: Unlike the auto-incrementing `id`, product_connect_id is a business identifier
+2. **External Integration**: Can be synchronized with external systems
+3. **Data Migration**: Easier to migrate data between environments using known IDs
+4. **Import/Export**: Consistent IDs in Excel imports/exports
+
+The internal `id` field is maintained for backwards compatibility and database performance optimizations.
+
 ## Sample Data Example
 
 ```csv
-App ID,ID,Vendor Connect ID,Vendor Name,Product Name,Main Category,Sub-Category,Allergens,Dietary Preferences,Cuisine Type,Seasonal and Featured,Size,Case Pack,Wholesale Case Price,Wholesale Unit Price,Retail Unit Price (MSRP),GM%,Case Minimum,Shelf Life,UPC,State,Delivery Info,Notes,Image
-I0000001,16820,871,2Betties,Bites - Chocolate Chip,Snacks,Other,"Dairy-Free, Gluten-Free, Soy-Free, Egg-Free, Peanut-Free","Paleo, Low-Fat, Low-Carb, Low-Sugar, Low-Sodium",,Featured,1.4 oz,36,$68.20,$1.89,$2.99,36.79%,1,7 months from manufacture date,,MD,,,https://s3.amazonaws.com/cureate/products/pics/000/016/820/medium/Chocolate_Chip-New.jpeg?1753127774
+Product Connect ID,ID,Vendor Connect ID,Vendor Name,Product Name,Main Category,Sub-Category,Allergens,Dietary Preferences,Cuisine Type,Seasonal and Featured,Size,Case Pack,Wholesale Case Price,Wholesale Unit Price,Retail Unit Price (MSRP),GM%,Case Minimum,Shelf Life,UPC,State,Delivery Info,Notes,Image
+10001,16820,871,2Betties,Bites - Chocolate Chip,Snacks,Other,"Dairy-Free, Gluten-Free, Soy-Free, Egg-Free, Peanut-Free","Paleo, Low-Fat, Low-Carb, Low-Sugar, Low-Sodium",,Featured,1.4 oz,36,$68.20,$1.89,$2.99,36.79%,1,7 months from manufacture date,,MD,,,https://s3.amazonaws.com/cureate/products/pics/000/016/820/medium/Chocolate_Chip-New.jpeg?1753127774
 ```

@@ -751,7 +751,23 @@ router.get('/:id/similar', authenticate, async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await query('SELECT * FROM products WHERE id = $1', [id]);
+
+    // Try to fetch by product_connect_id first (if numeric), fallback to id
+    const isNumeric = /^\d+$/.test(id);
+    let result;
+
+    if (isNumeric) {
+      // Try product_connect_id first
+      result = await query('SELECT * FROM products WHERE product_connect_id = $1', [id]);
+
+      // If not found, try id
+      if (result.rows.length === 0) {
+        result = await query('SELECT * FROM products WHERE id = $1', [id]);
+      }
+    } else {
+      // Not numeric, only try id
+      result = await query('SELECT * FROM products WHERE id = $1', [id]);
+    }
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Product not found' });
@@ -895,6 +911,7 @@ router.get('/filters/seasonal-featured', async (req, res) => {
 router.post('/', authenticate, requireAdmin, async (req, res) => {
   try {
     const {
+      product_connect_id,
       vendor_name,
       state,
       product_name,
@@ -915,13 +932,13 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
 
     const result = await query(
       `INSERT INTO products (
-        vendor_name, state, product_name, product_description, size, case_pack,
+        product_connect_id, vendor_name, state, product_name, product_description, size, case_pack,
         upc, wholesale_case_price, wholesale_unit_price, retail_unit_price,
         order_qty, stock_level, product_image, popular, new, category
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
       RETURNING *`,
       [
-        vendor_name, state, product_name, product_description, size, case_pack,
+        product_connect_id || null, vendor_name, state, product_name, product_description, size, case_pack,
         upc, wholesale_case_price, wholesale_unit_price, retail_unit_price,
         order_qty || 0, stock_level || 0, product_image, popular || false,
         isNew || false, category
@@ -940,6 +957,7 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const {
+      product_connect_id,
       vendor_name,
       state,
       product_name,
@@ -960,15 +978,15 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
 
     const result = await query(
       `UPDATE products SET
-        vendor_name = $1, state = $2, product_name = $3, product_description = $4,
-        size = $5, case_pack = $6, upc = $7, wholesale_case_price = $8,
-        wholesale_unit_price = $9, retail_unit_price = $10, order_qty = $11,
-        stock_level = $12, product_image = $13, popular = $14, new = $15,
-        category = $16, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $17
+        product_connect_id = $1, vendor_name = $2, state = $3, product_name = $4, product_description = $5,
+        size = $6, case_pack = $7, upc = $8, wholesale_case_price = $9,
+        wholesale_unit_price = $10, retail_unit_price = $11, order_qty = $12,
+        stock_level = $13, product_image = $14, popular = $15, new = $16,
+        category = $17, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $18
       RETURNING *`,
       [
-        vendor_name, state, product_name, product_description, size, case_pack,
+        product_connect_id || null, vendor_name, state, product_name, product_description, size, case_pack,
         upc, wholesale_case_price, wholesale_unit_price, retail_unit_price,
         order_qty, stock_level, product_image, popular, isNew, category, id
       ]
@@ -1051,6 +1069,7 @@ router.post('/bulk-import', authenticate, requireAdmin, async (req, res) => {
         // Map Excel column names to database fields
         const productData = {
           id: product['ID'] || product.id || null,
+          product_connect_id: product['Product Connect ID'] || product.product_connect_id || null,
           vendor_connect_id: product['Vendor Connect ID'] || product.vendor_connect_id || null,
           vendor_name: product['Vendor Name'] || product.vendor_name,
           product_name: product['Product Name'] || product.product_name,
@@ -1101,24 +1120,41 @@ router.post('/bulk-import', authenticate, requireAdmin, async (req, res) => {
         const seasonal = seasonalFeatured.includes('seasonal');
         const isNew = seasonalFeatured.includes('new');
 
-        // Check if product has an ID (update) or not (create)
-        if (productData.id && productData.id !== '') {
-          // Update existing product
-          const checkResult = await query('SELECT id FROM products WHERE id = $1', [productData.id]);
+        // Check if product has an ID or product_connect_id (update) or not (create)
+        let existingProduct = null;
 
-          if (checkResult.rows.length === 0) {
-            errors.push(`Row ${i + 1}: Product with ID ${productData.id} not found. Creating new product instead.`);
+        // First try to find by id if provided
+        if (productData.id && productData.id !== '') {
+          const checkResult = await query('SELECT id FROM products WHERE id = $1', [productData.id]);
+          if (checkResult.rows.length > 0) {
+            existingProduct = checkResult.rows[0];
+          }
+        }
+
+        // If not found by id, try by product_connect_id
+        if (!existingProduct && productData.product_connect_id && productData.product_connect_id !== '') {
+          const checkResult = await query('SELECT id FROM products WHERE product_connect_id = $1', [productData.product_connect_id]);
+          if (checkResult.rows.length > 0) {
+            existingProduct = checkResult.rows[0];
+          }
+        }
+
+        if ((productData.id && productData.id !== '') || (productData.product_connect_id && productData.product_connect_id !== '')) {
+          // Update mode requested
+          if (!existingProduct) {
+            const idInfo = productData.id ? `ID ${productData.id}` : `Product Connect ID ${productData.product_connect_id}`;
+            errors.push(`Row ${i + 1}: Product with ${idInfo} not found. Creating new product instead.`);
 
             // Create as new product
             await query(
               `INSERT INTO products (
-                vendor_connect_id, vendor_name, product_name, main_category, sub_category,
+                product_connect_id, vendor_connect_id, vendor_name, product_name, main_category, sub_category,
                 allergens, dietary_preferences, cuisine_type, seasonal_and_featured, size, case_pack,
                 wholesale_case_price, wholesale_unit_price, retail_unit_price, case_minimum, shelf_life,
                 upc, state, delivery_info, notes, product_image, popular, seasonal, new, category, product_description
-              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)`,
+              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27)`,
               [
-                productData.vendor_connect_id, productData.vendor_name, productData.product_name,
+                productData.product_connect_id, productData.vendor_connect_id, productData.vendor_name, productData.product_name,
                 productData.main_category, productData.sub_category, productData.allergens, productData.dietary_preferences,
                 productData.cuisine_type, productData.seasonal_and_featured, productData.size, productData.case_pack,
                 productData.wholesale_case_price, productData.wholesale_unit_price, productData.retail_unit_price,
@@ -1129,24 +1165,24 @@ router.post('/bulk-import', authenticate, requireAdmin, async (req, res) => {
             );
             created++;
           } else {
-            // Update existing product
+            // Update existing product (found by id or product_connect_id)
             await query(
               `UPDATE products SET
-                vendor_connect_id = $1, vendor_name = $2, product_name = $3, main_category = $4, sub_category = $5,
-                allergens = $6, dietary_preferences = $7, cuisine_type = $8, seasonal_and_featured = $9, size = $10, case_pack = $11,
-                wholesale_case_price = $12, wholesale_unit_price = $13, retail_unit_price = $14, case_minimum = $15, shelf_life = $16,
-                upc = $17, state = $18, delivery_info = $19, notes = $20, product_image = $21, popular = $22, seasonal = $23,
-                new = $24, category = $25, product_description = $26, updated_at = CURRENT_TIMESTAMP
-              WHERE id = $27`,
+                product_connect_id = $1, vendor_connect_id = $2, vendor_name = $3, product_name = $4, main_category = $5, sub_category = $6,
+                allergens = $7, dietary_preferences = $8, cuisine_type = $9, seasonal_and_featured = $10, size = $11, case_pack = $12,
+                wholesale_case_price = $13, wholesale_unit_price = $14, retail_unit_price = $15, case_minimum = $16, shelf_life = $17,
+                upc = $18, state = $19, delivery_info = $20, notes = $21, product_image = $22, popular = $23, seasonal = $24,
+                new = $25, category = $26, product_description = $27, updated_at = CURRENT_TIMESTAMP
+              WHERE id = $28`,
               [
-                productData.vendor_connect_id, productData.vendor_name, productData.product_name,
+                productData.product_connect_id, productData.vendor_connect_id, productData.vendor_name, productData.product_name,
                 productData.main_category, productData.sub_category, productData.allergens, productData.dietary_preferences,
                 productData.cuisine_type, productData.seasonal_and_featured, productData.size, productData.case_pack,
                 productData.wholesale_case_price, productData.wholesale_unit_price, productData.retail_unit_price,
                 productData.case_minimum, productData.shelf_life, productData.upc, productData.state,
                 productData.delivery_info, productData.notes, productData.product_image,
                 popular, seasonal, isNew, productData.category, productData.product_description,
-                productData.id
+                existingProduct.id
               ]
             );
             updated++;
@@ -1155,13 +1191,13 @@ router.post('/bulk-import', authenticate, requireAdmin, async (req, res) => {
           // Create new product (no ID provided)
           await query(
             `INSERT INTO products (
-              vendor_connect_id, vendor_name, product_name, main_category, sub_category,
+              product_connect_id, vendor_connect_id, vendor_name, product_name, main_category, sub_category,
               allergens, dietary_preferences, cuisine_type, seasonal_and_featured, size, case_pack,
               wholesale_case_price, wholesale_unit_price, retail_unit_price, case_minimum, shelf_life,
               upc, state, delivery_info, notes, product_image, popular, seasonal, new, category, product_description
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)`,
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27)`,
             [
-              productData.vendor_connect_id, productData.vendor_name, productData.product_name,
+              productData.product_connect_id, productData.vendor_connect_id, productData.vendor_name, productData.product_name,
               productData.main_category, productData.sub_category, productData.allergens, productData.dietary_preferences,
               productData.cuisine_type, productData.seasonal_and_featured, productData.size, productData.case_pack,
               productData.wholesale_case_price, productData.wholesale_unit_price, productData.retail_unit_price,
