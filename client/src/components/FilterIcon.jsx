@@ -1,13 +1,13 @@
 import { useFilter } from '../context/FilterContext';
 
-const FilterIcon = ({ onClick }) => {
+const FilterIcon = ({ onClick, className = '' }) => {
   const { getActiveFilterCount } = useFilter();
   const activeCount = getActiveFilterCount();
 
   return (
     <button
       onClick={onClick}
-      className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors"
+      className={`relative p-2 hover:bg-gray-100 rounded-lg transition-colors ${className}`}
       title="Filter products"
       aria-label="Filter products"
     >

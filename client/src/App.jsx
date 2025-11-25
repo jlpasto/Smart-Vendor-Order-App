@@ -3,6 +3,7 @@ import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { SearchProvider } from './context/SearchContext';
 import { FilterProvider } from './context/FilterContext';
+import { SidebarProvider } from './context/SidebarContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 
@@ -27,7 +28,8 @@ function App() {
         <CartProvider>
           <SearchProvider>
             <FilterProvider>
-              <Routes>
+              <SidebarProvider>
+                <Routes>
             {/* Public routes */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
@@ -97,6 +99,7 @@ function App() {
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>
+              </SidebarProvider>
             </FilterProvider>
           </SearchProvider>
         </CartProvider>

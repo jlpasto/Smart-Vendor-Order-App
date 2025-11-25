@@ -8,6 +8,7 @@ import AddToOrderModal from '../components/AddToOrderModal';
 import FilterIcon from '../components/FilterIcon';
 import FilterModal from '../components/FilterModal';
 import FilterDetailPanel from '../components/FilterDetailPanel';
+import FilterSidebar from '../components/FilterSidebar';
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 
 const ProductsPage = () => {
@@ -254,68 +255,74 @@ const ProductsPage = () => {
   }
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Products</h1>
-        <div className="flex items-center gap-3">
-          {/* Sort Buttons */}
-          <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
-            <span className="text-sm font-medium text-gray-700 px-2">Sort:</span>
+    <>
+      {/* Filter Sidebar - Large screens only */}
+      <FilterSidebar className="hidden lg:block" />
 
-            {/* Product Name Sort */}
-            <button
-              onClick={() => {
-                if (sortField === 'product_name') {
-                  setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-                } else {
-                  setSortField('product_name');
-                  setSortOrder('asc');
-                }
-              }}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                sortField === 'product_name'
-                  ? 'bg-white text-primary-700 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-              title={`Sort by Product Name ${sortField === 'product_name' ? (sortOrder === 'asc' ? '(A-Z)' : '(Z-A)') : ''}`}
-            >
-              Product
-              {sortField === 'product_name' && (
-                <span className="text-lg">
-                  {sortOrder === 'asc' ? '↑' : '↓'}
-                </span>
-              )}
-            </button>
+      {/* Main Content Area */}
+      <div className="px-4 sm:px-6 py-6 lg:ml-80">
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-2xl font-bold">Products</h1>
+            <div className="flex items-center gap-3">
+              {/* Sort Buttons */}
+              <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+                <span className="text-sm font-medium text-gray-700 px-2">Sort:</span>
 
-            {/* Vendor Name Sort */}
-            <button
-              onClick={() => {
-                if (sortField === 'vendor_name') {
-                  setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-                } else {
-                  setSortField('vendor_name');
-                  setSortOrder('asc');
-                }
-              }}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                sortField === 'vendor_name'
-                  ? 'bg-white text-primary-700 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-              title={`Sort by Vendor Name ${sortField === 'vendor_name' ? (sortOrder === 'asc' ? '(A-Z)' : '(Z-A)') : ''}`}
-            >
-              Vendor
-              {sortField === 'vendor_name' && (
-                <span className="text-lg">
-                  {sortOrder === 'asc' ? '↑' : '↓'}
-                </span>
-              )}
-            </button>
+                {/* Product Name Sort */}
+                <button
+                  onClick={() => {
+                    if (sortField === 'product_name') {
+                      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                    } else {
+                      setSortField('product_name');
+                      setSortOrder('asc');
+                    }
+                  }}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    sortField === 'product_name'
+                      ? 'bg-white text-primary-700 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                  title={`Sort by Product Name ${sortField === 'product_name' ? (sortOrder === 'asc' ? '(A-Z)' : '(Z-A)') : ''}`}
+                >
+                  Product
+                  {sortField === 'product_name' && (
+                    <span className="text-lg">
+                      {sortOrder === 'asc' ? '↑' : '↓'}
+                    </span>
+                  )}
+                </button>
+
+                {/* Vendor Name Sort */}
+                <button
+                  onClick={() => {
+                    if (sortField === 'vendor_name') {
+                      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                    } else {
+                      setSortField('vendor_name');
+                      setSortOrder('asc');
+                    }
+                  }}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    sortField === 'vendor_name'
+                      ? 'bg-white text-primary-700 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                  title={`Sort by Vendor Name ${sortField === 'vendor_name' ? (sortOrder === 'asc' ? '(A-Z)' : '(Z-A)') : ''}`}
+                >
+                  Vendor
+                  {sortField === 'vendor_name' && (
+                    <span className="text-lg">
+                      {sortOrder === 'asc' ? '↑' : '↓'}
+                    </span>
+                  )}
+                </button>
+              </div>
+
+              {/* Filter Icon - Small screens only */}
+              <FilterIcon onClick={handleFilterIconClick} className="lg:hidden" />
+            </div>
           </div>
-
-          <FilterIcon onClick={handleFilterIconClick} />
-        </div>
-      </div>
 
       {/* No results */}
       {products.length === 0 && !loading && (
@@ -383,7 +390,7 @@ const ProductsPage = () => {
               </span>
             </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {vendorProducts.map(product => (
                   <div
                     key={product.id}
@@ -454,7 +461,7 @@ const ProductsPage = () => {
 
       {/* Flat Product Grid - When sorting by product or other fields */}
       {!groupedProducts && products.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {products.map(product => (
             <div
               key={product.id}
@@ -677,19 +684,23 @@ const ProductsPage = () => {
         </div>
       )}
 
-      {/* Filter Modal */}
-      <FilterModal
-        isOpen={showFilterModal}
-        onClose={() => setShowFilterModal(false)}
-        onSelectField={handleSelectField}
-      />
+      </div>
 
-      {/* Filter Detail Panel */}
-      <FilterDetailPanel
-        field={selectedFilterField}
-        isOpen={showFilterPanel}
-        onBack={handleBackToFilterModal}
-      />
+      {/* Filter Modal - Small screens only */}
+      <div className="lg:hidden">
+        <FilterModal
+          isOpen={showFilterModal}
+          onClose={() => setShowFilterModal(false)}
+          onSelectField={handleSelectField}
+        />
+
+        {/* Filter Detail Panel */}
+        <FilterDetailPanel
+          field={selectedFilterField}
+          isOpen={showFilterPanel}
+          onBack={handleBackToFilterModal}
+        />
+      </div>
 
       {/* Add to Order Modal */}
       <AddToOrderModal
@@ -698,7 +709,7 @@ const ProductsPage = () => {
         onClose={handleCloseAddToOrderModal}
         onAddToOrder={handleAddToCart}
       />
-    </div>
+    </>
   );
 };
 

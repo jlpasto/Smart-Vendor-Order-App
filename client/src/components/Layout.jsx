@@ -2,17 +2,17 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useSearch } from '../context/SearchContext';
-import { useState } from 'react';
+import { useSidebar } from '../context/SidebarContext';
 import DemoUserSwitcher from './DemoUserSwitcher';
 
 const Layout = () => {
   const { user, logout, isAdmin } = useAuth();
   const { getCartCount } = useCart();
   const { globalSearchTerm, setGlobalSearchTerm } = useSearch();
+  const { sidebarOpen, setSidebarOpen } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
   const cartCount = getCartCount();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const handleLogout = () => {
     logout();
