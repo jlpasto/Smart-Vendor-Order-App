@@ -216,16 +216,21 @@ const ProductsPage = () => {
   };
 
   // Group products by vendor (memoized for performance)
+  // Only group when sorting by vendor_name, otherwise return null for flat list
   const groupedProducts = useMemo(() => {
-    const groups = {};
-    products.forEach(product => {
-      if (!groups[product.vendor_name]) {
-        groups[product.vendor_name] = [];
-      }
-      groups[product.vendor_name].push(product);
-    });
-    return groups;
-  }, [products]);
+    if (sortField === 'vendor_name') {
+      const groups = {};
+      products.forEach(product => {
+        if (!groups[product.vendor_name]) {
+          groups[product.vendor_name] = [];
+        }
+        groups[product.vendor_name].push(product);
+      });
+      return groups;
+    }
+    // Return null for flat list when not sorting by vendor
+    return null;
+  }, [products, sortField]);
 
   if (loading) {
     return (
@@ -319,8 +324,8 @@ const ProductsPage = () => {
         </div>
       )}
 
-      {/* Product Grid by Vendor */}
-      {Object.entries(groupedProducts).map(([vendor, vendorProducts]) => {
+      {/* Product Grid by Vendor - Only when sorting by vendor */}
+      {groupedProducts && Object.entries(groupedProducts).map(([vendor, vendorProducts]) => {
         const firstProduct = vendorProducts[0];
         const hasVendorInfo = firstProduct?.vendor_about || firstProduct?.vendor_story;
         return (
@@ -446,6 +451,80 @@ const ProductsPage = () => {
         </div>
         );
       })}
+
+      {/* Flat Product Grid - When sorting by product or other fields */}
+      {!groupedProducts && products.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+          {products.map(product => (
+            <div
+              key={product.id}
+              className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer overflow-hidden flex flex-col"
+              onClick={() => handleProductClick(product)}
+            >
+              {/* Product Image */}
+              <div className="relative w-full pt-[100%] bg-gray-100">
+                <img
+                  src={product.product_image || 'https://via.placeholder.com/200'}
+                  alt={product.product_name}
+                  className="absolute top-0 left-0 w-full h-full object-cover"
+                />
+                {/* Product ID Badge */}
+                <div className="absolute top-1 right-1 bg-black bg-opacity-50 text-white text-xs px-1.5 py-0.5 rounded">
+                  #{product.id}
+                </div>
+              </div>
+
+              {/* Product Details */}
+              <div className="p-2 flex-1 flex flex-col">
+                <h3 className="font-semibold text-xs text-gray-900 line-clamp-2 mb-1 min-h-[2rem]">
+                  {product.product_name}
+                </h3>
+
+                {/* Vendor Name - Show in flat view */}
+                <p className="text-xs text-gray-500 mb-1">
+                  {product.vendor_name}
+                </p>
+
+                <div className="space-y-0.5 text-xs text-gray-600 mb-2">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Case:</span>
+                    <span className="font-semibold">${parseFloat(product.wholesale_case_price || 0).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Unit:</span>
+                    <span className="font-semibold">${parseFloat(product.wholesale_unit_price || 0).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">MSRP:</span>
+                    <span className="font-semibold">${parseFloat(product.retail_unit_price || 0).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">GM:</span>
+                    <span className="font-semibold text-green-600">{parseFloat(product.gm_percent || 0).toFixed(1)}%</span>
+                  </div>
+                </div>
+
+                {/* Add Button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenAddToOrderModal(product);
+                  }}
+                  disabled={addedToCart[product.id]}
+                  className={`w-full py-1.5 rounded-md text-xs font-semibold transition-colors mt-auto ${
+                    addedToCart[product.id]
+                      ? 'bg-green-500 text-white'
+                      : 'bg-primary-600 hover:bg-primary-700 text-white'
+                  }`}
+                  aria-label="Add to order"
+                >
+                  {addedToCart[product.id] ? '✓ Added' : '+ Add to Order'}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Loading More Indicator */}
       {loadingMore && (
