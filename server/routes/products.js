@@ -938,7 +938,7 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
       RETURNING *`,
       [
-        product_connect_id || null, vendor_name, state, product_name, product_description, size, case_pack,
+        product_connect_id || null, vendor_name, state, product_name, product_description, size, case_pack || null,
         upc, wholesale_case_price, wholesale_unit_price, retail_unit_price,
         order_qty || 0, stock_level || 0, product_image, popular || false,
         isNew || false, category
@@ -986,9 +986,9 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
       WHERE id = $18
       RETURNING *`,
       [
-        product_connect_id || null, vendor_name, state, product_name, product_description, size, case_pack,
+        product_connect_id || null, vendor_name, state, product_name, product_description, size, case_pack || null,
         upc, wholesale_case_price, wholesale_unit_price, retail_unit_price,
-        order_qty, stock_level, product_image, popular, isNew, category, id
+        order_qty || 0, stock_level || 0, product_image, popular || false, isNew || false, category, id
       ]
     );
 
