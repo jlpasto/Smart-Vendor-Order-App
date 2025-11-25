@@ -23,10 +23,16 @@ const AddToOrderModal = ({ product, isOpen, onClose, onAddToOrder }) => {
   // Fetch similar products when "replace" is selected
   useEffect(() => {
     const fetchSimilarProducts = async () => {
-      if (unavailableAction === 'replace' && product && isOpen) {
+      if ((unavailableAction === 'replace_same_vendor' || unavailableAction === 'replace_other_vendors') && product && isOpen) {
         setLoadingSimilar(true);
         try {
-          const response = await api.get(`/api/products/${product.id}/similar?limit=10`);
+          const sameVendorOnly = unavailableAction === 'replace_same_vendor';
+          const response = await api.get(`/api/products/${product.id}/similar`, {
+            params: {
+              limit: 10,
+              sameVendorOnly
+            }
+          });
           setSimilarProducts(response.data.similarProducts || []);
         } catch (error) {
           console.error('Error fetching similar products:', error);
@@ -34,6 +40,8 @@ const AddToOrderModal = ({ product, isOpen, onClose, onAddToOrder }) => {
         } finally {
           setLoadingSimilar(false);
         }
+      } else {
+        setSimilarProducts([]);
       }
     };
 
@@ -78,8 +86,8 @@ const AddToOrderModal = ({ product, isOpen, onClose, onAddToOrder }) => {
   };
 
   const handleAddToOrder = () => {
-    // Pass replacement product ID if "replace" is selected and a replacement is chosen
-    const replacementProductId = unavailableAction === 'replace' && selectedReplacement
+    // Pass replacement product ID if any "replace" option is selected and a replacement is chosen
+    const replacementProductId = (unavailableAction === 'replace_same_vendor' || unavailableAction === 'replace_other_vendors') && selectedReplacement
       ? selectedReplacement.id
       : null;
 
@@ -166,13 +174,14 @@ const AddToOrderModal = ({ product, isOpen, onClose, onAddToOrder }) => {
               }}
             >
               <option value="curate">Cureate to replace if sold out</option>
-              <option value="replace">Replace with similar item</option>
+              <option value="replace_same_vendor">Replace with similar item under same vendor</option>
+              <option value="replace_other_vendors">Replace with similar item across other vendors</option>
               <option value="remove">Remove it from my order</option>
             </select>
           </div>
 
           {/* Similar Products Selection */}
-          {unavailableAction === 'replace' && (
+          {(unavailableAction === 'replace_same_vendor' || unavailableAction === 'replace_other_vendors') && (
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Choose replacement product:
@@ -186,7 +195,9 @@ const AddToOrderModal = ({ product, isOpen, onClose, onAddToOrder }) => {
 
               {!loadingSimilar && similarProducts.length === 0 && (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-800">
-                  No similar products found in the same category.
+                  {unavailableAction === 'replace_same_vendor'
+                    ? 'No similar products found under the same vendor in the same category.'
+                    : 'No similar products found from other vendors in the same category.'}
                 </div>
               )}
 

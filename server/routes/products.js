@@ -700,11 +700,12 @@ router.get('/grouped-by-vendor', authenticate, requireAdmin, async (req, res) =>
 router.get('/:id/similar', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
-    const { limit = 10 } = req.query;
+    const { limit = 10, sameVendorOnly } = req.query;
+    const onlySameVendor = sameVendorOnly === 'true';
 
-    // First, get the original product to find its categories
+    // First, get the original product to find its categories and vendor
     const productResult = await query(
-      'SELECT id, sub_category, main_category FROM products WHERE id = $1',
+      'SELECT id, sub_category, main_category, vendor_name, vendor_connect_id FROM products WHERE id = $1',
       [id]
     );
 
@@ -715,16 +716,21 @@ router.get('/:id/similar', authenticate, async (req, res) => {
     const product = productResult.rows[0];
     let similarProducts = [];
 
+    // Build vendor filter condition
+    const vendorCondition = onlySameVendor
+      ? 'AND p.vendor_connect_id = $4'
+      : 'AND p.vendor_connect_id != $4';
+
     // Try to find products with same sub_category first
     if (product.sub_category) {
       const subCategoryResult = await query(
         `SELECT p.*, v.about as vendor_about, v.story as vendor_story, v.logo_url as vendor_logo, v.website_url as vendor_website
          FROM products p
          LEFT JOIN vendors v ON p.vendor_connect_id = v.vendor_connect_id
-         WHERE p.sub_category = $1 AND p.id != $2
+         WHERE p.sub_category = $1 AND p.id != $2 ${vendorCondition}
          ORDER BY p.product_name ASC
          LIMIT $3`,
-        [product.sub_category, id, parseInt(limit)]
+        [product.sub_category, id, parseInt(limit), product.vendor_connect_id]
       );
       similarProducts = subCategoryResult.rows;
     }
@@ -735,10 +741,10 @@ router.get('/:id/similar', authenticate, async (req, res) => {
         `SELECT p.*, v.about as vendor_about, v.story as vendor_story, v.logo_url as vendor_logo, v.website_url as vendor_website
          FROM products p
          LEFT JOIN vendors v ON p.vendor_connect_id = v.vendor_connect_id
-         WHERE p.main_category = $1 AND p.id != $2
+         WHERE p.main_category = $1 AND p.id != $2 ${vendorCondition}
          ORDER BY p.product_name ASC
          LIMIT $3`,
-        [product.main_category, id, parseInt(limit)]
+        [product.main_category, id, parseInt(limit), product.vendor_connect_id]
       );
       similarProducts = mainCategoryResult.rows;
     }
@@ -748,7 +754,8 @@ router.get('/:id/similar', authenticate, async (req, res) => {
       similarProducts,
       matchedBy: similarProducts.length > 0
         ? (product.sub_category && similarProducts.length > 0 ? 'sub_category' : 'main_category')
-        : null
+        : null,
+      sameVendorOnly: onlySameVendor
     });
   } catch (error) {
     console.error('Error fetching similar products:', error);
