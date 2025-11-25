@@ -87,9 +87,9 @@ router.get('/', authenticate, async (req, res) => {
       if (userResult.rows.length > 0) {
         const assignedProductIds = userResult.rows[0].assigned_product_ids;
 
-        // If user has assigned product IDs, filter products by those product IDs
+        // If user has assigned product IDs, filter products by those product_connect_ids
         if (assignedProductIds && assignedProductIds.length > 0) {
-          queryText += ` AND p.id = ANY($${paramCount})`;
+          queryText += ` AND p.product_connect_id = ANY($${paramCount})`;
           queryParams.push(assignedProductIds);
           paramCount++;
         } else {
@@ -628,12 +628,14 @@ router.get('/ids', authenticate, requireAdmin, async (req, res) => {
 
 // Get products grouped by vendor (for product assignment UI)
 // IMPORTANT: This must come BEFORE /:id route to avoid matching "grouped-by-vendor" as an ID
+// Returns product_connect_id for each product
 router.get('/grouped-by-vendor', authenticate, requireAdmin, async (req, res) => {
   try {
     // Get all products grouped by vendor_name
     const productsResult = await query(`
       SELECT
         id,
+        product_connect_id,
         product_name,
         vendor_name,
         vendor_connect_id,
@@ -669,6 +671,7 @@ router.get('/grouped-by-vendor', authenticate, requireAdmin, async (req, res) =>
       const vendor = vendorMap.get(vendorName);
       vendor.products.push({
         id: product.id,
+        product_connect_id: product.product_connect_id,
         product_name: product.product_name,
         vendor_connect_id: product.vendor_connect_id,
         size: product.size,

@@ -85,7 +85,7 @@ export const initDatabase = async () => {
       DO $$
       BEGIN
         ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
-        ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('buyer', 'admin'));
+        ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('buyer', 'admin', 'user'));
       EXCEPTION
         WHEN OTHERS THEN NULL;
       END $$;

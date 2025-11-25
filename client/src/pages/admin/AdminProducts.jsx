@@ -474,15 +474,15 @@ const AdminProducts = () => {
     if (filters.delivery_info && !product.delivery_info?.toLowerCase().includes(filters.delivery_info.toLowerCase())) return false;
     if (filters.notes && !product.notes?.toLowerCase().includes(filters.notes.toLowerCase())) return false;
 
+    // Multi-select filters
+    if (filters.vendor?.length > 0 && !filters.vendor.includes(product.vendor_name)) return false;
+    if (filters.main_categories?.length > 0 && !filters.main_categories.includes(product.main_category)) return false;
+    if (filters.sub_categories?.length > 0 && !filters.sub_categories.includes(product.sub_category)) return false;
+
     // Dropdown filters
-    if (filters.vendor && product.vendor_name !== filters.vendor) return false;
     if (filters.state && product.state !== filters.state) return false;
     if (filters.cuisine_type && product.cuisine_type !== filters.cuisine_type) return false;
     if (filters.seasonal_featured && product.seasonal_featured !== filters.seasonal_featured) return false;
-
-    // Multi-select filters
-    if (filters.main_categories?.length > 0 && !filters.main_categories.includes(product.main_category)) return false;
-    if (filters.sub_categories?.length > 0 && !filters.sub_categories.includes(product.sub_category)) return false;
 
     if (filters.allergens?.length > 0) {
       const productAllergens = product.allergens?.split(',').map(a => a.trim()) || [];

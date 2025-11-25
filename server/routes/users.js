@@ -164,14 +164,14 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
     }
 
     if (assigned_products !== undefined) {
-      // Validate product IDs exist in products table
+      // Validate product_connect_ids exist in products table
       if (Array.isArray(assigned_products) && assigned_products.length > 0) {
         const productCheck = await query(
-          'SELECT id FROM products WHERE id = ANY($1)',
+          'SELECT product_connect_id FROM products WHERE product_connect_id = ANY($1)',
           [assigned_products]
         );
 
-        const validProductIds = productCheck.rows.map(row => row.id);
+        const validProductIds = productCheck.rows.map(row => row.product_connect_id);
         const invalidProductIds = assigned_products.filter(id => !validProductIds.includes(id));
 
         if (invalidProductIds.length > 0) {

@@ -443,7 +443,7 @@ const VendorAssignmentModal = ({ user, onClose, onSave }) => {
 
   // Toggle vendor checkbox (selects/deselects ALL products under vendor)
   const handleVendorCheckbox = (vendor) => {
-    const vendorProductIds = vendor.products.map(p => p.id);
+    const vendorProductIds = vendor.products.map(p => p.product_connect_id);
     const allSelected = vendorProductIds.every(id => selectedProductIds.includes(id));
 
     if (allSelected) {
@@ -470,7 +470,7 @@ const VendorAssignmentModal = ({ user, onClose, onSave }) => {
 
   // Calculate vendor checkbox state (none, all, or partial)
   const getVendorCheckboxState = (vendor) => {
-    const vendorProductIds = vendor.products.map(p => p.id);
+    const vendorProductIds = vendor.products.map(p => p.product_connect_id);
     const selectedCount = vendorProductIds.filter(id =>
       selectedProductIds.includes(id)
     ).length;
@@ -482,7 +482,7 @@ const VendorAssignmentModal = ({ user, onClose, onSave }) => {
 
   // Select all products (from all vendors)
   const handleSelectAll = () => {
-    const allProductIds = filteredVendors.flatMap(v => v.products.map(p => p.id));
+    const allProductIds = filteredVendors.flatMap(v => v.products.map(p => p.product_connect_id));
     setSelectedProductIds([...new Set([...selectedProductIds, ...allProductIds])]);
   };
 
@@ -615,7 +615,7 @@ const VendorAssignmentModal = ({ user, onClose, onSave }) => {
                   const isExpanded = expandedVendors.has(vendor.id);
                   const checkboxState = getVendorCheckboxState(vendor);
                   const selectedCount = vendor.products.filter(p =>
-                    selectedProductIds.includes(p.id)
+                    selectedProductIds.includes(p.product_connect_id)
                   ).length;
 
                   return (
@@ -670,18 +670,18 @@ const VendorAssignmentModal = ({ user, onClose, onSave }) => {
                         <div className="bg-white">
                           {vendor.products.map(product => (
                             <label
-                              key={product.id}
+                              key={product.product_connect_id}
                               className="flex items-center px-4 py-2 pl-12 cursor-pointer hover:bg-gray-50 border-t border-gray-100"
                             >
                               <input
                                 type="checkbox"
-                                checked={selectedProductIds.includes(product.id)}
-                                onChange={() => handleProductCheckbox(product.id)}
+                                checked={selectedProductIds.includes(product.product_connect_id)}
+                                onChange={() => handleProductCheckbox(product.product_connect_id)}
                                 className="w-4 h-4 mr-3 cursor-pointer"
                               />
                               <div className="flex-1">
                                 <span className="text-sm text-gray-800">{product.product_name}</span>
-                                <span className="text-xs text-gray-500 ml-2">(#{product.id})</span>
+                                <span className="text-xs text-gray-500 ml-2">(Product ID: {product.product_connect_id})</span>
                               </div>
                               {product.wholesale_case_price && (
                                 <span className="text-xs text-gray-600">

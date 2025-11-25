@@ -23,7 +23,8 @@
       "Bash(npm run server:*)",
       "Bash(npm run dev:client:*)",
       "Bash(npm run:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(echo:*)"
     ],
     "deny": [],
     "ask": []
