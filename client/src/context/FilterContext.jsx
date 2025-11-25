@@ -24,12 +24,12 @@ export const FilterProvider = ({ children }) => {
     notes: '',
 
     // Dropdown filters
-    vendor: '',
     state: '',
     cuisine_type: '',
     seasonal_featured: '',
 
     // Multi-select filters
+    vendor: [],
     main_categories: [],
     sub_categories: [],
     allergens: [],
@@ -84,10 +84,10 @@ export const FilterProvider = ({ children }) => {
       shelf_life: '',
       delivery_info: '',
       notes: '',
-      vendor: '',
       state: '',
       cuisine_type: '',
       seasonal_featured: '',
+      vendor: [],
       main_categories: [],
       sub_categories: [],
       allergens: [],

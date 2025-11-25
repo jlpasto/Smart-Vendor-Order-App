@@ -8,7 +8,7 @@ const FilterFieldList = ({ onSelectField, onClearAll }) => {
   const filterFields = [
     { key: 'id', label: 'ID', icon: '#', type: 'text' },
     { key: 'vendor_connect_id', label: 'Vendor Connect ID', icon: '🔗', type: 'text' },
-    { key: 'vendor', label: 'Vendor Name', icon: '🏪', type: 'dropdown' },
+    { key: 'vendor', label: 'Vendor Name', icon: '🏪', type: 'checkbox' },
     { key: 'product_name', label: 'Product Name', icon: '📦', type: 'text' },
     { key: 'main_categories', label: 'Main Category', icon: '📂', type: 'checkbox' },
     { key: 'sub_categories', label: 'Sub-Category', icon: '📁', type: 'checkbox' },

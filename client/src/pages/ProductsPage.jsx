@@ -82,13 +82,23 @@ const ProductsPage = () => {
   }, [sortField, sortOrder, globalSearchTerm, filters]);
 
   const fetchProducts = async (currentCursor) => {
+    // Serialize array filters as JSON strings
+    const serializedFilters = {};
+    Object.entries(filters).forEach(([key, value]) => {
+      if (Array.isArray(value) && value.length > 0) {
+        serializedFilters[key] = JSON.stringify(value);
+      } else if (value !== '' && value !== null && value !== undefined && value !== false) {
+        serializedFilters[key] = value;
+      }
+    });
+
     const params = {
       cursor: currentCursor,
       limit: 20,
       sort: sortField,
       order: sortOrder,
       search: globalSearchTerm || undefined,
-      ...filters
+      ...serializedFilters
     };
 
     const response = await api.get('/api/products', { params });

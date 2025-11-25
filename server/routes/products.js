@@ -178,11 +178,21 @@ router.get('/', authenticate, async (req, res) => {
       paramCount++;
     }
 
-    // Single select filters
+    // Vendor filter (multi-select array)
     if (vendor) {
-      queryText += ` AND p.vendor_name = $${paramCount}`;
-      queryParams.push(vendor);
-      paramCount++;
+      try {
+        const vendorArray = Array.isArray(vendor) ? vendor : JSON.parse(vendor);
+        if (vendorArray.length > 0) {
+          queryText += ` AND p.vendor_name = ANY($${paramCount})`;
+          queryParams.push(vendorArray);
+          paramCount++;
+        }
+      } catch (e) {
+        // Fallback for backward compatibility: treat as single string
+        queryText += ` AND p.vendor_name = $${paramCount}`;
+        queryParams.push(vendor);
+        paramCount++;
+      }
     }
 
     if (state) {
