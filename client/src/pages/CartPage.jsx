@@ -100,6 +100,16 @@ const CartPage = () => {
     }, 0);
   };
 
+  // Helper function to check if case minimum warning should be shown
+  const shouldShowCaseMinimumWarning = (item) => {
+    return (
+      item.pricing_mode === 'case' &&
+      item.case_minimum != null &&
+      item.case_minimum > 0 &&
+      item.quantity < item.case_minimum
+    );
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <h1 className="page-title mb-6">Purchase Order</h1>
@@ -151,22 +161,31 @@ const CartPage = () => {
                           <h3 className="text-base font-bold text-gray-900 mb-1">{item.product_name}</h3>
 
                           {/* Pricing Mode Dropdown */}
-                          <div className="flex items-center gap-3 mb-2 flex-wrap">
-                            <label htmlFor={`pricing-mode-${item.id}`} className="text-sm text-gray-600">
-                              Order by:
-                            </label>
-                            <select
-                              id={`pricing-mode-${item.id}`}
-                              className="border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                              value={item.pricing_mode || 'case'}
-                              onChange={(e) => updatePricingMode(item.id, e.target.value)}
-                            >
-                              <option value="case">By Case</option>
-                              <option value="unit">By Unit</option>
-                            </select>
-                            <span className="text-sm font-semibold text-primary-600">
-                              ${parseFloat(price).toFixed(2)} per {item.pricing_mode === 'unit' ? 'unit' : 'case'}
-                            </span>
+                          <div className="mb-2">
+                            <div className="flex items-center gap-3 flex-wrap">
+                              <label htmlFor={`pricing-mode-${item.id}`} className="text-sm text-gray-600">
+                                Order by:
+                              </label>
+                              <select
+                                id={`pricing-mode-${item.id}`}
+                                className="border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                value={item.pricing_mode || 'case'}
+                                onChange={(e) => updatePricingMode(item.id, e.target.value)}
+                              >
+                                <option value="case">By Case</option>
+                                <option value="unit">By Unit</option>
+                              </select>
+                              <span className="text-sm font-semibold text-primary-600">
+                                ${parseFloat(price).toFixed(2)} per {item.pricing_mode === 'unit' ? 'unit' : 'case'}
+                              </span>
+                            </div>
+
+                            {/* Show case minimum info below pricing mode */}
+                            {item.pricing_mode === 'case' && item.case_minimum && item.case_minimum > 0 && (
+                              <div className="mt-1 text-xs text-gray-600">
+                                <span className="font-semibold">Case Minimum:</span> {item.case_minimum} case{item.case_minimum > 1 ? 's' : ''}
+                              </div>
+                            )}
                           </div>
 
                           {/* Quantity Controls */}
@@ -206,6 +225,24 @@ const CartPage = () => {
                               </p>
                             </div>
                           </div>
+
+                          {/* Case Minimum Warning */}
+                          {shouldShowCaseMinimumWarning(item) && (
+                            <div className="mt-3 bg-yellow-50 border-l-4 border-yellow-400 px-4 py-3 rounded-r-lg flex items-start gap-3">
+                              <svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                              </svg>
+                              <div className="flex-1">
+                                <p className="text-sm font-semibold text-yellow-800">
+                                  Case Minimum Not Met
+                                </p>
+                                <p className="text-xs text-yellow-700 mt-1">
+                                  Please order at least <strong>{item.case_minimum}</strong> case{item.case_minimum > 1 ? 's' : ''}.
+                                  Currently ordering <strong>{item.quantity}</strong> case{item.quantity > 1 ? 's' : ''}.
+                                </p>
+                              </div>
+                            </div>
+                          )}
                         </div>
 
                         {/* Remove Button */}
