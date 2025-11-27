@@ -1162,10 +1162,8 @@ router.post('/bulk-import', authenticate, requireAdmin, async (req, res) => {
         if ((productData.id && productData.id !== '') || (productData.product_connect_id && productData.product_connect_id !== '')) {
           // Update mode requested
           if (!existingProduct) {
-            const idInfo = productData.id ? `ID ${productData.id}` : `Product Connect ID ${productData.product_connect_id}`;
-            errors.push(`Row ${i + 1}: Product with ${idInfo} not found. Creating new product instead.`);
-
-            // Create as new product
+            // Product not found, create as new product (this is expected behavior)
+            // No error message needed as creating new products is intentional
             await query(
               `INSERT INTO products (
                 product_connect_id, vendor_connect_id, vendor_name, product_name, main_category, sub_category,
