@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -57,6 +57,103 @@ const CartPage = () => {
       }
     }
   };
+
+  // Helper function to aggregate units by vendor and case pack
+  const aggregateUnitsByVendorAndCasePack = (cartItems) => {
+    const groups = {};
+
+    cartItems.forEach(item => {
+      // Only process UNIT mode items with valid case_pack
+      if (item.pricing_mode !== 'unit' || !item.case_pack || item.case_pack <= 0) {
+        return;
+      }
+
+      // Create unique group key
+      const groupKey = `${item.vendor_name || 'unknown'}_${item.case_pack}`;
+
+      if (!groups[groupKey]) {
+        groups[groupKey] = {
+          vendor_name: item.vendor_name,
+          case_pack: item.case_pack,
+          total_units: 0,
+          items: [],
+          is_complete: false,
+          units_needed: 0
+        };
+      }
+
+      groups[groupKey].total_units += item.quantity;
+      groups[groupKey].items.push({
+        id: item.id,
+        product_name: item.product_name,
+        quantity: item.quantity
+      });
+    });
+
+    // Calculate completion status
+    Object.values(groups).forEach(group => {
+      group.is_complete = group.total_units >= group.case_pack;
+      group.units_needed = Math.max(0, group.case_pack - group.total_units);
+    });
+
+    return groups;
+  };
+
+  // Helper function to check if case pack warning should be shown
+  const shouldShowCasePackWarning = (item, aggregateGroups) => {
+    if (item.pricing_mode !== 'unit') return false;
+    if (!item.case_pack || item.case_pack <= 0) return false;
+
+    const groupKey = `${item.vendor_name || 'unknown'}_${item.case_pack}`;
+    const group = aggregateGroups[groupKey];
+
+    if (!group) return false;
+
+    return !group.is_complete;
+  };
+
+  // Helper function to check if case pack success should be shown
+  const shouldShowCasePackSuccess = (item, aggregateGroups) => {
+    if (item.pricing_mode !== 'unit') return false;
+    if (!item.case_pack || item.case_pack <= 0) return false;
+
+    const groupKey = `${item.vendor_name || 'unknown'}_${item.case_pack}`;
+    const group = aggregateGroups[groupKey];
+
+    if (!group) return false;
+
+    return group.is_complete;
+  };
+
+  // Helper function to get case pack warning data
+  const getCasePackWarningData = (item, aggregateGroups) => {
+    const groupKey = `${item.vendor_name || 'unknown'}_${item.case_pack}`;
+    const group = aggregateGroups[groupKey];
+
+    if (!group) return null;
+
+    return {
+      current_units: group.total_units,
+      required_units: group.case_pack,
+      units_needed: group.units_needed,
+      products_in_group: group.items.length,
+      is_part_of_group: group.items.length > 1
+    };
+  };
+
+  // Calculate case pack groups with memoization for performance
+  const casePackGroups = useMemo(() => {
+    const groups = aggregateUnitsByVendorAndCasePack(cart);
+    console.log('Case Pack Groups:', groups);
+    console.log('Cart items:', cart.map(item => ({
+      id: item.id,
+      name: item.product_name,
+      pricing_mode: item.pricing_mode,
+      case_pack: item.case_pack,
+      quantity: item.quantity
+    })));
+    return groups;
+  }, [cart]);
 
   if (cart.length === 0) {
     return (
@@ -225,6 +322,60 @@ const CartPage = () => {
                               </p>
                             </div>
                           </div>
+
+                          {/* Case Pack Warning (UNIT mode) */}
+                          {shouldShowCasePackWarning(item, casePackGroups) && (() => {
+                            const warningData = getCasePackWarningData(item, casePackGroups);
+                            if (!warningData) return null;
+
+                            return (
+                              <div className="mt-3 bg-yellow-50 border-l-4 border-yellow-400 px-4 py-3 rounded-r-lg flex items-start gap-3">
+                                <svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                </svg>
+                                <div className="flex-1">
+                                  <p className="text-sm font-semibold text-yellow-800">
+                                    ⚠️ Case Pack Incomplete ({warningData.current_units}/{warningData.required_units} units)
+                                  </p>
+                                  <p className="text-xs text-yellow-700 mt-1">
+                                    {warningData.is_part_of_group ? (
+                                      <>Add <strong>{warningData.units_needed}</strong> more units from similar products to complete the case pack.</>
+                                    ) : (
+                                      <>
+                                        This product requires <strong>{warningData.required_units}</strong> units per case pack.
+                                        You currently have <strong>{warningData.current_units}</strong> units.
+                                        Add <strong>{warningData.units_needed}</strong> more units to complete the case pack.
+                                        <br />
+                                        <span className="text-xs mt-1 block">💡 Tip: You can combine with similar products from {item.vendor_name} with the same case pack size ({warningData.required_units} units) to meet this requirement.</span>
+                                      </>
+                                    )}
+                                  </p>
+                                </div>
+                              </div>
+                            );
+                          })()}
+
+                          {/* Case Pack Success Indicator (UNIT mode) */}
+                          {shouldShowCasePackSuccess(item, casePackGroups) && (() => {
+                            const warningData = getCasePackWarningData(item, casePackGroups);
+                            if (!warningData) return null;
+
+                            return (
+                              <div className="mt-3 bg-green-50 border-l-4 border-green-400 px-4 py-3 rounded-r-lg flex items-start gap-3">
+                                <svg className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                                <div className="flex-1">
+                                  <p className="text-sm font-semibold text-green-800">
+                                    ✓ Case Pack Complete ({warningData.current_units}/{warningData.required_units} units)
+                                  </p>
+                                  <p className="text-xs text-green-700 mt-1">
+                                    Great! You've met the case pack requirement.
+                                  </p>
+                                </div>
+                              </div>
+                            );
+                          })()}
 
                           {/* Case Minimum Warning */}
                           {shouldShowCaseMinimumWarning(item) && (
