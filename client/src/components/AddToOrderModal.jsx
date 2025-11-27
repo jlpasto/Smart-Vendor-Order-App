@@ -159,13 +159,6 @@ const AddToOrderModal = ({ product, isOpen, onClose, onAddToOrder }) => {
               Order by:
             </label>
 
-            {/* Show case minimum info if available and case mode is selected */}
-            {pricingMode === 'case' && product.case_minimum && product.case_minimum > 0 && (
-              <div className="mb-2 text-xs text-gray-600 bg-gray-50 px-3 py-2 rounded border border-gray-200">
-                <span className="font-semibold">Case Minimum:</span> {product.case_minimum} case{product.case_minimum > 1 ? 's' : ''}
-              </div>
-            )}
-
             <select
               id="pricing-mode"
               className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -175,6 +168,13 @@ const AddToOrderModal = ({ product, isOpen, onClose, onAddToOrder }) => {
               <option value="case">Case - ${parseFloat(product.wholesale_case_price || 0).toFixed(2)}</option>
               <option value="unit">Unit - ${parseFloat(product.wholesale_unit_price || 0).toFixed(2)}</option>
             </select>
+
+            {/* Show case minimum info below dropdown if available and case mode is selected */}
+            {pricingMode === 'case' && product.case_minimum && product.case_minimum > 0 && (
+              <div className="mt-2 text-xs text-gray-600 bg-gray-50 px-3 py-2 rounded border border-gray-200">
+                <span className="font-semibold">Case Minimum:</span> {product.case_minimum} case{product.case_minimum > 1 ? 's' : ''}
+              </div>
+            )}
           </div>
 
           {/* If Unavailable Dropdown */}
