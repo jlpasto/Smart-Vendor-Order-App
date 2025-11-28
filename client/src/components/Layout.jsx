@@ -31,7 +31,7 @@ const Layout = () => {
   // Menu items for regular users
   const regularUserMenuItems = [
     { path: '/products', label: 'Products', icon: '📦' },
-    { path: '/cart', label: 'Cart', icon: '🛒' },
+    { path: '/cart', label: 'Purchase Order', icon: '🛒' },
     { path: '/orders', label: 'My Orders', icon: '📋' },
     { path: '/settings', label: 'Settings', icon: '⚙️' },
   ];
