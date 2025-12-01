@@ -207,6 +207,28 @@ const CartPage = () => {
     );
   };
 
+  // Helper function to check if minimum units warning should be shown
+  const shouldShowMinimumUnitsWarning = (item) => {
+    return (
+      item.pricing_mode === 'unit' &&
+      item.minimum_units != null &&
+      item.minimum_units > 0 &&
+      item.quantity < item.minimum_units
+    );
+  };
+
+  // Helper function to check if minimum cost warning should be shown
+  const shouldShowMinimumCostWarning = (item) => {
+    if (!item.minimum_cost || item.minimum_cost <= 0) return false;
+
+    const price = item.pricing_mode === 'unit'
+      ? (item.wholesale_unit_price || 0)
+      : (item.wholesale_case_price || 0);
+    const totalPrice = price * item.quantity;
+
+    return totalPrice < parseFloat(item.minimum_cost);
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <h1 className="page-title mb-6">Purchase Order</h1>
@@ -281,6 +303,13 @@ const CartPage = () => {
                             {item.pricing_mode === 'case' && item.case_minimum && item.case_minimum > 0 && (
                               <div className="mt-1 text-xs text-gray-600">
                                 <span className="font-semibold">Case Minimum:</span> {item.case_minimum} case{item.case_minimum > 1 ? 's' : ''}
+                              </div>
+                            )}
+
+                            {/* Show minimum units info below pricing mode */}
+                            {item.pricing_mode === 'unit' && item.minimum_units && item.minimum_units > 0 && (
+                              <div className="mt-1 text-xs text-gray-600">
+                                <span className="font-semibold">Minimum Units:</span> {item.minimum_units} unit{item.minimum_units > 1 ? 's' : ''}
                               </div>
                             )}
                           </div>
@@ -394,6 +423,49 @@ const CartPage = () => {
                               </div>
                             </div>
                           )}
+
+                          {/* Minimum Units Warning */}
+                          {shouldShowMinimumUnitsWarning(item) && (
+                            <div className="mt-3 bg-yellow-50 border-l-4 border-yellow-400 px-4 py-3 rounded-r-lg flex items-start gap-3">
+                              <svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                              </svg>
+                              <div className="flex-1">
+                                <p className="text-sm font-semibold text-yellow-800">
+                                  Minimum Units Not Met
+                                </p>
+                                <p className="text-xs text-yellow-700 mt-1">
+                                  Please order at least <strong>{item.minimum_units}</strong> unit{item.minimum_units > 1 ? 's' : ''}.
+                                  Currently ordering <strong>{item.quantity}</strong> unit{item.quantity > 1 ? 's' : ''}.
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Minimum Cost Warning */}
+                          {shouldShowMinimumCostWarning(item) && (() => {
+                            const price = item.pricing_mode === 'unit'
+                              ? (item.wholesale_unit_price || 0)
+                              : (item.wholesale_case_price || 0);
+                            const totalPrice = price * item.quantity;
+
+                            return (
+                              <div className="mt-3 bg-yellow-50 border-l-4 border-yellow-400 px-4 py-3 rounded-r-lg flex items-start gap-3">
+                                <svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                </svg>
+                                <div className="flex-1">
+                                  <p className="text-sm font-semibold text-yellow-800">
+                                    Minimum Cost Not Met
+                                  </p>
+                                  <p className="text-xs text-yellow-700 mt-1">
+                                    This product requires a minimum order cost of <strong>${parseFloat(item.minimum_cost).toFixed(2)}</strong>.
+                                    Current total: <strong>${totalPrice.toFixed(2)}</strong>
+                                  </p>
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </div>
 
                         {/* Remove Button */}
