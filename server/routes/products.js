@@ -1229,21 +1229,28 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
       product_image,
       popular,
       new: isNew,
-      category
+      category,
+      is_split_case,
+      minimum_units,
+      minimum_cost
     } = req.body;
 
     const result = await query(
       `INSERT INTO products (
         product_connect_id, vendor_name, state, product_name, product_description, size, case_pack,
         upc, wholesale_case_price, wholesale_unit_price, retail_unit_price,
-        order_qty, stock_level, product_image, popular, new, category
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+        order_qty, stock_level, product_image, popular, new, category,
+        is_split_case, minimum_units, minimum_cost
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
       RETURNING *`,
       [
         product_connect_id || null, vendor_name, state, product_name, product_description, size, case_pack || null,
         upc, wholesale_case_price, wholesale_unit_price, retail_unit_price,
         order_qty || 0, stock_level || 0, product_image, popular || false,
-        isNew || false, category
+        isNew || false, category,
+        is_split_case !== undefined ? is_split_case : false,
+        minimum_units || null,
+        minimum_cost || null
       ]
     );
 
@@ -1275,7 +1282,10 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
       product_image,
       popular,
       new: isNew,
-      category
+      category,
+      is_split_case,
+      minimum_units,
+      minimum_cost
     } = req.body;
 
     const result = await query(
@@ -1284,13 +1294,18 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
         size = $6, case_pack = $7, upc = $8, wholesale_case_price = $9,
         wholesale_unit_price = $10, retail_unit_price = $11, order_qty = $12,
         stock_level = $13, product_image = $14, popular = $15, new = $16,
-        category = $17, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $18
+        category = $17, is_split_case = $18, minimum_units = $19, minimum_cost = $20,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $21
       RETURNING *`,
       [
         product_connect_id || null, vendor_name, state, product_name, product_description, size, case_pack || null,
         upc, wholesale_case_price, wholesale_unit_price, retail_unit_price,
-        order_qty || 0, stock_level || 0, product_image, popular || false, isNew || false, category, id
+        order_qty || 0, stock_level || 0, product_image, popular || false, isNew || false, category,
+        is_split_case !== undefined ? is_split_case : false,
+        minimum_units || null,
+        minimum_cost || null,
+        id
       ]
     );
 
@@ -1393,6 +1408,10 @@ router.post('/bulk-import', authenticate, requireAdmin, async (req, res) => {
           delivery_info: product['Delivery Info'] || product.delivery_info || null,
           notes: product['Notes'] || product.notes || null,
           product_image: product['Image'] || product.product_image || 'https://connect.cureate.co/assets/layout/product_placeholder-bad273c886e8a66164d91ed147868c9189aa626a1c3960a14adcccbac595afa1.png',
+          // New fields
+          is_split_case: product['Is Split Case'] || product.is_split_case || false,
+          minimum_units: product['Minimum Units'] || product.minimum_units || null,
+          minimum_cost: product['Minimum Cost'] || product.minimum_cost || null,
           // Legacy fields for backward compatibility
           category: product.category || product['Main Category'] || product.main_category || null,
           product_description: product.product_description || product['Notes'] || product.notes || null
@@ -1451,8 +1470,9 @@ router.post('/bulk-import', authenticate, requireAdmin, async (req, res) => {
                 product_connect_id, vendor_connect_id, vendor_name, product_name, main_category, sub_category,
                 allergens, dietary_preferences, cuisine_type, seasonal_and_featured, size, case_pack,
                 wholesale_case_price, wholesale_unit_price, retail_unit_price, case_minimum, shelf_life,
-                upc, state, delivery_info, notes, product_image, popular, seasonal, new, category, product_description
-              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27)`,
+                upc, state, delivery_info, notes, product_image, popular, seasonal, new, category, product_description,
+                is_split_case, minimum_units, minimum_cost
+              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30)`,
               [
                 productData.product_connect_id, productData.vendor_connect_id, productData.vendor_name, productData.product_name,
                 productData.main_category, productData.sub_category, productData.allergens, productData.dietary_preferences,
@@ -1460,7 +1480,8 @@ router.post('/bulk-import', authenticate, requireAdmin, async (req, res) => {
                 productData.wholesale_case_price, productData.wholesale_unit_price, productData.retail_unit_price,
                 productData.case_minimum, productData.shelf_life, productData.upc, productData.state,
                 productData.delivery_info, productData.notes, productData.product_image,
-                popular, seasonal, isNew, productData.category, productData.product_description
+                popular, seasonal, isNew, productData.category, productData.product_description,
+                productData.is_split_case, productData.minimum_units, productData.minimum_cost
               ]
             );
             created++;
@@ -1472,8 +1493,9 @@ router.post('/bulk-import', authenticate, requireAdmin, async (req, res) => {
                 allergens = $7, dietary_preferences = $8, cuisine_type = $9, seasonal_and_featured = $10, size = $11, case_pack = $12,
                 wholesale_case_price = $13, wholesale_unit_price = $14, retail_unit_price = $15, case_minimum = $16, shelf_life = $17,
                 upc = $18, state = $19, delivery_info = $20, notes = $21, product_image = $22, popular = $23, seasonal = $24,
-                new = $25, category = $26, product_description = $27, updated_at = CURRENT_TIMESTAMP
-              WHERE id = $28`,
+                new = $25, category = $26, product_description = $27, is_split_case = $28, minimum_units = $29, minimum_cost = $30,
+                updated_at = CURRENT_TIMESTAMP
+              WHERE id = $31`,
               [
                 productData.product_connect_id, productData.vendor_connect_id, productData.vendor_name, productData.product_name,
                 productData.main_category, productData.sub_category, productData.allergens, productData.dietary_preferences,
@@ -1482,6 +1504,7 @@ router.post('/bulk-import', authenticate, requireAdmin, async (req, res) => {
                 productData.case_minimum, productData.shelf_life, productData.upc, productData.state,
                 productData.delivery_info, productData.notes, productData.product_image,
                 popular, seasonal, isNew, productData.category, productData.product_description,
+                productData.is_split_case, productData.minimum_units, productData.minimum_cost,
                 existingProduct.id
               ]
             );
@@ -1494,8 +1517,9 @@ router.post('/bulk-import', authenticate, requireAdmin, async (req, res) => {
               product_connect_id, vendor_connect_id, vendor_name, product_name, main_category, sub_category,
               allergens, dietary_preferences, cuisine_type, seasonal_and_featured, size, case_pack,
               wholesale_case_price, wholesale_unit_price, retail_unit_price, case_minimum, shelf_life,
-              upc, state, delivery_info, notes, product_image, popular, seasonal, new, category, product_description
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27)`,
+              upc, state, delivery_info, notes, product_image, popular, seasonal, new, category, product_description,
+              is_split_case, minimum_units, minimum_cost
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30)`,
             [
               productData.product_connect_id, productData.vendor_connect_id, productData.vendor_name, productData.product_name,
               productData.main_category, productData.sub_category, productData.allergens, productData.dietary_preferences,
@@ -1503,7 +1527,8 @@ router.post('/bulk-import', authenticate, requireAdmin, async (req, res) => {
               productData.wholesale_case_price, productData.wholesale_unit_price, productData.retail_unit_price,
               productData.case_minimum, productData.shelf_life, productData.upc, productData.state,
               productData.delivery_info, productData.notes, productData.product_image,
-              popular, seasonal, isNew, productData.category, productData.product_description
+              popular, seasonal, isNew, productData.category, productData.product_description,
+              productData.is_split_case, productData.minimum_units, productData.minimum_cost
             ]
           );
           created++;

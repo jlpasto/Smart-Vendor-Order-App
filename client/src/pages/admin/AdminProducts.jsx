@@ -93,7 +93,10 @@ const AdminProducts = () => {
       popular: false,
       seasonal: false,
       new: false,
-      category: ''
+      category: '',
+      is_split_case: false,
+      minimum_units: '',
+      minimum_cost: ''
     });
     setShowModal(true);
   };
@@ -445,6 +448,9 @@ const AdminProducts = () => {
         'Retail Unit Price (MSRP)': product.retail_unit_price || '',
         'GM%': product.gm_percent ? `${product.gm_percent}%` : '',
         'Case Minimum': product.case_minimum || '',
+        'Is Split Case': product.is_split_case ? 'Yes' : 'No',
+        'Minimum Units': product.minimum_units || '',
+        'Minimum Cost': product.minimum_cost || '',
         'Shelf Life': product.shelf_life || '',
         'UPC': product.upc || '',
         'State': product.state || '',
@@ -979,6 +985,41 @@ const AdminProducts = () => {
                   value={formData.case_minimum || ''}
                   onChange={(e) => handleInputChange('case_minimum', e.target.value)}
                   className="input"
+                />
+              </div>
+
+              <div>
+                <label className="block text-lg font-semibold text-gray-700 mb-2">Is Split Case</label>
+                <select
+                  value={formData.is_split_case ? 'true' : 'false'}
+                  onChange={(e) => handleInputChange('is_split_case', e.target.value === 'true')}
+                  className="input"
+                >
+                  <option value="false">No</option>
+                  <option value="true">Yes</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-lg font-semibold text-gray-700 mb-2">Minimum Units</label>
+                <input
+                  type="number"
+                  value={formData.minimum_units || ''}
+                  onChange={(e) => handleInputChange('minimum_units', e.target.value)}
+                  className="input"
+                  placeholder="Minimum units for order"
+                />
+              </div>
+
+              <div>
+                <label className="block text-lg font-semibold text-gray-700 mb-2">Minimum Cost</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formData.minimum_cost || ''}
+                  onChange={(e) => handleInputChange('minimum_cost', e.target.value)}
+                  className="input"
+                  placeholder="Minimum cost threshold"
                 />
               </div>
 
