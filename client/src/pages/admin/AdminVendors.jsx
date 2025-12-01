@@ -246,6 +246,34 @@ const AdminVendors = () => {
     XLSX.writeFile(wb, 'vendor_import_template.xlsx');
   };
 
+  const exportVendors = () => {
+    // Use filtered vendors for export
+    const vendorsToExport = filteredVendors.map(vendor => ({
+      'Vendor Connect ID': vendor.vendor_connect_id || '',
+      'Vendor Name': vendor.name || '',
+      'URL': vendor.website_url || '',
+      'Logo': vendor.logo_url || '',
+      'Phone': vendor.phone || '',
+      'Email': vendor.email || '',
+      'Address': vendor.address || '',
+      'City': vendor.city || '',
+      'State': vendor.state || '',
+      'Territory': vendor.territory || '',
+      'About': vendor.about || '',
+      'Story': vendor.story || ''
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(vendorsToExport);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Vendors');
+
+    // Generate filename with timestamp
+    const timestamp = new Date().toISOString().split('T')[0];
+    const filename = `vendors_export_${timestamp}.xlsx`;
+
+    XLSX.writeFile(wb, filename);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -269,6 +297,13 @@ const AdminVendors = () => {
         <div className="flex gap-3">
           <button onClick={openImportModal} className="btn-secondary">
             📥 Import Vendors
+          </button>
+          <button
+            onClick={exportVendors}
+            className="btn-secondary"
+            title={`Export ${filteredVendors.length} vendor(s) to Excel`}
+          >
+            📤 Export Vendors ({filteredVendors.length})
           </button>
           <button onClick={openCreateModal} className="btn-primary">
             + Add New Vendor
