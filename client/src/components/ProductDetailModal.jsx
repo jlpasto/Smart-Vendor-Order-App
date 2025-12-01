@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useCart } from '../context/CartContext';
 
-const ProductDetailModal = ({ product, isOpen, onClose, onNext, onPrev, onEdit, onDelete }) => {
+const ProductDetailModal = ({ product, isOpen, onClose, onNext, onPrev }) => {
   const [isMaximized, setIsMaximized] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
   const [showVendorModal, setShowVendorModal] = useState(false);
@@ -51,13 +51,6 @@ const ProductDetailModal = ({ product, isOpen, onClose, onNext, onPrev, onEdit, 
     setTimeout(() => setAddedToCart(false), 2000);
   };
 
-  const handleDelete = () => {
-    if (window.confirm(`Are you sure you want to delete "${product.product_name}"?`)) {
-      onDelete(product);
-      onClose();
-    }
-  };
-
   return (
     <>
       {/* Backdrop */}
@@ -82,15 +75,6 @@ const ProductDetailModal = ({ product, isOpen, onClose, onNext, onPrev, onEdit, 
 
           {/* Action Buttons */}
           <div className="flex items-center space-x-2 ml-4">
-            {/* Delete Button */}
-            <button
-              onClick={handleDelete}
-              className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-semibold text-sm"
-              title="Delete"
-            >
-              Delete
-            </button>
-
             {/* Previous Button */}
             <button
               onClick={onPrev}
@@ -147,17 +131,6 @@ const ProductDetailModal = ({ product, isOpen, onClose, onNext, onPrev, onEdit, 
 
         {/* Action Buttons Row */}
         <div className="bg-gray-50 border-b border-gray-200 px-6 py-4 flex items-center space-x-4 flex-shrink-0">
-          {/* Edit Button */}
-          <button
-            onClick={() => onEdit && onEdit(product)}
-            className="flex items-center space-x-2 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-semibold"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-            <span>Edit</span>
-          </button>
-
           {/* Add to Cart Button */}
           <button
             onClick={handleAddToCart}

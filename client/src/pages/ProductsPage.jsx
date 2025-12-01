@@ -210,22 +210,6 @@ const ProductsPage = () => {
     }
   };
 
-  const handleEdit = (product) => {
-    console.log('Edit product:', product);
-    alert('Edit functionality coming soon!');
-  };
-
-  const handleDelete = async (product) => {
-    try {
-      await api.delete(`/api/products/${product.id}`);
-      // Refresh products list
-      resetAndLoadProducts();
-    } catch (err) {
-      console.error('Error deleting product:', err);
-      alert('Failed to delete product');
-    }
-  };
-
   // Group products by vendor (memoized for performance)
   // Only group when sorting by vendor_name, otherwise return null for flat list
   const groupedProducts = useMemo(() => {
@@ -615,8 +599,6 @@ const ProductsPage = () => {
             ? handlePrevProduct
             : null
         }
-        onEdit={handleEdit}
-        onDelete={handleDelete}
       />
 
       {/* Vendor Info Modal */}
