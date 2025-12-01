@@ -393,17 +393,17 @@ const AdminVendors = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="page-title mb-0">Manage Vendors</h1>
         <div className="flex gap-3">
-          <button onClick={openImportModal} className="btn-secondary">
+          <button onClick={openImportModal} className="btn-secondary text-sm px-4 py-2 min-h-[36px]">
             📥 Import Vendors
           </button>
           <button
             onClick={exportVendors}
-            className="btn-secondary"
+            className="btn-secondary text-sm px-4 py-2 min-h-[36px]"
             title="Export all vendors to Excel (including those not yet loaded)"
           >
             📤 Export Vendors (All)
           </button>
-          <button onClick={openCreateModal} className="btn-primary">
+          <button onClick={openCreateModal} className="btn-primary text-sm px-4 py-2 min-h-[36px]">
             + Add New Vendor
           </button>
         </div>

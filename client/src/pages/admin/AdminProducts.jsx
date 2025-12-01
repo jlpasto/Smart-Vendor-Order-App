@@ -642,17 +642,17 @@ const AdminProducts = () => {
           </div>
 
           <FilterIcon onClick={handleFilterIconClick} />
-          <button onClick={openImportModal} className="btn-secondary">
+          <button onClick={openImportModal} className="btn-secondary text-sm px-4 py-2 min-h-[36px]">
             📥 Import Products
           </button>
           <button
             onClick={exportProducts}
-            className="btn-secondary"
+            className="btn-secondary text-sm px-4 py-2 min-h-[36px]"
             title="Export all filtered products to Excel (includes all pages)"
           >
             📤 Export Products ({filteredProducts.length})
           </button>
-          <button onClick={openCreateModal} className="btn-primary">
+          <button onClick={openCreateModal} className="btn-primary text-sm px-4 py-2 min-h-[36px]">
             + Add New Product
           </button>
         </div>
