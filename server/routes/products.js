@@ -1392,7 +1392,7 @@ router.post('/bulk-import', authenticate, requireAdmin, async (req, res) => {
           state: product['State'] || product.state || null,
           delivery_info: product['Delivery Info'] || product.delivery_info || null,
           notes: product['Notes'] || product.notes || null,
-          product_image: product['Image'] || product.product_image || null,
+          product_image: product['Image'] || product.product_image || 'https://connect.cureate.co/assets/layout/product_placeholder-bad273c886e8a66164d91ed147868c9189aa626a1c3960a14adcccbac595afa1.png',
           // Legacy fields for backward compatibility
           category: product.category || product['Main Category'] || product.main_category || null,
           product_description: product.product_description || product['Notes'] || product.notes || null
