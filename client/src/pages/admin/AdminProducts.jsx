@@ -391,44 +391,90 @@ const AdminProducts = () => {
     XLSX.writeFile(wb, 'product_import_template.xlsx');
   };
 
-  const exportProducts = () => {
-    // Use filtered products for export
-    const productsToExport = filteredProducts.map(product => ({
-      'ID': product.id || '',
-      'Product Connect ID': product.product_connect_id || '',
-      'Vendor Connect ID': product.vendor_connect_id || '',
-      'Vendor Name': product.vendor_name || '',
-      'Product Name': product.product_name || '',
-      'Main Category': product.main_category || '',
-      'Sub-Category': product.sub_category || '',
-      'Allergens': product.allergens || '',
-      'Dietary Preferences': product.dietary_preferences || '',
-      'Cuisine Type': product.cuisine_type || '',
-      'Seasonal and Featured': product.seasonal_and_featured || '',
-      'Size': product.size || '',
-      'Case Pack': product.case_pack || '',
-      'Wholesale Case Price': product.wholesale_case_price || '',
-      'Wholesale Unit Price': product.wholesale_unit_price || '',
-      'Retail Unit Price (MSRP)': product.retail_unit_price || '',
-      'GM%': product.gm_percent ? `${product.gm_percent}%` : '',
-      'Case Minimum': product.case_minimum || '',
-      'Shelf Life': product.shelf_life || '',
-      'UPC': product.upc || '',
-      'State': product.state || '',
-      'Delivery Info': product.delivery_info || '',
-      'Notes': product.notes || '',
-      'Image': product.product_image || ''
-    }));
+  const exportProducts = async () => {
+    try {
+      // Show loading state
+      const exportButton = document.activeElement;
+      if (exportButton) {
+        exportButton.disabled = true;
+        exportButton.textContent = 'Exporting...';
+      }
 
-    const ws = XLSX.utils.json_to_sheet(productsToExport);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Products');
+      // Fetch ALL products from the export endpoint (no pagination) with active filters
+      const params = {
+        sort: sortField,
+        order: sortOrder,
+        search: globalSearchTerm || undefined
+      };
 
-    // Generate filename with timestamp
-    const timestamp = new Date().toISOString().split('T')[0];
-    const filename = `products_export_${timestamp}.xlsx`;
+      // Add all active filters from the FilterContext
+      Object.keys(filters).forEach(key => {
+        const value = filters[key];
+        // Only include filters that have values
+        if (value !== null && value !== undefined && value !== '' &&
+            !(Array.isArray(value) && value.length === 0)) {
+          // For array values (multi-select), stringify them
+          if (Array.isArray(value)) {
+            params[key] = JSON.stringify(value);
+          } else {
+            params[key] = value;
+          }
+        }
+      });
 
-    XLSX.writeFile(wb, filename);
+      const response = await api.get('/api/products/export', { params });
+      const allProducts = response.data;
+
+      // Map products to export format
+      const productsToExport = allProducts.map(product => ({
+        'ID': product.id || '',
+        'Product Connect ID': product.product_connect_id || '',
+        'Vendor Connect ID': product.vendor_connect_id || '',
+        'Vendor Name': product.vendor_name || '',
+        'Product Name': product.product_name || '',
+        'Main Category': product.main_category || '',
+        'Sub-Category': product.sub_category || '',
+        'Allergens': product.allergens || '',
+        'Dietary Preferences': product.dietary_preferences || '',
+        'Cuisine Type': product.cuisine_type || '',
+        'Seasonal and Featured': product.seasonal_and_featured || '',
+        'Size': product.size || '',
+        'Case Pack': product.case_pack || '',
+        'Wholesale Case Price': product.wholesale_case_price || '',
+        'Wholesale Unit Price': product.wholesale_unit_price || '',
+        'Retail Unit Price (MSRP)': product.retail_unit_price || '',
+        'GM%': product.gm_percent ? `${product.gm_percent}%` : '',
+        'Case Minimum': product.case_minimum || '',
+        'Shelf Life': product.shelf_life || '',
+        'UPC': product.upc || '',
+        'State': product.state || '',
+        'Delivery Info': product.delivery_info || '',
+        'Notes': product.notes || '',
+        'Image': product.product_image || ''
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(productsToExport);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Products');
+
+      // Generate filename with timestamp
+      const timestamp = new Date().toISOString().split('T')[0];
+      const filename = `products_export_${timestamp}.xlsx`;
+
+      XLSX.writeFile(wb, filename);
+
+      // Show success message
+      alert(`Successfully exported ${allProducts.length} product(s) to ${filename}`);
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Error exporting products: ' + (error.response?.data?.error || error.message || 'Unknown error'));
+    } finally {
+      // Reset button state - the React state will handle the button text
+      const exportButton = document.activeElement;
+      if (exportButton) {
+        exportButton.disabled = false;
+      }
+    }
   };
 
   // Filter handlers
@@ -602,7 +648,7 @@ const AdminProducts = () => {
           <button
             onClick={exportProducts}
             className="btn-secondary"
-            title={`Export ${filteredProducts.length} product(s) to Excel`}
+            title="Export all filtered products to Excel (includes all pages)"
           >
             📤 Export Products ({filteredProducts.length})
           </button>

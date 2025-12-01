@@ -4,6 +4,24 @@ import { authenticate, requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
+// Cursor encoding/decoding utilities
+const encodeCursor = (lastItem, sortField) => {
+  const cursorData = {
+    [sortField]: lastItem[sortField],
+    id: lastItem.id
+  };
+  return Buffer.from(JSON.stringify(cursorData)).toString('base64');
+};
+
+const decodeCursor = (cursor) => {
+  try {
+    const decoded = Buffer.from(cursor, 'base64').toString('utf-8');
+    return JSON.parse(decoded);
+  } catch (e) {
+    return null;
+  }
+};
+
 // Bulk import vendors (Admin only) - MUST be before /:id route
 router.post('/bulk-import', authenticate, requireAdmin, async (req, res) => {
   try {
@@ -137,10 +155,10 @@ router.post('/bulk-import', authenticate, requireAdmin, async (req, res) => {
   }
 });
 
-// Get all vendors (Admin only)
-router.get('/', authenticate, requireAdmin, async (req, res) => {
+// Get all vendors for export (Admin only) - returns all vendors without pagination
+router.get('/export', authenticate, requireAdmin, async (req, res) => {
   try {
-    const { search, state, territory } = req.query;
+    const { search, state, territory, sort, order } = req.query;
 
     let queryText = 'SELECT * FROM vendors WHERE 1=1';
     const queryParams = [];
@@ -167,10 +185,127 @@ router.get('/', authenticate, requireAdmin, async (req, res) => {
       paramCount++;
     }
 
-    queryText += ' ORDER BY name ASC';
+    // Sorting
+    const sortField = sort || 'name';
+    const sortOrder = order || 'asc';
+
+    // Validate sort field to prevent SQL injection
+    const allowedSortFields = ['name', 'state', 'territory', 'vendor_connect_id', 'created_at'];
+    const validSortField = allowedSortFields.includes(sortField) ? sortField : 'name';
+    const validSortOrder = (sortOrder === 'desc') ? 'DESC' : 'ASC';
+
+    queryText += ` ORDER BY ${validSortField} ${validSortOrder}`;
 
     const result = await query(queryText, queryParams);
     res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching vendors for export:', error);
+    res.status(500).json({ error: 'Error fetching vendors for export' });
+  }
+});
+
+// Get all vendors (Admin only)
+router.get('/', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { search, state, territory, cursor, limit, sort, order } = req.query;
+
+    // Pagination setup
+    const pageLimit = limit ? Math.min(parseInt(limit), 100) : null; // Max 100 items per request
+    const useCursorPagination = cursor !== undefined || limit !== undefined;
+
+    let queryText = 'SELECT * FROM vendors WHERE 1=1';
+    const queryParams = [];
+    let paramCount = 1;
+
+    // Decode and apply cursor if provided
+    if (cursor) {
+      const cursorData = decodeCursor(cursor);
+      if (!cursorData) {
+        return res.status(400).json({ error: 'Invalid cursor' });
+      }
+
+      // Determine sort field and order
+      const sortField = sort || 'name';
+      const sortOrder = order || 'asc';
+      const operator = sortOrder.toLowerCase() === 'asc' ? '>' : '<';
+
+      // Apply cursor condition
+      queryText += ` AND (${sortField}, id) ${operator} ($${paramCount}, $${paramCount + 1})`;
+      queryParams.push(cursorData[sortField], cursorData.id);
+      paramCount += 2;
+    }
+
+    // Add search filter
+    if (search) {
+      queryText += ` AND (name ILIKE $${paramCount} OR address ILIKE $${paramCount} OR territory ILIKE $${paramCount})`;
+      queryParams.push(`%${search}%`);
+      paramCount++;
+    }
+
+    // Add state filter
+    if (state) {
+      queryText += ` AND state = $${paramCount}`;
+      queryParams.push(state);
+      paramCount++;
+    }
+
+    // Add territory filter
+    if (territory) {
+      queryText += ` AND territory = $${paramCount}`;
+      queryParams.push(territory);
+      paramCount++;
+    }
+
+    // Sorting
+    const sortField = sort || 'name'; // Default sort by name
+    const sortOrder = order || 'asc'; // Default ascending (A-Z)
+
+    // Validate sort field to prevent SQL injection
+    const allowedSortFields = ['name', 'state', 'territory', 'vendor_connect_id', 'created_at'];
+    const validSortField = allowedSortFields.includes(sortField) ? sortField : 'name';
+
+    // Validate sort order
+    const validSortOrder = (sortOrder === 'desc') ? 'DESC' : 'ASC';
+
+    // Add ORDER BY with id as tiebreaker for cursor pagination
+    queryText += ` ORDER BY ${validSortField} ${validSortOrder}, id ${validSortOrder}`;
+
+    // Add LIMIT for cursor pagination (request one extra to check if there are more)
+    if (useCursorPagination && pageLimit) {
+      queryText += ` LIMIT ${pageLimit + 1}`;
+    }
+
+    const result = await query(queryText, queryParams);
+
+    // Handle cursor pagination response
+    if (useCursorPagination && pageLimit) {
+      const hasMore = result.rows.length > pageLimit;
+      const items = hasMore ? result.rows.slice(0, pageLimit) : result.rows;
+
+      // Generate next cursor
+      let nextCursor = null;
+      if (hasMore && items.length > 0) {
+        const lastItem = items[items.length - 1];
+        nextCursor = encodeCursor(lastItem, validSortField);
+      }
+
+      res.json({
+        items,
+        pagination: {
+          limit: pageLimit,
+          nextCursor,
+          hasMore
+        },
+        meta: {
+          count: items.length,
+          sortField: validSortField,
+          sortOrder: validSortOrder
+        }
+      });
+    } else {
+      // Backward compatibility: return array for non-cursor pagination
+      res.json(result.rows);
+    }
   } catch (error) {
     console.error('Error fetching vendors:', error);
     res.status(500).json({ error: 'Error fetching vendors' });

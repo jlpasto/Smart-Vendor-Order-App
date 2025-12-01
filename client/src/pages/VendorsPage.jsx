@@ -1,32 +1,88 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import api from '../config/api';
-import Pagination from '../components/Pagination';
+import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 
 const VendorsPage = () => {
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState('');
+  const [cursor, setCursor] = useState(null);
+  const [hasMore, setHasMore] = useState(true);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [vendorsPerPage] = useState(12);
+  // Infinite scroll hook
+  const observerTarget = useInfiniteScroll({
+    loading: loadingMore,
+    hasMore,
+    onLoadMore: loadMoreVendors,
+    rootMargin: '100px'
+  });
 
+  // Reset and load vendors when search changes
   useEffect(() => {
-    fetchVendors();
-  }, []);
+    resetAndLoadVendors();
+  }, [searchTerm]);
 
-  const fetchVendors = async () => {
+  const resetAndLoadVendors = useCallback(async () => {
+    setVendors([]);
+    setCursor(null);
+    setHasMore(true);
+    setLoading(true);
+    setError('');
+
     try {
-      const response = await api.get('/api/vendors');
-      setVendors(response.data);
-      setLoading(false);
-    } catch (error) {
-      console.error('Error fetching vendors:', error);
+      await fetchVendors(null);
+    } catch (err) {
+      setError('Failed to load vendors');
+    } finally {
       setLoading(false);
     }
+  }, [searchTerm]);
+
+  const fetchVendors = async (currentCursor) => {
+    const params = {
+      cursor: currentCursor,
+      limit: 20,
+      sort: 'name',
+      order: 'asc',
+      search: searchTerm || undefined
+    };
+
+    const response = await api.get('/api/vendors', { params });
+
+    // Handle cursor pagination response
+    if (response.data.items) {
+      const { items, pagination } = response.data;
+
+      setVendors(prev => currentCursor ? [...prev, ...items] : items);
+      setCursor(pagination.nextCursor);
+      setHasMore(pagination.hasMore);
+    } else {
+      // Backward compatibility: if API returns array (old format)
+      setVendors(response.data);
+      setHasMore(false);
+    }
+
+    return response.data;
   };
+
+  async function loadMoreVendors() {
+    if (loadingMore || !hasMore) return;
+
+    setLoadingMore(true);
+    setError('');
+
+    try {
+      await fetchVendors(cursor);
+    } catch (err) {
+      setError('Failed to load more vendors');
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   const openDetailModal = (vendor) => {
     setSelectedVendor(vendor);
@@ -38,33 +94,23 @@ const VendorsPage = () => {
     setSelectedVendor(null);
   };
 
-  const filteredVendors = vendors.filter(vendor =>
-    vendor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    vendor.address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    vendor.state?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    vendor.territory?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  // Calculate pagination
-  const indexOfLastVendor = currentPage * vendorsPerPage;
-  const indexOfFirstVendor = indexOfLastVendor - vendorsPerPage;
-  const currentVendors = filteredVendors.slice(indexOfFirstVendor, indexOfLastVendor);
-  const totalPages = Math.ceil(filteredVendors.length / vendorsPerPage);
-
-  const handlePageChange = (pageNumber) => {
-    setCurrentPage(pageNumber);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  // Reset to page 1 when search changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm]);
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="spinner w-16 h-16 border-4 border-primary-600 border-t-transparent rounded-full"></div>
+        <div className="text-center">
+          <div className="spinner w-16 h-16 border-4 border-primary-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-xl text-gray-600">Loading vendors...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-12">
+        <div className="bg-red-50 border-2 border-red-200 text-red-800 px-6 py-4 rounded-lg">
+          <p className="font-semibold text-lg">{error}</p>
+        </div>
       </div>
     );
   }
@@ -99,7 +145,7 @@ const VendorsPage = () => {
 
       {/* Vendors Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {currentVendors.map(vendor => (
+        {vendors.map(vendor => (
           <div
             key={vendor.id}
             className="card hover:shadow-lg transition-shadow cursor-pointer"
@@ -138,20 +184,71 @@ const VendorsPage = () => {
         ))}
       </div>
 
-      {/* Pagination */}
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={handlePageChange}
-      />
-
-      {filteredVendors.length === 0 && (
+      {/* No results */}
+      {vendors.length === 0 && !loading && (
         <div className="text-center py-12">
           <p className="text-gray-500 text-lg">
             {searchTerm ? 'No vendors found matching your search.' : 'No vendors available.'}
           </p>
         </div>
       )}
+
+      {/* Loading More Indicator */}
+      {loadingMore && (
+        <div className="flex justify-center py-8">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 border-3 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+            <span className="text-gray-600">Loading more vendors...</span>
+          </div>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && !loading && (
+        <div className="flex flex-col items-center gap-4 py-8">
+          <div className="text-red-600 text-center">
+            <p className="font-semibold">{error}</p>
+          </div>
+          <button
+            onClick={loadMoreVendors}
+            className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      )}
+
+      {/* Intersection Observer Target */}
+      {hasMore && !loadingMore && !error && (
+        <div
+          ref={observerTarget}
+          className="h-20 flex items-center justify-center"
+          role="status"
+          aria-live="polite"
+        >
+          <div className="text-gray-400 text-sm">Scroll for more</div>
+        </div>
+      )}
+
+      {/* End of Results */}
+      {!hasMore && vendors.length > 0 && (
+        <div className="text-center py-12 border-t border-gray-200 mt-8">
+          <p className="text-xl font-semibold text-gray-700">You've reached the end!</p>
+          <p className="text-gray-500 mt-2">Showing all {vendors.length} vendors</p>
+          <button
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="mt-4 px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            Back to Top ↑
+          </button>
+        </div>
+      )}
+
+      {/* Screen reader announcements */}
+      <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+        {loadingMore && 'Loading more vendors'}
+        {!hasMore && `All ${vendors.length} vendors loaded`}
+      </div>
 
       {/* Detail Modal */}
       {showDetailModal && selectedVendor && (

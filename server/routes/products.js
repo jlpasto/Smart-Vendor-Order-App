@@ -22,6 +22,288 @@ const decodeCursor = (cursor) => {
   }
 };
 
+// Get all products for export (Admin only) - returns all filtered products without pagination
+router.get('/export', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const {
+      search,
+      vendor,
+      state,
+      sort,
+      order,
+      // Advanced filters
+      id,
+      vendor_connect_id,
+      product_name,
+      main_categories,
+      sub_categories,
+      allergens,
+      dietary_preferences,
+      cuisine_type,
+      seasonal_featured,
+      size,
+      upc,
+      case_pack_min,
+      case_pack_max,
+      price_min,
+      price_max,
+      unit_price_min,
+      unit_price_max,
+      msrp_min,
+      msrp_max,
+      gm_min,
+      gm_max,
+      case_minimum_min,
+      case_minimum_max,
+      shelf_life,
+      delivery_info,
+      notes
+    } = req.query;
+
+    let queryText = 'SELECT * FROM products WHERE 1=1';
+    const queryParams = [];
+    let paramCount = 1;
+
+    // Add search filter
+    if (search) {
+      queryText += ` AND (product_name ILIKE $${paramCount} OR vendor_name ILIKE $${paramCount} OR category ILIKE $${paramCount})`;
+      queryParams.push(`%${search}%`);
+      paramCount++;
+    }
+
+    // Text filters
+    if (id) {
+      queryText += ` AND id = $${paramCount}`;
+      queryParams.push(parseInt(id));
+      paramCount++;
+    }
+
+    if (vendor_connect_id) {
+      queryText += ` AND vendor_connect_id = $${paramCount}`;
+      queryParams.push(vendor_connect_id);
+      paramCount++;
+    }
+
+    if (product_name) {
+      queryText += ` AND product_name ILIKE $${paramCount}`;
+      queryParams.push(`%${product_name}%`);
+      paramCount++;
+    }
+
+    if (size) {
+      queryText += ` AND size ILIKE $${paramCount}`;
+      queryParams.push(`%${size}%`);
+      paramCount++;
+    }
+
+    if (upc) {
+      queryText += ` AND upc = $${paramCount}`;
+      queryParams.push(upc);
+      paramCount++;
+    }
+
+    if (shelf_life) {
+      queryText += ` AND shelf_life ILIKE $${paramCount}`;
+      queryParams.push(`%${shelf_life}%`);
+      paramCount++;
+    }
+
+    if (delivery_info) {
+      queryText += ` AND delivery_info ILIKE $${paramCount}`;
+      queryParams.push(`%${delivery_info}%`);
+      paramCount++;
+    }
+
+    if (notes) {
+      queryText += ` AND notes ILIKE $${paramCount}`;
+      queryParams.push(`%${notes}%`);
+      paramCount++;
+    }
+
+    // Multi-select filters
+    if (vendor) {
+      try {
+        const vendorArray = JSON.parse(vendor);
+        if (Array.isArray(vendorArray) && vendorArray.length > 0) {
+          queryText += ` AND vendor_name = ANY($${paramCount})`;
+          queryParams.push(vendorArray);
+          paramCount++;
+        }
+      } catch (e) {
+        queryText += ` AND vendor_name = $${paramCount}`;
+        queryParams.push(vendor);
+        paramCount++;
+      }
+    }
+
+    if (main_categories) {
+      try {
+        const categoriesArray = JSON.parse(main_categories);
+        if (Array.isArray(categoriesArray) && categoriesArray.length > 0) {
+          queryText += ` AND main_category = ANY($${paramCount})`;
+          queryParams.push(categoriesArray);
+          paramCount++;
+        }
+      } catch (e) {}
+    }
+
+    if (sub_categories) {
+      try {
+        const subCategoriesArray = JSON.parse(sub_categories);
+        if (Array.isArray(subCategoriesArray) && subCategoriesArray.length > 0) {
+          queryText += ` AND sub_category = ANY($${paramCount})`;
+          queryParams.push(subCategoriesArray);
+          paramCount++;
+        }
+      } catch (e) {}
+    }
+
+    // Dropdown filters
+    if (state) {
+      queryText += ` AND state = $${paramCount}`;
+      queryParams.push(state);
+      paramCount++;
+    }
+
+    if (cuisine_type) {
+      queryText += ` AND cuisine_type = $${paramCount}`;
+      queryParams.push(cuisine_type);
+      paramCount++;
+    }
+
+    if (seasonal_featured) {
+      queryText += ` AND seasonal_and_featured = $${paramCount}`;
+      queryParams.push(seasonal_featured);
+      paramCount++;
+    }
+
+    // Allergens and dietary preferences (comma-separated fields)
+    if (allergens) {
+      try {
+        const allergensArray = JSON.parse(allergens);
+        if (Array.isArray(allergensArray) && allergensArray.length > 0) {
+          const allergenConditions = allergensArray.map(() => {
+            const condition = `allergens ILIKE $${paramCount}`;
+            paramCount++;
+            return condition;
+          });
+          queryText += ` AND (${allergenConditions.join(' OR ')})`;
+          allergensArray.forEach(allergen => {
+            queryParams.push(`%${allergen}%`);
+          });
+        }
+      } catch (e) {}
+    }
+
+    if (dietary_preferences) {
+      try {
+        const dietaryArray = JSON.parse(dietary_preferences);
+        if (Array.isArray(dietaryArray) && dietaryArray.length > 0) {
+          const dietaryConditions = dietaryArray.map(() => {
+            const condition = `dietary_preferences ILIKE $${paramCount}`;
+            paramCount++;
+            return condition;
+          });
+          queryText += ` AND (${dietaryConditions.join(' OR ')})`;
+          dietaryArray.forEach(pref => {
+            queryParams.push(`%${pref}%`);
+          });
+        }
+      } catch (e) {}
+    }
+
+    // Range filters
+    if (case_pack_min) {
+      queryText += ` AND CAST(case_pack AS NUMERIC) >= $${paramCount}`;
+      queryParams.push(parseFloat(case_pack_min));
+      paramCount++;
+    }
+
+    if (case_pack_max) {
+      queryText += ` AND CAST(case_pack AS NUMERIC) <= $${paramCount}`;
+      queryParams.push(parseFloat(case_pack_max));
+      paramCount++;
+    }
+
+    if (price_min) {
+      queryText += ` AND CAST(wholesale_case_price AS NUMERIC) >= $${paramCount}`;
+      queryParams.push(parseFloat(price_min));
+      paramCount++;
+    }
+
+    if (price_max) {
+      queryText += ` AND CAST(wholesale_case_price AS NUMERIC) <= $${paramCount}`;
+      queryParams.push(parseFloat(price_max));
+      paramCount++;
+    }
+
+    if (unit_price_min) {
+      queryText += ` AND CAST(wholesale_unit_price AS NUMERIC) >= $${paramCount}`;
+      queryParams.push(parseFloat(unit_price_min));
+      paramCount++;
+    }
+
+    if (unit_price_max) {
+      queryText += ` AND CAST(wholesale_unit_price AS NUMERIC) <= $${paramCount}`;
+      queryParams.push(parseFloat(unit_price_max));
+      paramCount++;
+    }
+
+    if (msrp_min) {
+      queryText += ` AND CAST(retail_unit_price AS NUMERIC) >= $${paramCount}`;
+      queryParams.push(parseFloat(msrp_min));
+      paramCount++;
+    }
+
+    if (msrp_max) {
+      queryText += ` AND CAST(retail_unit_price AS NUMERIC) <= $${paramCount}`;
+      queryParams.push(parseFloat(msrp_max));
+      paramCount++;
+    }
+
+    if (gm_min) {
+      queryText += ` AND CAST(gm_percent AS NUMERIC) >= $${paramCount}`;
+      queryParams.push(parseFloat(gm_min));
+      paramCount++;
+    }
+
+    if (gm_max) {
+      queryText += ` AND CAST(gm_percent AS NUMERIC) <= $${paramCount}`;
+      queryParams.push(parseFloat(gm_max));
+      paramCount++;
+    }
+
+    if (case_minimum_min) {
+      queryText += ` AND CAST(case_minimum AS NUMERIC) >= $${paramCount}`;
+      queryParams.push(parseFloat(case_minimum_min));
+      paramCount++;
+    }
+
+    if (case_minimum_max) {
+      queryText += ` AND CAST(case_minimum AS NUMERIC) <= $${paramCount}`;
+      queryParams.push(parseFloat(case_minimum_max));
+      paramCount++;
+    }
+
+    // Sorting
+    const sortField = sort || 'vendor_name';
+    const sortOrder = order || 'asc';
+
+    // Validate sort field
+    const allowedSortFields = ['product_name', 'vendor_name', 'wholesale_case_price', 'created_at'];
+    const validSortField = allowedSortFields.includes(sortField) ? sortField : 'vendor_name';
+    const validSortOrder = (sortOrder === 'desc') ? 'DESC' : 'ASC';
+
+    queryText += ` ORDER BY ${validSortField} ${validSortOrder}`;
+
+    const result = await query(queryText, queryParams);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching products for export:', error);
+    res.status(500).json({ error: 'Error fetching products for export' });
+  }
+});
+
 // Get all products with optional filters
 router.get('/', authenticate, async (req, res) => {
   try {

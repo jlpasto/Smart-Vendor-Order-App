@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import api from '../../config/api';
 import { useSearch } from '../../context/SearchContext';
+import { useInfiniteScroll } from '../../hooks/useInfiniteScroll';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 
@@ -8,6 +9,10 @@ const AdminVendors = () => {
   const { globalSearchTerm } = useSearch();
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState('');
+  const [cursor, setCursor] = useState(null);
+  const [hasMore, setHasMore] = useState(true);
   const [editingVendor, setEditingVendor] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -20,9 +25,18 @@ const AdminVendors = () => {
   const [importResults, setImportResults] = useState(null);
   const [openMenuId, setOpenMenuId] = useState(null);
 
+  // Infinite scroll hook
+  const observerTarget = useInfiniteScroll({
+    loading: loadingMore,
+    hasMore,
+    onLoadMore: loadMoreVendors,
+    rootMargin: '100px'
+  });
+
+  // Reset and load vendors when search changes
   useEffect(() => {
-    fetchVendors();
-  }, []);
+    resetAndLoadVendors();
+  }, [globalSearchTerm]);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -36,16 +50,63 @@ const AdminVendors = () => {
     return () => document.removeEventListener('click', handleClickOutside);
   }, [openMenuId]);
 
-  const fetchVendors = async () => {
+  const resetAndLoadVendors = useCallback(async () => {
+    setVendors([]);
+    setCursor(null);
+    setHasMore(true);
+    setLoading(true);
+    setError('');
+
     try {
-      const response = await api.get('/api/vendors');
-      setVendors(response.data);
-      setLoading(false);
-    } catch (error) {
-      console.error('Error fetching vendors:', error);
+      await fetchVendors(null);
+    } catch (err) {
+      setError('Failed to load vendors');
+    } finally {
       setLoading(false);
     }
+  }, [globalSearchTerm]);
+
+  const fetchVendors = async (currentCursor) => {
+    const params = {
+      cursor: currentCursor,
+      limit: 20,
+      sort: 'name',
+      order: 'asc',
+      search: globalSearchTerm || undefined
+    };
+
+    const response = await api.get('/api/vendors', { params });
+
+    // Handle cursor pagination response
+    if (response.data.items) {
+      const { items, pagination } = response.data;
+
+      setVendors(prev => currentCursor ? [...prev, ...items] : items);
+      setCursor(pagination.nextCursor);
+      setHasMore(pagination.hasMore);
+    } else {
+      // Backward compatibility: if API returns array (old format)
+      setVendors(response.data);
+      setHasMore(false);
+    }
+
+    return response.data;
   };
+
+  async function loadMoreVendors() {
+    if (loadingMore || !hasMore) return;
+
+    setLoadingMore(true);
+    setError('');
+
+    try {
+      await fetchVendors(cursor);
+    } catch (err) {
+      setError('Failed to load more vendors');
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   const openEditModal = (vendor) => {
     setEditingVendor(vendor);
@@ -102,7 +163,7 @@ const AdminVendors = () => {
         alert('Vendor created successfully!');
       }
       closeModal();
-      fetchVendors();
+      resetAndLoadVendors();
     } catch (error) {
       alert('Error saving vendor: ' + (error.response?.data?.error || 'Unknown error'));
     } finally {
@@ -115,7 +176,7 @@ const AdminVendors = () => {
       try {
         await api.delete(`/api/vendors/${vendorId}`);
         alert('Vendor deleted successfully!');
-        fetchVendors();
+        resetAndLoadVendors();
       } catch (error) {
         alert('Error deleting vendor: ' + (error.response?.data?.error || 'Unknown error'));
       }
@@ -213,7 +274,7 @@ const AdminVendors = () => {
       setImportResults(response.data);
       alert(`Import completed!\n${response.data.created} vendors created\n${response.data.updated} vendors updated\n${response.data.failed} vendors failed`);
 
-      fetchVendors();
+      resetAndLoadVendors();
     } catch (error) {
       console.error('Import error:', error);
       alert('Error importing vendors: ' + (error.response?.data?.error || error.message || 'Unknown error'));
@@ -246,49 +307,86 @@ const AdminVendors = () => {
     XLSX.writeFile(wb, 'vendor_import_template.xlsx');
   };
 
-  const exportVendors = () => {
-    // Use filtered vendors for export
-    const vendorsToExport = filteredVendors.map(vendor => ({
-      'Vendor Connect ID': vendor.vendor_connect_id || '',
-      'Vendor Name': vendor.name || '',
-      'URL': vendor.website_url || '',
-      'Logo': vendor.logo_url || '',
-      'Phone': vendor.phone || '',
-      'Email': vendor.email || '',
-      'Address': vendor.address || '',
-      'City': vendor.city || '',
-      'State': vendor.state || '',
-      'Territory': vendor.territory || '',
-      'About': vendor.about || '',
-      'Story': vendor.story || ''
-    }));
+  const exportVendors = async () => {
+    try {
+      // Show loading state
+      const exportButton = document.activeElement;
+      if (exportButton) {
+        exportButton.disabled = true;
+        exportButton.textContent = 'Exporting...';
+      }
 
-    const ws = XLSX.utils.json_to_sheet(vendorsToExport);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Vendors');
+      // Fetch ALL vendors from the export endpoint (no pagination)
+      const params = {
+        sort: 'name',
+        order: 'asc',
+        search: globalSearchTerm || undefined
+      };
 
-    // Generate filename with timestamp
-    const timestamp = new Date().toISOString().split('T')[0];
-    const filename = `vendors_export_${timestamp}.xlsx`;
+      const response = await api.get('/api/vendors/export', { params });
+      const allVendors = response.data;
 
-    XLSX.writeFile(wb, filename);
+      // Map vendors to export format
+      const vendorsToExport = allVendors.map(vendor => ({
+        'Vendor Connect ID': vendor.vendor_connect_id || '',
+        'Vendor Name': vendor.name || '',
+        'URL': vendor.website_url || '',
+        'Logo': vendor.logo_url || '',
+        'Phone': vendor.phone || '',
+        'Email': vendor.email || '',
+        'Address': vendor.address || '',
+        'City': vendor.city || '',
+        'State': vendor.state || '',
+        'Territory': vendor.territory || '',
+        'About': vendor.about || '',
+        'Story': vendor.story || ''
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(vendorsToExport);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Vendors');
+
+      // Generate filename with timestamp
+      const timestamp = new Date().toISOString().split('T')[0];
+      const filename = `vendors_export_${timestamp}.xlsx`;
+
+      XLSX.writeFile(wb, filename);
+
+      // Show success message
+      alert(`Successfully exported ${allVendors.length} vendor(s) to ${filename}`);
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Error exporting vendors: ' + (error.response?.data?.error || error.message || 'Unknown error'));
+    } finally {
+      // Reset button state
+      const exportButton = document.activeElement;
+      if (exportButton) {
+        exportButton.disabled = false;
+        exportButton.textContent = `📤 Export Vendors (All)`;
+      }
+    }
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="spinner w-16 h-16 border-4 border-primary-600 border-t-transparent rounded-full"></div>
+        <div className="text-center">
+          <div className="spinner w-16 h-16 border-4 border-primary-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-xl text-gray-600">Loading vendors...</p>
+        </div>
       </div>
     );
   }
 
-  // Filter vendors based on global search term
-  const filteredVendors = vendors.filter(vendor =>
-    vendor.name.toLowerCase().includes(globalSearchTerm.toLowerCase()) ||
-    vendor.city?.toLowerCase().includes(globalSearchTerm.toLowerCase()) ||
-    vendor.state?.toLowerCase().includes(globalSearchTerm.toLowerCase()) ||
-    vendor.description?.toLowerCase().includes(globalSearchTerm.toLowerCase())
-  );
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-12">
+        <div className="bg-red-50 border-2 border-red-200 text-red-800 px-6 py-4 rounded-lg">
+          <p className="font-semibold text-lg">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -301,9 +399,9 @@ const AdminVendors = () => {
           <button
             onClick={exportVendors}
             className="btn-secondary"
-            title={`Export ${filteredVendors.length} vendor(s) to Excel`}
+            title="Export all vendors to Excel (including those not yet loaded)"
           >
-            📤 Export Vendors ({filteredVendors.length})
+            📤 Export Vendors (All)
           </button>
           <button onClick={openCreateModal} className="btn-primary">
             + Add New Vendor
@@ -313,7 +411,7 @@ const AdminVendors = () => {
 
       {/* Vendors Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {filteredVendors.map(vendor => (
+        {vendors.map(vendor => (
           <div
             key={vendor.id}
             className="card hover:shadow-lg transition-shadow cursor-pointer relative"
@@ -395,13 +493,71 @@ const AdminVendors = () => {
         ))}
       </div>
 
-      {filteredVendors.length === 0 && (
+      {/* No results */}
+      {vendors.length === 0 && !loading && (
         <div className="text-center py-12">
           <p className="text-gray-500 text-lg">
             {globalSearchTerm ? 'No vendors found matching your search.' : 'No vendors found. Add your first vendor!'}
           </p>
         </div>
       )}
+
+      {/* Loading More Indicator */}
+      {loadingMore && (
+        <div className="flex justify-center py-8">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 border-3 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+            <span className="text-gray-600">Loading more vendors...</span>
+          </div>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && !loading && (
+        <div className="flex flex-col items-center gap-4 py-8">
+          <div className="text-red-600 text-center">
+            <p className="font-semibold">{error}</p>
+          </div>
+          <button
+            onClick={loadMoreVendors}
+            className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      )}
+
+      {/* Intersection Observer Target */}
+      {hasMore && !loadingMore && !error && (
+        <div
+          ref={observerTarget}
+          className="h-20 flex items-center justify-center"
+          role="status"
+          aria-live="polite"
+        >
+          <div className="text-gray-400 text-sm">Scroll for more</div>
+        </div>
+      )}
+
+      {/* End of Results */}
+      {!hasMore && vendors.length > 0 && (
+        <div className="text-center py-12 border-t border-gray-200 mt-8">
+          <p className="text-xl font-semibold text-gray-700">You've reached the end!</p>
+          <p className="text-gray-500 mt-2">Showing all {vendors.length} vendors</p>
+          <button
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="mt-4 px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            Back to Top ↑
+          </button>
+        </div>
+      )}
+
+      {/* Screen reader announcements */}
+      <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+        {loadingMore && 'Loading more vendors'}
+        {!hasMore && `All ${vendors.length} vendors loaded`}
+      </div>
 
       {/* Edit/Create Modal */}
       {showModal && (
