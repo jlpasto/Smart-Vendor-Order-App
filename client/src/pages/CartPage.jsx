@@ -141,6 +141,108 @@ const CartPage = () => {
     };
   };
 
+  // Helper function to aggregate split case products
+  const aggregateSplitCaseByVendorAndCasePack = (cartItems) => {
+    const groups = {};
+
+    cartItems.forEach(item => {
+      // Only process UNIT mode items that are split case
+      if (item.pricing_mode !== 'unit') return;
+
+      const isSplitCase = item.is_split_case === true ||
+                         item.is_split_case === 1 ||
+                         item.is_split_case === 'Yes' ||
+                         item.is_split_case === 'yes';
+
+      if (!isSplitCase || !item.case_pack || item.case_pack <= 0) return;
+
+      // Create unique group key
+      const groupKey = `${item.vendor_name || 'unknown'}_${item.case_pack}_split`;
+
+      if (!groups[groupKey]) {
+        groups[groupKey] = {
+          vendor_name: item.vendor_name,
+          case_pack: item.case_pack,
+          total_units: 0,
+          items: [],
+          is_valid: false
+        };
+      }
+
+      groups[groupKey].total_units += item.quantity;
+      groups[groupKey].items.push({
+        id: item.id,
+        product_name: item.product_name,
+        quantity: item.quantity
+      });
+    });
+
+    // Calculate validation status - total must be divisible by full case_pack (not half)
+    Object.values(groups).forEach(group => {
+      group.is_valid = group.total_units % group.case_pack === 0;
+    });
+
+    return groups;
+  };
+
+  // Helper function to check if minimum units warning should be shown
+  const shouldShowMinimumUnitsWarning = (item) => {
+    if (item.pricing_mode !== 'unit') return false;
+
+    // Check if split case is enabled
+    const isSplitCase = item.is_split_case === true ||
+                       item.is_split_case === 1 ||
+                       item.is_split_case === 'Yes' ||
+                       item.is_split_case === 'yes';
+
+    // For split case products, check if quantity is valid split case amount
+    if (isSplitCase && item.case_pack != null && item.case_pack > 0) {
+      const fullCase = item.case_pack;
+      const halfCase = Math.floor(item.case_pack / 2);
+
+      // Valid quantities are: halfCase, fullCase, or multiples of halfCase
+      // Check if quantity is NOT a valid split case amount
+      return item.quantity !== halfCase && item.quantity !== fullCase && item.quantity % halfCase !== 0;
+    }
+
+    // For non-split case products, use minimum_units or case_pack
+    // If minimum_units is set, use it
+    if (item.minimum_units != null && item.minimum_units > 0) {
+      return item.quantity < item.minimum_units;
+    }
+
+    // If minimum_units is empty but case_pack exists, use case_pack as minimum
+    if ((!item.minimum_units || item.minimum_units === 0) &&
+        item.case_pack != null &&
+        item.case_pack > 0) {
+      return item.quantity < item.case_pack;
+    }
+
+    return false;
+  };
+
+  // Helper function to check if case minimum warning should be shown
+  const shouldShowCaseMinimumWarning = (item) => {
+    return (
+      item.pricing_mode === 'case' &&
+      item.case_minimum != null &&
+      item.case_minimum > 0 &&
+      item.quantity < item.case_minimum
+    );
+  };
+
+  // Helper function to check if minimum cost warning should be shown
+  const shouldShowMinimumCostWarning = (item) => {
+    if (!item.minimum_cost || item.minimum_cost <= 0) return false;
+
+    const price = item.pricing_mode === 'unit'
+      ? (item.wholesale_unit_price || 0)
+      : (item.wholesale_case_price || 0);
+    const totalPrice = price * item.quantity;
+
+    return totalPrice < parseFloat(item.minimum_cost);
+  };
+
   // Calculate case pack groups with memoization for performance
   const casePackGroups = useMemo(() => {
     const groups = aggregateUnitsByVendorAndCasePack(cart);
@@ -154,6 +256,52 @@ const CartPage = () => {
     })));
     return groups;
   }, [cart]);
+
+  // Calculate split case groups with memoization
+  const splitCaseGroups = useMemo(() => {
+    const groups = aggregateSplitCaseByVendorAndCasePack(cart);
+    console.log('Split Case Groups:', groups);
+    return groups;
+  }, [cart]);
+
+  // Helper function to check if split case aggregation warning should be shown
+  const shouldShowSplitCaseAggregateWarning = (item, splitGroups) => {
+    if (item.pricing_mode !== 'unit') return false;
+
+    const isSplitCase = item.is_split_case === true ||
+                       item.is_split_case === 1 ||
+                       item.is_split_case === 'Yes' ||
+                       item.is_split_case === 'yes';
+
+    if (!isSplitCase || !item.case_pack || item.case_pack <= 0) return false;
+
+    const groupKey = `${item.vendor_name || 'unknown'}_${item.case_pack}_split`;
+    const group = splitGroups[groupKey];
+
+    if (!group) return false;
+
+    return !group.is_valid;
+  };
+
+  // Helper function to get split case aggregate data
+  const getSplitCaseAggregateData = (item, splitGroups) => {
+    const groupKey = `${item.vendor_name || 'unknown'}_${item.case_pack}_split`;
+    const group = splitGroups[groupKey];
+
+    if (!group) return null;
+
+    const remainder = group.total_units % group.case_pack;
+    const unitsNeeded = remainder > 0 ? group.case_pack - remainder : 0;
+
+    return {
+      total_units: group.total_units,
+      full_case_pack: group.case_pack,
+      remainder: remainder,
+      units_needed: unitsNeeded,
+      products_in_group: group.items.length,
+      is_part_of_group: group.items.length > 1
+    };
+  };
 
   if (cart.length === 0) {
     return (
@@ -195,38 +343,6 @@ const CartPage = () => {
         : (item.wholesale_case_price || 0);
       return total + (price * item.quantity);
     }, 0);
-  };
-
-  // Helper function to check if case minimum warning should be shown
-  const shouldShowCaseMinimumWarning = (item) => {
-    return (
-      item.pricing_mode === 'case' &&
-      item.case_minimum != null &&
-      item.case_minimum > 0 &&
-      item.quantity < item.case_minimum
-    );
-  };
-
-  // Helper function to check if minimum units warning should be shown
-  const shouldShowMinimumUnitsWarning = (item) => {
-    return (
-      item.pricing_mode === 'unit' &&
-      item.minimum_units != null &&
-      item.minimum_units > 0 &&
-      item.quantity < item.minimum_units
-    );
-  };
-
-  // Helper function to check if minimum cost warning should be shown
-  const shouldShowMinimumCostWarning = (item) => {
-    if (!item.minimum_cost || item.minimum_cost <= 0) return false;
-
-    const price = item.pricing_mode === 'unit'
-      ? (item.wholesale_unit_price || 0)
-      : (item.wholesale_case_price || 0);
-    const totalPrice = price * item.quantity;
-
-    return totalPrice < parseFloat(item.minimum_cost);
   };
 
   return (
@@ -307,11 +423,23 @@ const CartPage = () => {
                             )}
 
                             {/* Show minimum units info below pricing mode */}
-                            {item.pricing_mode === 'unit' && item.minimum_units && item.minimum_units > 0 && (
-                              <div className="mt-1 text-xs text-gray-600">
-                                <span className="font-semibold">Minimum Units:</span> {item.minimum_units} unit{item.minimum_units > 1 ? 's' : ''}
-                              </div>
-                            )}
+                            {item.pricing_mode === 'unit' && (() => {
+                              // Show minimum_units if set, otherwise show case_pack as minimum
+                              if (item.minimum_units && item.minimum_units > 0) {
+                                return (
+                                  <div className="mt-1 text-xs text-gray-600">
+                                    <span className="font-semibold">Minimum Units:</span> {item.minimum_units} unit{item.minimum_units > 1 ? 's' : ''}
+                                  </div>
+                                );
+                              } else if (item.case_pack && item.case_pack > 0) {
+                                return (
+                                  <div className="mt-1 text-xs text-gray-600">
+                                    <span className="font-semibold">Minimum Units (Case Pack):</span> {item.case_pack} unit{item.case_pack > 1 ? 's' : ''}
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })()}
                           </div>
 
                           {/* Quantity Controls */}
@@ -384,28 +512,6 @@ const CartPage = () => {
                             );
                           })()}
 
-                          {/* Case Pack Success Indicator (UNIT mode) */}
-                          {shouldShowCasePackSuccess(item, casePackGroups) && (() => {
-                            const warningData = getCasePackWarningData(item, casePackGroups);
-                            if (!warningData) return null;
-
-                            return (
-                              <div className="mt-3 bg-green-50 border-l-4 border-green-400 px-4 py-3 rounded-r-lg flex items-start gap-3">
-                                <svg className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                </svg>
-                                <div className="flex-1">
-                                  <p className="text-sm font-semibold text-green-800">
-                                    ✓ Case Pack Complete ({warningData.current_units}/{warningData.required_units} units)
-                                  </p>
-                                  <p className="text-xs text-green-700 mt-1">
-                                    Great! You've met the case pack requirement.
-                                  </p>
-                                </div>
-                              </div>
-                            );
-                          })()}
-
                           {/* Case Minimum Warning */}
                           {shouldShowCaseMinimumWarning(item) && (
                             <div className="mt-3 bg-yellow-50 border-l-4 border-yellow-400 px-4 py-3 rounded-r-lg flex items-start gap-3">
@@ -424,23 +530,92 @@ const CartPage = () => {
                             </div>
                           )}
 
-                          {/* Minimum Units Warning */}
-                          {shouldShowMinimumUnitsWarning(item) && (
-                            <div className="mt-3 bg-yellow-50 border-l-4 border-yellow-400 px-4 py-3 rounded-r-lg flex items-start gap-3">
-                              <svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                              </svg>
-                              <div className="flex-1">
-                                <p className="text-sm font-semibold text-yellow-800">
-                                  Minimum Units Not Met
-                                </p>
-                                <p className="text-xs text-yellow-700 mt-1">
-                                  Please order at least <strong>{item.minimum_units}</strong> unit{item.minimum_units > 1 ? 's' : ''}.
-                                  Currently ordering <strong>{item.quantity}</strong> unit{item.quantity > 1 ? 's' : ''}.
-                                </p>
+                          {/* Split Case Aggregate Warning */}
+                          {shouldShowSplitCaseAggregateWarning(item, splitCaseGroups) && (() => {
+                            const aggregateData = getSplitCaseAggregateData(item, splitCaseGroups);
+                            if (!aggregateData) return null;
+
+                            return (
+                              <div className="mt-3 bg-yellow-50 border-l-4 border-yellow-400 px-4 py-3 rounded-r-lg flex items-start gap-3">
+                                <svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                </svg>
+                                <div className="flex-1">
+                                  <p className="text-sm font-semibold text-yellow-800">
+                                    ⚠️ Split Case Requirement Not Met
+                                  </p>
+                                  <p className="text-xs text-yellow-700 mt-1">
+                                    {aggregateData.is_part_of_group ? (
+                                      <>
+                                        You have <strong>{aggregateData.total_units}</strong> units total across <strong>{aggregateData.products_in_group}</strong> split case products from {item.vendor_name}.
+                                        The total must be divisible by <strong>{aggregateData.full_case_pack}</strong> (full case).
+                                        Add <strong>{aggregateData.units_needed}</strong> more units to complete the requirement.
+                                      </>
+                                    ) : (
+                                      <>
+                                        This split case product requires the total quantity to be divisible by <strong>{aggregateData.full_case_pack}</strong> (full case).
+                                        You currently have <strong>{aggregateData.total_units}</strong> units.
+                                        Add <strong>{aggregateData.units_needed}</strong> more units to meet the requirement.
+                                      </>
+                                    )}
+                                  </p>
+                                </div>
                               </div>
-                            </div>
-                          )}
+                            );
+                          })()}
+
+                          {/* Minimum Units Warning (for non-split case or individual quantity validation) */}
+                          {shouldShowMinimumUnitsWarning(item) && (() => {
+                            // Check if split case is enabled
+                            const isSplitCase = item.is_split_case === true ||
+                                               item.is_split_case === 1 ||
+                                               item.is_split_case === 'Yes' ||
+                                               item.is_split_case === 'yes';
+
+                            // For split case products
+                            if (isSplitCase && item.case_pack != null && item.case_pack > 0) {
+                              const fullCase = item.case_pack;
+                              const halfCase = Math.floor(item.case_pack / 2);
+
+                              return (
+                                <div className="mt-3 bg-yellow-50 border-l-4 border-yellow-400 px-4 py-3 rounded-r-lg flex items-start gap-3">
+                                  <svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                  </svg>
+                                  <div className="flex-1">
+                                    <p className="text-sm font-semibold text-yellow-800">
+                                      Invalid Split Case Quantity
+                                    </p>
+                                    <p className="text-xs text-yellow-700 mt-1">
+                                      This product allows split case. Please order <strong>{halfCase}</strong> units (half case) or <strong>{fullCase}</strong> units (full case), or multiples of <strong>{halfCase}</strong>.
+                                    </p>
+                                  </div>
+                                </div>
+                              );
+                            }
+
+                            // For non-split case products
+                            const effectiveMinimum = (item.minimum_units != null && item.minimum_units > 0)
+                              ? item.minimum_units
+                              : item.case_pack;
+
+                            return (
+                              <div className="mt-3 bg-yellow-50 border-l-4 border-yellow-400 px-4 py-3 rounded-r-lg flex items-start gap-3">
+                                <svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                </svg>
+                                <div className="flex-1">
+                                  <p className="text-sm font-semibold text-yellow-800">
+                                    Minimum Units Not Met
+                                  </p>
+                                  <p className="text-xs text-yellow-700 mt-1">
+                                    Please order at least <strong>{effectiveMinimum}</strong> unit{effectiveMinimum > 1 ? 's' : ''}.
+                                    Currently ordering <strong>{item.quantity}</strong> unit{item.quantity > 1 ? 's' : ''}.
+                                  </p>
+                                </div>
+                              </div>
+                            );
+                          })()}
 
                           {/* Minimum Cost Warning */}
                           {shouldShowMinimumCostWarning(item) && (() => {
