@@ -242,10 +242,10 @@ const AdminOrders = () => {
 
       {/* Filters */}
       <div className="card mb-8">
-        <h2 className="text-xl font-semibold mb-4">Filters</h2>
+        <h2 className="text-lg font-semibold mb-3">Filters</h2>
         <div className="grid md:grid-cols-4 gap-4">
           <div>
-            <label className="block text-lg font-semibold text-gray-700 mb-2">Vendor</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Vendor</label>
             <select
               value={filters.vendor}
               onChange={(e) => handleFilterChange('vendor', e.target.value)}
@@ -259,7 +259,7 @@ const AdminOrders = () => {
           </div>
 
           <div>
-            <label className="block text-lg font-semibold text-gray-700 mb-2">Status</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Status</label>
             <select
               value={filters.status}
               onChange={(e) => handleFilterChange('status', e.target.value)}
@@ -273,7 +273,7 @@ const AdminOrders = () => {
           </div>
 
           <div>
-            <label className="block text-lg font-semibold text-gray-700 mb-2">Start Date</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Start Date</label>
             <input
               type="date"
               value={filters.startDate}
@@ -283,7 +283,7 @@ const AdminOrders = () => {
           </div>
 
           <div>
-            <label className="block text-lg font-semibold text-gray-700 mb-2">End Date</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">End Date</label>
             <input
               type="date"
               value={filters.endDate}
@@ -327,14 +327,14 @@ const AdminOrders = () => {
                 <div className="bg-gray-50 -m-6 p-6 rounded-t-xl mb-6">
                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                     <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
+                      <div className="flex items-center gap-2 mb-1">
                         <button
                           onClick={() => toggleBatchExpansion(batchNumber)}
                           className="p-1 hover:bg-gray-200 rounded transition-colors"
                           title={isExpanded ? "Collapse batch" : "Expand batch"}
                         >
                           <svg
-                            className={`w-6 h-6 text-gray-600 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                            className={`w-5 h-5 text-gray-600 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -342,14 +342,14 @@ const AdminOrders = () => {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                           </svg>
                         </button>
-                        <h3 className="text-xl font-bold text-gray-900">{batchNumber}</h3>
+                        <h3 className="text-lg font-bold text-gray-900">{batchNumber}</h3>
                         {hasModifications && (
-                          <span className="px-3 py-1 bg-yellow-100 border border-yellow-400 text-yellow-800 text-xs font-bold rounded-full">
+                          <span className="px-2 py-0.5 bg-yellow-100 border border-yellow-400 text-yellow-800 text-xs font-bold rounded-full">
                             ✏️ Modified ({totalModifications} {totalModifications === 1 ? 'change' : 'changes'})
                           </span>
                         )}
                       </div>
-                      <div className="flex flex-wrap gap-3 text-base text-gray-600">
+                      <div className="flex flex-wrap gap-2 text-sm text-gray-600">
                         <span>👤 {customerEmail}</span>
                         <span>📅 {new Date(batchDate).toLocaleDateString()}</span>
                         <span>📦 {batchOrders.length} items</span>

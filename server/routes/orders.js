@@ -801,6 +801,7 @@ router.get('/:id/history', authenticate, requireAdmin, async (req, res) => {
     );
 
     res.json({
+      success: true,
       order: order,
       original_snapshot: snapshotResult.rows[0] || null,
       history: historyResult.rows
@@ -841,6 +842,7 @@ router.get('/batch/:batchNumber/history', authenticate, requireAdmin, async (req
     };
 
     res.json({
+      success: true,
       batch_number: batchNumber,
       items: ordersResult.rows,
       all_changes: historyResult.rows,
