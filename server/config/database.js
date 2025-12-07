@@ -14,7 +14,7 @@ const pool = new Pool({
   password: process.env.DB_PASSWORD,
   max: 20,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 30000,
   // Enable SSL for Render and other cloud databases
   ssl: process.env.DB_HOST?.includes('render') || process.env.DB_HOST?.includes('amazonaws') ? {
     rejectUnauthorized: false
@@ -191,12 +191,53 @@ export const initDatabase = async () => {
         vendor_name VARCHAR(255),
         quantity INTEGER NOT NULL,
         amount DECIMAL(10, 2) NOT NULL,
+        pricing_mode VARCHAR(10) DEFAULT 'case',
+        unit_price DECIMAL(10, 2),
+        case_price DECIMAL(10, 2),
         status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'cancelled')),
         user_email VARCHAR(255),
         user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
         notes TEXT,
+        modified_by_admin BOOLEAN DEFAULT FALSE,
+        modification_count INTEGER DEFAULT 0,
         date_submitted TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    // Create Order History table for tracking changes
+    await query(`
+      CREATE TABLE IF NOT EXISTS order_history (
+        id SERIAL PRIMARY KEY,
+        order_id INTEGER REFERENCES orders(id) ON DELETE CASCADE,
+        batch_order_number VARCHAR(50) NOT NULL,
+        change_type VARCHAR(50) NOT NULL,
+        field_changed VARCHAR(100),
+        old_value TEXT,
+        new_value TEXT,
+        admin_notes TEXT,
+        changed_by_admin_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        changed_by_admin_email VARCHAR(255),
+        change_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    // Create Order Snapshots table for before/after comparison
+    await query(`
+      CREATE TABLE IF NOT EXISTS order_snapshots (
+        id SERIAL PRIMARY KEY,
+        order_id INTEGER REFERENCES orders(id) ON DELETE CASCADE,
+        batch_order_number VARCHAR(50) NOT NULL,
+        snapshot_type VARCHAR(20) NOT NULL CHECK (snapshot_type IN ('original', 'current')),
+        product_connect_id INTEGER,
+        product_name VARCHAR(255),
+        vendor_name VARCHAR(255),
+        quantity INTEGER,
+        pricing_mode VARCHAR(10),
+        unit_price DECIMAL(10, 2),
+        case_price DECIMAL(10, 2),
+        amount DECIMAL(10, 2),
+        snapshot_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
 
@@ -216,6 +257,12 @@ export const initDatabase = async () => {
       CREATE INDEX IF NOT EXISTS idx_orders_date ON orders(date_submitted);
       CREATE INDEX IF NOT EXISTS idx_orders_vendor_connect_id ON orders(vendor_connect_id);
       CREATE INDEX IF NOT EXISTS idx_orders_vendor_name ON orders(vendor_name);
+      CREATE INDEX IF NOT EXISTS idx_order_history_order_id ON order_history(order_id);
+      CREATE INDEX IF NOT EXISTS idx_order_history_batch ON order_history(batch_order_number);
+      CREATE INDEX IF NOT EXISTS idx_order_history_timestamp ON order_history(change_timestamp);
+      CREATE INDEX IF NOT EXISTS idx_order_snapshots_order_id ON order_snapshots(order_id);
+      CREATE INDEX IF NOT EXISTS idx_order_snapshots_batch ON order_snapshots(batch_order_number);
+      CREATE INDEX IF NOT EXISTS idx_order_snapshots_type ON order_snapshots(snapshot_type);
       CREATE INDEX IF NOT EXISTS idx_vendors_name ON vendors(name);
       CREATE INDEX IF NOT EXISTS idx_vendors_state ON vendors(state);
       CREATE INDEX IF NOT EXISTS idx_vendors_city ON vendors(city);

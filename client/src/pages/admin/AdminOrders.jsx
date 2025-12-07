@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
 import api from '../../config/api';
+import OrderEditForm from '../../components/OrderEditForm';
+import OrderHistoryPanel from '../../components/OrderHistoryPanel';
+import AddItemModal from '../../components/AddItemModal';
 
 const AdminOrders = () => {
   const [orders, setOrders] = useState([]);
@@ -15,6 +18,19 @@ const AdminOrders = () => {
   const [newStatus, setNewStatus] = useState('');
   const [adminNotes, setAdminNotes] = useState('');
   const [updating, setUpdating] = useState(false);
+
+  // New states for edit mode
+  const [editModeBatch, setEditModeBatch] = useState(null); // Which batch is in edit mode
+  const [editingOrderId, setEditingOrderId] = useState(null); // Which order item is being edited
+
+  // History panel state
+  const [showHistoryPanel, setShowHistoryPanel] = useState(false);
+  const [historyOrderId, setHistoryOrderId] = useState(null);
+  const [historyBatchNumber, setHistoryBatchNumber] = useState(null);
+
+  // Add item modal state
+  const [showAddItemModal, setShowAddItemModal] = useState(false);
+  const [addItemBatchNumber, setAddItemBatchNumber] = useState(null);
 
   useEffect(() => {
     fetchOrders();
@@ -90,6 +106,101 @@ const AdminOrders = () => {
     } finally {
       setUpdating(false);
     }
+  };
+
+  // Edit mode handlers
+  const toggleEditMode = (batchNumber) => {
+    if (editModeBatch === batchNumber) {
+      // Exit edit mode
+      setEditModeBatch(null);
+      setEditingOrderId(null);
+    } else {
+      // Enter edit mode
+      setEditModeBatch(batchNumber);
+      setEditingOrderId(null);
+    }
+  };
+
+  const handleEditOrder = (orderId) => {
+    setEditingOrderId(orderId);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingOrderId(null);
+  };
+
+  const handleSaveOrder = (updatedOrder) => {
+    // Update the order in the state
+    setOrders((prevOrders) =>
+      prevOrders.map((order) =>
+        order.id === updatedOrder.id ? updatedOrder : order
+      )
+    );
+    setEditingOrderId(null);
+    alert('Order updated successfully!');
+  };
+
+  const handleDeleteOrder = async (orderId) => {
+    if (!confirm('Are you sure you want to remove this item from the batch?')) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:5000/api/orders/${orderId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert('Item removed successfully!');
+        fetchOrders(); // Refresh orders
+      } else {
+        alert(data.message || 'Failed to remove item');
+      }
+    } catch (error) {
+      console.error('Error deleting order:', error);
+      alert('Failed to remove item from batch');
+    }
+  };
+
+  // History panel handlers
+  const handleViewOrderHistory = (orderId) => {
+    setHistoryOrderId(orderId);
+    setHistoryBatchNumber(null);
+    setShowHistoryPanel(true);
+  };
+
+  const handleViewBatchHistory = (batchNumber) => {
+    setHistoryOrderId(null);
+    setHistoryBatchNumber(batchNumber);
+    setShowHistoryPanel(true);
+  };
+
+  const handleCloseHistory = () => {
+    setShowHistoryPanel(false);
+    setHistoryOrderId(null);
+    setHistoryBatchNumber(null);
+  };
+
+  // Add item handlers
+  const handleOpenAddItem = (batchNumber) => {
+    setAddItemBatchNumber(batchNumber);
+    setShowAddItemModal(true);
+  };
+
+  const handleCloseAddItem = () => {
+    setShowAddItemModal(false);
+    setAddItemBatchNumber(null);
+  };
+
+  const handleItemAdded = (newOrder) => {
+    alert('Item added successfully!');
+    fetchOrders(); // Refresh orders
   };
 
   // Group orders by batch
@@ -189,6 +300,9 @@ const AdminOrders = () => {
             const batchDate = batchOrders[0].date_submitted;
             const customerEmail = batchOrders[0].user_email;
             const batchNotes = batchOrders[0].notes;
+            const hasModifications = batchOrders.some(order => order.modified_by_admin);
+            const totalModifications = batchOrders.reduce((sum, order) => sum + (order.modification_count || 0), 0);
+            const isInEditMode = editModeBatch === batchNumber;
 
             return (
               <div key={batchNumber} className="card">
@@ -196,7 +310,14 @@ const AdminOrders = () => {
                 <div className="bg-gray-50 -m-6 p-6 rounded-t-xl mb-6">
                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                     <div>
-                      <h3 className="text-xl font-bold text-gray-900 mb-2">{batchNumber}</h3>
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="text-xl font-bold text-gray-900">{batchNumber}</h3>
+                        {hasModifications && (
+                          <span className="px-3 py-1 bg-yellow-100 border border-yellow-400 text-yellow-800 text-xs font-bold rounded-full">
+                            ✏️ Modified ({totalModifications} {totalModifications === 1 ? 'change' : 'changes'})
+                          </span>
+                        )}
+                      </div>
                       <div className="flex flex-wrap gap-3 text-base text-gray-600">
                         <span>👤 {customerEmail}</span>
                         <span>📅 {new Date(batchDate).toLocaleDateString()}</span>
@@ -222,29 +343,114 @@ const AdminOrders = () => {
 
                 {/* Batch Items */}
                 <div className="space-y-3 mb-6">
-                  {batchOrders.map(order => (
-                    <div key={order.id} className="flex justify-between items-center bg-gray-50 p-4 rounded-lg">
-                      <div className="flex-1">
-                        <p className="font-semibold text-gray-900">{order.product_name}</p>
-                        <p className="text-gray-600 text-sm">
-                          {order.vendor_name && `Vendor: ${order.vendor_name} | `}
-                          Quantity: {order.quantity}
-                        </p>
+                  {batchOrders.map(order => {
+                    const isEditing = isInEditMode && editingOrderId === order.id;
+
+                    return (
+                      <div key={order.id}>
+                        {isEditing ? (
+                          <OrderEditForm
+                            order={order}
+                            onSave={handleSaveOrder}
+                            onCancel={handleCancelEdit}
+                            adminEmail={localStorage.getItem('userEmail')}
+                          />
+                        ) : (
+                          <div className={`flex justify-between items-center bg-gray-50 p-4 rounded-lg ${
+                            order.modified_by_admin ? 'border-2 border-yellow-300' : ''
+                          }`}>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <p className="font-semibold text-gray-900">{order.product_name}</p>
+                                {order.modified_by_admin && (
+                                  <span className="px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs font-bold rounded">
+                                    Modified
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-gray-600 text-sm">
+                                {order.vendor_name && `Vendor: ${order.vendor_name} | `}
+                                Quantity: {order.quantity} |
+                                Mode: {order.pricing_mode === 'unit' ? 'By Unit' : 'By Case'}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <p className="text-xl font-bold text-primary-600">
+                                ${parseFloat(order.amount).toFixed(2)}
+                              </p>
+
+                              {isInEditMode && (
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => handleEditOrder(order.id)}
+                                    className="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                                    title="Edit item"
+                                  >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                  </button>
+                                  <button
+                                    onClick={() => handleViewOrderHistory(order.id)}
+                                    className="p-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+                                    title="View history"
+                                  >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteOrder(order.id)}
+                                    className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                                    title="Remove item"
+                                  >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      <p className="text-xl font-bold text-primary-600">
-                        ${parseFloat(order.amount).toFixed(2)}
-                      </p>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {/* Actions */}
-                <button
-                  onClick={() => openEditModal(batchOrders[0])}
-                  className="btn-primary"
-                >
-                  Update Status & Add Note
-                </button>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    onClick={() => toggleEditMode(batchNumber)}
+                    className={`btn-primary ${isInEditMode ? 'bg-gray-600 hover:bg-gray-700' : ''}`}
+                  >
+                    {isInEditMode ? '✓ Exit Edit Mode' : '✏️ Edit Order'}
+                  </button>
+
+                  {isInEditMode && (
+                    <>
+                      <button
+                        onClick={() => handleOpenAddItem(batchNumber)}
+                        className="btn-primary bg-green-600 hover:bg-green-700"
+                      >
+                        ➕ Add Item
+                      </button>
+                      <button
+                        onClick={() => handleViewBatchHistory(batchNumber)}
+                        className="btn-primary bg-purple-600 hover:bg-purple-700"
+                      >
+                        📜 View Batch History
+                      </button>
+                    </>
+                  )}
+
+                  <button
+                    onClick={() => openEditModal(batchOrders[0])}
+                    className="btn-secondary"
+                  >
+                    Update Status & Add Note
+                  </button>
+                </div>
               </div>
             );
           })}
@@ -315,6 +521,22 @@ const AdminOrders = () => {
           </div>
         </div>
       )}
+
+      {/* Order History Panel */}
+      <OrderHistoryPanel
+        orderId={historyOrderId}
+        batchNumber={historyBatchNumber}
+        isOpen={showHistoryPanel}
+        onClose={handleCloseHistory}
+      />
+
+      {/* Add Item Modal */}
+      <AddItemModal
+        batchNumber={addItemBatchNumber}
+        isOpen={showAddItemModal}
+        onClose={handleCloseAddItem}
+        onItemAdded={handleItemAdded}
+      />
     </div>
   );
 };

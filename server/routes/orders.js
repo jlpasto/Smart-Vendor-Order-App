@@ -250,8 +250,16 @@ router.post('/submit', authenticate, async (req, res) => {
       const item = items[i];
       console.log(`\n📦 Processing item ${i + 1}/${items.length}:`, item.product_name);
 
-      const price = item.wholesale_case_price || item.wholesale_unit_price || 0;
-      const amount = price * item.quantity;
+      // Extract pricing information
+      const pricingMode = item.pricing_mode || 'case';
+      const unitPrice = parseFloat(item.wholesale_unit_price || 0);
+      const casePrice = parseFloat(item.wholesale_case_price || 0);
+
+      // Calculate amount based on pricing mode
+      const price = pricingMode === 'unit' ? unitPrice : casePrice;
+      const amount = parseFloat((price * item.quantity).toFixed(2));
+
+      console.log(`💰 Pricing Mode: ${pricingMode}, Unit Price: ${unitPrice}, Case Price: ${casePrice}`);
       console.log(`💰 Price: ${price}, Quantity: ${item.quantity}, Amount: ${amount}`);
 
       // Get vendor_id by looking up vendor_name in vendors table
@@ -262,11 +270,11 @@ router.post('/submit', authenticate, async (req, res) => {
       if (vendorName) {
         try {
           const vendorResult = await query(
-            'SELECT id FROM vendors WHERE LOWER(name) = LOWER($1) LIMIT 1',
+            'SELECT vendor_connect_id FROM vendors WHERE LOWER(name) = LOWER($1) LIMIT 1',
             [vendorName]
           );
           if (vendorResult.rows.length > 0) {
-            vendorId = vendorResult.rows[0].id;
+            vendorId = vendorResult.rows[0].vendor_connect_id;
             console.log(`✓ Vendor ID found: ${vendorId}`);
           } else {
             console.log(`⚠️  Vendor "${vendorName}" not found in vendors table`);
@@ -280,9 +288,10 @@ router.post('/submit', authenticate, async (req, res) => {
       console.log(`💾 Inserting order into database...`);
       const result = await query(
         `INSERT INTO orders (
-          batch_order_number, product_connect_id, product_name, vendor_id, vendor_name,
-          quantity, amount, status, user_email, user_id, date_submitted
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP)
+          batch_order_number, product_connect_id, product_name, vendor_connect_id, vendor_name,
+          quantity, amount, pricing_mode, unit_price, case_price,
+          status, user_email, user_id, date_submitted
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, CURRENT_TIMESTAMP)
         RETURNING *`,
         [
           batchNumber,
@@ -292,14 +301,43 @@ router.post('/submit', authenticate, async (req, res) => {
           vendorName,
           item.quantity,
           amount,
+          pricingMode,
+          unitPrice,
+          casePrice,
           'pending',
           userEmail,
           userId
         ]
       );
 
-      console.log(`✓ Order inserted with ID: ${result.rows[0].id}`);
-      createdOrders.push(result.rows[0]);
+      const createdOrder = result.rows[0];
+      console.log(`✓ Order inserted with ID: ${createdOrder.id}`);
+
+      // Create original snapshot for audit trail
+      console.log(`📸 Creating original snapshot...`);
+      await query(
+        `INSERT INTO order_snapshots (
+          order_id, batch_order_number, snapshot_type,
+          product_connect_id, product_name, vendor_name,
+          quantity, pricing_mode, unit_price, case_price, amount
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+        [
+          createdOrder.id,
+          batchNumber,
+          'original',
+          item.product_connect_id,
+          item.product_name,
+          vendorName,
+          item.quantity,
+          pricingMode,
+          unitPrice,
+          casePrice,
+          amount
+        ]
+      );
+      console.log(`✓ Original snapshot created`);
+
+      createdOrders.push(createdOrder);
     }
 
     console.log(`\n✅ All ${createdOrders.length} orders inserted successfully`);
@@ -486,6 +524,325 @@ router.get('/stats', authenticate, requireAdmin, async (req, res) => {
   } catch (error) {
     console.error('Error fetching order stats:', error);
     res.status(500).json({ error: 'Error fetching order stats' });
+  }
+});
+
+// ============================================
+// ORDER MODIFICATION ENDPOINTS (Admin only)
+// ============================================
+
+// Helper function to log order changes
+const logOrderChange = async (orderId, batchNumber, changeType, fieldChanged, oldValue, newValue, adminNotes, adminId, adminEmail) => {
+  try {
+    await query(`
+      INSERT INTO order_history
+      (order_id, batch_order_number, change_type, field_changed, old_value, new_value, admin_notes, changed_by_admin_id, changed_by_admin_email)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    `, [orderId, batchNumber, changeType, fieldChanged, String(oldValue), String(newValue), adminNotes, adminId, adminEmail]);
+  } catch (error) {
+    console.error('Error logging order change:', error);
+  }
+};
+
+// Helper function to calculate amount
+const calculateAmount = (quantity, pricingMode, unitPrice, casePrice) => {
+  const price = pricingMode === 'unit' ? unitPrice : casePrice;
+  return parseFloat((price * quantity).toFixed(2));
+};
+
+// Modify individual order (Admin only)
+router.patch('/:id/modify', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { quantity, pricing_mode, unit_price, case_price, admin_notes } = req.body;
+
+    // Fetch current order
+    const currentResult = await query('SELECT * FROM orders WHERE id = $1', [id]);
+    if (currentResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    const currentOrder = currentResult.rows[0];
+    const changes = [];
+
+    // Track what changed
+    if (quantity !== undefined && quantity !== currentOrder.quantity) {
+      changes.push({ field: 'quantity', old: currentOrder.quantity, new: quantity });
+    }
+    if (pricing_mode !== undefined && pricing_mode !== currentOrder.pricing_mode) {
+      changes.push({ field: 'pricing_mode', old: currentOrder.pricing_mode, new: pricing_mode });
+    }
+    if (unit_price !== undefined && parseFloat(unit_price) !== parseFloat(currentOrder.unit_price || 0)) {
+      changes.push({ field: 'unit_price', old: currentOrder.unit_price, new: unit_price });
+    }
+    if (case_price !== undefined && parseFloat(case_price) !== parseFloat(currentOrder.case_price || 0)) {
+      changes.push({ field: 'case_price', old: currentOrder.case_price, new: case_price });
+    }
+
+    if (changes.length === 0 && !admin_notes) {
+      return res.status(400).json({ error: 'No changes provided' });
+    }
+
+    // Calculate new amount
+    const newQuantity = quantity !== undefined ? quantity : currentOrder.quantity;
+    const newPricingMode = pricing_mode !== undefined ? pricing_mode : currentOrder.pricing_mode;
+    const newUnitPrice = unit_price !== undefined ? parseFloat(unit_price) : parseFloat(currentOrder.unit_price || 0);
+    const newCasePrice = case_price !== undefined ? parseFloat(case_price) : parseFloat(currentOrder.case_price || 0);
+    const newAmount = calculateAmount(newQuantity, newPricingMode, newUnitPrice, newCasePrice);
+
+    if (newAmount !== parseFloat(currentOrder.amount)) {
+      changes.push({ field: 'amount', old: currentOrder.amount, new: newAmount });
+    }
+
+    // Update order
+    const updateResult = await query(`
+      UPDATE orders SET
+        quantity = $1,
+        pricing_mode = $2,
+        unit_price = $3,
+        case_price = $4,
+        amount = $5,
+        modified_by_admin = TRUE,
+        modification_count = modification_count + 1,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $6
+      RETURNING *
+    `, [newQuantity, newPricingMode, newUnitPrice, newCasePrice, newAmount, id]);
+
+    const updatedOrder = updateResult.rows[0];
+
+    // Log all changes
+    for (const change of changes) {
+      await logOrderChange(
+        id,
+        currentOrder.batch_order_number,
+        `${change.field}_changed`,
+        change.field,
+        change.old,
+        change.new,
+        admin_notes,
+        req.user.id,
+        req.user.email
+      );
+    }
+
+    // Log manual note if provided
+    if (admin_notes && changes.length === 0) {
+      await logOrderChange(
+        id,
+        currentOrder.batch_order_number,
+        'note_added',
+        null,
+        null,
+        null,
+        admin_notes,
+        req.user.id,
+        req.user.email
+      );
+    }
+
+    res.json({
+      success: true,
+      message: 'Order modified successfully',
+      order: updatedOrder,
+      changes: changes
+    });
+  } catch (error) {
+    console.error('Error modifying order:', error);
+    res.status(500).json({ error: 'Error modifying order' });
+  }
+});
+
+// Add item to existing batch (Admin only)
+router.post('/batch/:batchNumber/add-item', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { batchNumber } = req.params;
+    const { product_connect_id, product_name, vendor_name, quantity, pricing_mode, unit_price, case_price, admin_notes } = req.body;
+
+    // Validate batch exists
+    const batchCheck = await query('SELECT user_email, user_id FROM orders WHERE batch_order_number = $1 LIMIT 1', [batchNumber]);
+    if (batchCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Batch not found' });
+    }
+
+    const { user_email, user_id } = batchCheck.rows[0];
+
+    // Get vendor_id
+    let vendorId = null;
+    if (vendor_name) {
+      const vendorResult = await query('SELECT id FROM vendors WHERE LOWER(name) = LOWER($1) LIMIT 1', [vendor_name]);
+      if (vendorResult.rows.length > 0) {
+        vendorId = vendorResult.rows[0].id;
+      }
+    }
+
+    // Calculate amount
+    const amount = calculateAmount(quantity, pricing_mode, parseFloat(unit_price), parseFloat(case_price));
+
+    // Insert new order
+    const result = await query(`
+      INSERT INTO orders (
+        batch_order_number, product_connect_id, product_name, vendor_id, vendor_name,
+        quantity, amount, pricing_mode, unit_price, case_price,
+        status, user_email, user_id, modified_by_admin, date_submitted
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending', $11, $12, TRUE, CURRENT_TIMESTAMP)
+      RETURNING *
+    `, [batchNumber, product_connect_id, product_name, vendorId, vendor_name, quantity, amount, pricing_mode, unit_price, case_price, user_email, user_id]);
+
+    const newOrder = result.rows[0];
+
+    // Create snapshot for new item
+    await query(`
+      INSERT INTO order_snapshots (
+        order_id, batch_order_number, snapshot_type,
+        product_connect_id, product_name, vendor_name,
+        quantity, pricing_mode, unit_price, case_price, amount
+      ) VALUES ($1, $2, 'original', $3, $4, $5, $6, $7, $8, $9, $10)
+    `, [newOrder.id, batchNumber, product_connect_id, product_name, vendor_name, quantity, pricing_mode, unit_price, case_price, amount]);
+
+    // Log change
+    await logOrderChange(
+      newOrder.id,
+      batchNumber,
+      'item_added',
+      'product_name',
+      null,
+      product_name,
+      admin_notes || `Added ${product_name} to batch`,
+      req.user.id,
+      req.user.email
+    );
+
+    res.status(201).json({
+      message: 'Item added to batch successfully',
+      order: newOrder
+    });
+  } catch (error) {
+    console.error('Error adding item to batch:', error);
+    res.status(500).json({ error: 'Error adding item to batch' });
+  }
+});
+
+// Remove item from batch (Admin only)
+router.delete('/:id', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { admin_notes } = req.body;
+
+    // Fetch order to delete
+    const orderResult = await query('SELECT * FROM orders WHERE id = $1', [id]);
+    if (orderResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    const order = orderResult.rows[0];
+
+    // Check if this is the last item in batch
+    const batchCount = await query('SELECT COUNT(*) as count FROM orders WHERE batch_order_number = $1', [order.batch_order_number]);
+    if (parseInt(batchCount.rows[0].count) === 1) {
+      return res.status(400).json({ error: 'Cannot remove the last item from a batch. Cancel the entire batch instead.' });
+    }
+
+    // Log removal before deleting
+    await logOrderChange(
+      id,
+      order.batch_order_number,
+      'item_removed',
+      'product_name',
+      order.product_name,
+      null,
+      admin_notes || `Removed ${order.product_name} from batch`,
+      req.user.id,
+      req.user.email
+    );
+
+    // Delete order (cascade will delete snapshots and history)
+    await query('DELETE FROM orders WHERE id = $1', [id]);
+
+    res.json({
+      success: true,
+      message: 'Order item removed successfully'
+    });
+  } catch (error) {
+    console.error('Error removing order:', error);
+    res.status(500).json({ error: 'Error removing order' });
+  }
+});
+
+// Get order modification history (Admin only)
+router.get('/:id/history', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Fetch order
+    const orderResult = await query('SELECT * FROM orders WHERE id = $1', [id]);
+    if (orderResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    const order = orderResult.rows[0];
+
+    // Fetch original snapshot
+    const snapshotResult = await query(
+      'SELECT * FROM order_snapshots WHERE order_id = $1 AND snapshot_type = $2',
+      [id, 'original']
+    );
+
+    // Fetch all history
+    const historyResult = await query(
+      'SELECT * FROM order_history WHERE order_id = $1 ORDER BY change_timestamp DESC',
+      [id]
+    );
+
+    res.json({
+      order: order,
+      original_snapshot: snapshotResult.rows[0] || null,
+      history: historyResult.rows
+    });
+  } catch (error) {
+    console.error('Error fetching order history:', error);
+    res.status(500).json({ error: 'Error fetching order history' });
+  }
+});
+
+// Get batch modification history (Admin only)
+router.get('/batch/:batchNumber/history', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { batchNumber } = req.params;
+
+    // Fetch all orders in batch
+    const ordersResult = await query(
+      'SELECT * FROM orders WHERE batch_order_number = $1 ORDER BY id',
+      [batchNumber]
+    );
+
+    if (ordersResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Batch not found' });
+    }
+
+    // Fetch all history for this batch
+    const historyResult = await query(
+      'SELECT * FROM order_history WHERE batch_order_number = $1 ORDER BY change_timestamp DESC',
+      [batchNumber]
+    );
+
+    // Calculate summary
+    const summary = {
+      total_modifications: historyResult.rows.length,
+      items_added: historyResult.rows.filter(h => h.change_type === 'item_added').length,
+      items_removed: historyResult.rows.filter(h => h.change_type === 'item_removed').length,
+      last_modified: historyResult.rows.length > 0 ? historyResult.rows[0].change_timestamp : null
+    };
+
+    res.json({
+      batch_number: batchNumber,
+      items: ordersResult.rows,
+      all_changes: historyResult.rows,
+      summary: summary
+    });
+  } catch (error) {
+    console.error('Error fetching batch history:', error);
+    res.status(500).json({ error: 'Error fetching batch history' });
   }
 });
 
