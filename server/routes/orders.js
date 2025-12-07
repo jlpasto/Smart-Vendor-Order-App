@@ -667,12 +667,12 @@ router.post('/batch/:batchNumber/add-item', authenticate, requireAdmin, async (r
 
     const { user_email, user_id } = batchCheck.rows[0];
 
-    // Get vendor_id
-    let vendorId = null;
+    // Get vendor_connect_id
+    let vendorConnectId = null;
     if (vendor_name) {
-      const vendorResult = await query('SELECT id FROM vendors WHERE LOWER(name) = LOWER($1) LIMIT 1', [vendor_name]);
+      const vendorResult = await query('SELECT vendor_connect_id FROM vendors WHERE LOWER(name) = LOWER($1) LIMIT 1', [vendor_name]);
       if (vendorResult.rows.length > 0) {
-        vendorId = vendorResult.rows[0].id;
+        vendorConnectId = vendorResult.rows[0].vendor_connect_id;
       }
     }
 
@@ -682,12 +682,12 @@ router.post('/batch/:batchNumber/add-item', authenticate, requireAdmin, async (r
     // Insert new order
     const result = await query(`
       INSERT INTO orders (
-        batch_order_number, product_connect_id, product_name, vendor_id, vendor_name,
+        batch_order_number, product_connect_id, product_name, vendor_connect_id, vendor_name,
         quantity, amount, pricing_mode, unit_price, case_price,
         status, user_email, user_id, modified_by_admin, date_submitted
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending', $11, $12, TRUE, CURRENT_TIMESTAMP)
       RETURNING *
-    `, [batchNumber, product_connect_id, product_name, vendorId, vendor_name, quantity, amount, pricing_mode, unit_price, case_price, user_email, user_id]);
+    `, [batchNumber, product_connect_id, product_name, vendorConnectId, vendor_name, quantity, amount, pricing_mode, unit_price, case_price, user_email, user_id]);
 
     const newOrder = result.rows[0];
 
@@ -714,6 +714,7 @@ router.post('/batch/:batchNumber/add-item', authenticate, requireAdmin, async (r
     );
 
     res.status(201).json({
+      success: true,
       message: 'Item added to batch successfully',
       order: newOrder
     });
