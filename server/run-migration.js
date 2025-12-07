@@ -28,7 +28,7 @@ async function runMigration() {
 
   try {
     // Read the migration file
-    const migrationPath = path.join(__dirname, 'migrations', 'add_order_modifications.sql');
+    const migrationPath = path.join(__dirname, 'migrations', 'add_admin_notes_to_orders.sql');
     const migrationSQL = fs.readFileSync(migrationPath, 'utf8');
 
     console.log('📄 Migration file loaded');
@@ -38,15 +38,8 @@ async function runMigration() {
     await pool.query(migrationSQL);
 
     console.log('✅ Migration completed successfully!');
-    console.log('\nNew columns added to orders table:');
-    console.log('  - pricing_mode (VARCHAR)');
-    console.log('  - unit_price (DECIMAL)');
-    console.log('  - case_price (DECIMAL)');
-    console.log('  - modified_by_admin (BOOLEAN)');
-    console.log('  - modification_count (INTEGER)');
-    console.log('\nNew tables created:');
-    console.log('  - order_history (audit trail)');
-    console.log('  - order_snapshots (before/after comparison)');
+    console.log('\nNew column added to orders table:');
+    console.log('  - admin_notes (TEXT)');
 
   } catch (error) {
     console.error('❌ Migration failed:', error.message);

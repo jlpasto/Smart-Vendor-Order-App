@@ -117,6 +117,7 @@ const AddItemModal = ({ batchNumber, isOpen, onClose, onItemAdded }) => {
           new Map(prev).set(product.id, {
             quantity: initialQty,
             pricing_mode: initialMode,
+            admin_notes: '',
             isValid: true
           })
         );
@@ -161,6 +162,7 @@ const AddItemModal = ({ batchNumber, isOpen, onClose, onItemAdded }) => {
           newConfigs.set(p.id, {
             quantity: qty,
             pricing_mode: mode,
+            admin_notes: '',
             isValid: true
           });
         }
@@ -279,7 +281,7 @@ const AddItemModal = ({ batchNumber, isOpen, onClose, onItemAdded }) => {
             pricing_mode: config.pricing_mode,
             unit_price: parseFloat(product.wholesale_unit_price || 0),
             case_price: parseFloat(product.wholesale_case_price || 0),
-            admin_notes: null
+            admin_notes: config.admin_notes?.trim() || null
           },
           {
             headers: { Authorization: `Bearer ${token}` }
@@ -560,6 +562,19 @@ const AddItemModal = ({ batchNumber, isOpen, onClose, onItemAdded }) => {
                       {hasError && (
                         <div className="text-xs text-red-600 mb-2">{validationErrors.get(product.id)}</div>
                       )}
+
+                      <div className="mb-2">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Notes (Optional)
+                        </label>
+                        <textarea
+                          value={config.admin_notes || ''}
+                          onChange={(e) => handleConfigChange(product.id, 'admin_notes', e.target.value)}
+                          placeholder="Add notes about this item..."
+                          className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-green-500 resize-none"
+                          rows="2"
+                        />
+                      </div>
 
                       <div className="flex justify-between items-center text-sm">
                         <span className="text-gray-600">

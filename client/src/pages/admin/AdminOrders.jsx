@@ -32,6 +32,9 @@ const AdminOrders = () => {
   const [showAddItemModal, setShowAddItemModal] = useState(false);
   const [addItemBatchNumber, setAddItemBatchNumber] = useState(null);
 
+  // Expandable batches state - track which batches are expanded (default: all expanded)
+  const [expandedBatches, setExpandedBatches] = useState(new Set());
+
   useEffect(() => {
     fetchOrders();
     fetchVendors();
@@ -187,6 +190,19 @@ const AdminOrders = () => {
     setHistoryBatchNumber(null);
   };
 
+  // Toggle batch expansion
+  const toggleBatchExpansion = (batchNumber) => {
+    setExpandedBatches(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(batchNumber)) {
+        newSet.delete(batchNumber);
+      } else {
+        newSet.add(batchNumber);
+      }
+      return newSet;
+    });
+  };
+
   // Add item handlers
   const handleOpenAddItem = (batchNumber) => {
     setAddItemBatchNumber(batchNumber);
@@ -303,14 +319,29 @@ const AdminOrders = () => {
             const hasModifications = batchOrders.some(order => order.modified_by_admin);
             const totalModifications = batchOrders.reduce((sum, order) => sum + (order.modification_count || 0), 0);
             const isInEditMode = editModeBatch === batchNumber;
+            const isExpanded = expandedBatches.has(batchNumber);
 
             return (
               <div key={batchNumber} className="card">
                 {/* Batch Header */}
                 <div className="bg-gray-50 -m-6 p-6 rounded-t-xl mb-6">
                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                    <div>
+                    <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
+                        <button
+                          onClick={() => toggleBatchExpansion(batchNumber)}
+                          className="p-1 hover:bg-gray-200 rounded transition-colors"
+                          title={isExpanded ? "Collapse batch" : "Expand batch"}
+                        >
+                          <svg
+                            className={`w-6 h-6 text-gray-600 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
                         <h3 className="text-xl font-bold text-gray-900">{batchNumber}</h3>
                         {hasModifications && (
                           <span className="px-3 py-1 bg-yellow-100 border border-yellow-400 text-yellow-800 text-xs font-bold rounded-full">
@@ -341,9 +372,11 @@ const AdminOrders = () => {
                   )}
                 </div>
 
-                {/* Batch Items */}
-                <div className="space-y-3 mb-6">
-                  {batchOrders.map(order => {
+                {/* Batch Items - Only show when expanded */}
+                {isExpanded && (
+                  <>
+                    <div className="space-y-3 mb-6">
+                      {batchOrders.map(order => {
                     const isEditing = isInEditMode && editingOrderId === order.id;
 
                     return (
@@ -373,6 +406,12 @@ const AdminOrders = () => {
                                 Quantity: {order.quantity} |
                                 Mode: {order.pricing_mode === 'unit' ? 'By Unit' : 'By Case'}
                               </p>
+                              {order.admin_notes && (
+                                <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
+                                  <span className="font-semibold text-blue-900">Note: </span>
+                                  <span className="text-gray-700">{order.admin_notes}</span>
+                                </div>
+                              )}
                             </div>
                             <div className="flex items-center gap-4">
                               <p className="text-xl font-bold text-primary-600">
@@ -415,42 +454,44 @@ const AdminOrders = () => {
                         )}
                       </div>
                     );
-                  })}
-                </div>
+                      })}
+                    </div>
 
-                {/* Actions */}
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    onClick={() => toggleEditMode(batchNumber)}
-                    className={`btn-primary ${isInEditMode ? 'bg-gray-600 hover:bg-gray-700' : ''}`}
-                  >
-                    {isInEditMode ? '✓ Exit Edit Mode' : '✏️ Edit Order'}
-                  </button>
-
-                  {isInEditMode && (
-                    <>
+                    {/* Actions */}
+                    <div className="flex flex-wrap gap-3">
                       <button
-                        onClick={() => handleOpenAddItem(batchNumber)}
-                        className="btn-primary bg-green-600 hover:bg-green-700"
+                        onClick={() => toggleEditMode(batchNumber)}
+                        className={`btn-primary ${isInEditMode ? 'bg-gray-600 hover:bg-gray-700' : ''}`}
                       >
-                        ➕ Add Item
+                        {isInEditMode ? '✓ Exit Edit Mode' : '✏️ Edit Order'}
                       </button>
-                      <button
-                        onClick={() => handleViewBatchHistory(batchNumber)}
-                        className="btn-primary bg-purple-600 hover:bg-purple-700"
-                      >
-                        📜 View Batch History
-                      </button>
-                    </>
-                  )}
 
-                  <button
-                    onClick={() => openEditModal(batchOrders[0])}
-                    className="btn-secondary"
-                  >
-                    Update Status & Add Note
-                  </button>
-                </div>
+                      {isInEditMode && (
+                        <>
+                          <button
+                            onClick={() => handleOpenAddItem(batchNumber)}
+                            className="btn-primary bg-green-600 hover:bg-green-700"
+                          >
+                            ➕ Add Item
+                          </button>
+                          <button
+                            onClick={() => handleViewBatchHistory(batchNumber)}
+                            className="btn-primary bg-purple-600 hover:bg-purple-700"
+                          >
+                            📜 View Batch History
+                          </button>
+                        </>
+                      )}
+
+                      <button
+                        onClick={() => openEditModal(batchOrders[0])}
+                        className="btn-secondary"
+                      >
+                        Update Status & Add Note
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             );
           })}

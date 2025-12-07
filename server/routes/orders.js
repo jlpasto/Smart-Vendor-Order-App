@@ -578,6 +578,9 @@ router.patch('/:id/modify', authenticate, requireAdmin, async (req, res) => {
     if (case_price !== undefined && parseFloat(case_price) !== parseFloat(currentOrder.case_price || 0)) {
       changes.push({ field: 'case_price', old: currentOrder.case_price, new: case_price });
     }
+    if (admin_notes !== undefined && admin_notes !== currentOrder.admin_notes) {
+      changes.push({ field: 'admin_notes', old: currentOrder.admin_notes, new: admin_notes });
+    }
 
     if (changes.length === 0 && !admin_notes) {
       return res.status(400).json({ error: 'No changes provided' });
@@ -595,6 +598,7 @@ router.patch('/:id/modify', authenticate, requireAdmin, async (req, res) => {
     }
 
     // Update order
+    const newAdminNotes = admin_notes !== undefined ? admin_notes : currentOrder.admin_notes;
     const updateResult = await query(`
       UPDATE orders SET
         quantity = $1,
@@ -602,12 +606,13 @@ router.patch('/:id/modify', authenticate, requireAdmin, async (req, res) => {
         unit_price = $3,
         case_price = $4,
         amount = $5,
+        admin_notes = $6,
         modified_by_admin = TRUE,
         modification_count = modification_count + 1,
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $6
+      WHERE id = $7
       RETURNING *
-    `, [newQuantity, newPricingMode, newUnitPrice, newCasePrice, newAmount, id]);
+    `, [newQuantity, newPricingMode, newUnitPrice, newCasePrice, newAmount, newAdminNotes, id]);
 
     const updatedOrder = updateResult.rows[0];
 
@@ -683,11 +688,11 @@ router.post('/batch/:batchNumber/add-item', authenticate, requireAdmin, async (r
     const result = await query(`
       INSERT INTO orders (
         batch_order_number, product_connect_id, product_name, vendor_connect_id, vendor_name,
-        quantity, amount, pricing_mode, unit_price, case_price,
+        quantity, amount, pricing_mode, unit_price, case_price, admin_notes,
         status, user_email, user_id, modified_by_admin, date_submitted
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending', $11, $12, TRUE, CURRENT_TIMESTAMP)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'pending', $12, $13, TRUE, CURRENT_TIMESTAMP)
       RETURNING *
-    `, [batchNumber, product_connect_id, product_name, vendorConnectId, vendor_name, quantity, amount, pricing_mode, unit_price, case_price, user_email, user_id]);
+    `, [batchNumber, product_connect_id, product_name, vendorConnectId, vendor_name, quantity, amount, pricing_mode, unit_price, case_price, admin_notes, user_email, user_id]);
 
     const newOrder = result.rows[0];
 

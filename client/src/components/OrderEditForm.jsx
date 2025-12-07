@@ -7,7 +7,7 @@ const OrderEditForm = ({ order, onSave, onCancel, adminEmail }) => {
     pricing_mode: order.pricing_mode || 'case',
     unit_price: parseFloat(order.unit_price || 0).toFixed(2),
     case_price: parseFloat(order.case_price || 0).toFixed(2),
-    admin_notes: ''
+    admin_notes: order.admin_notes || ''
   });
 
   const [calculatedAmount, setCalculatedAmount] = useState(() => {
@@ -32,7 +32,8 @@ const OrderEditForm = ({ order, onSave, onCancel, adminEmail }) => {
       formData.quantity !== order.quantity ||
       formData.pricing_mode !== order.pricing_mode ||
       parseFloat(formData.unit_price) !== parseFloat(order.unit_price || 0) ||
-      parseFloat(formData.case_price) !== parseFloat(order.case_price || 0);
+      parseFloat(formData.case_price) !== parseFloat(order.case_price || 0) ||
+      formData.admin_notes !== (order.admin_notes || '');
 
     setHasChanges(hasModifications);
   }, [formData, order]);
@@ -104,7 +105,7 @@ const OrderEditForm = ({ order, onSave, onCancel, adminEmail }) => {
       pricing_mode: order.pricing_mode || 'case',
       unit_price: parseFloat(order.unit_price || 0).toFixed(2),
       case_price: parseFloat(order.case_price || 0).toFixed(2),
-      admin_notes: ''
+      admin_notes: order.admin_notes || ''
     });
     setError(null);
   };
