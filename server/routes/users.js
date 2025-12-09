@@ -16,6 +16,22 @@ const generatePassword = () => {
   return password;
 };
 
+// Helper function to parse cell values
+function parseCellValue(value) {
+  if (value === null || value === undefined || value === '') return false;
+
+  const strValue = String(value).trim().toLowerCase();
+
+  // Truthy values
+  if (['1', 'true', 'yes', 'y', '✓', 'x'].includes(strValue)) return true;
+
+  // Falsy values
+  if (['0', 'false', 'no', 'n', ''].includes(strValue)) return false;
+
+  // Numeric comparison
+  return parseFloat(value) !== 0;
+}
+
 // Get all users (Admin only)
 router.get('/', authenticate, requireAdmin, async (req, res) => {
   try {
@@ -26,6 +42,166 @@ router.get('/', authenticate, requireAdmin, async (req, res) => {
   } catch (error) {
     console.error('Error fetching users:', error);
     res.status(500).json({ error: 'Error fetching users' });
+  }
+});
+
+// Export buyer-product assignments as matrix (Admin only)
+router.get('/export-assignments', authenticate, requireAdmin, async (req, res) => {
+  try {
+    // Debug: Check all users and their roles
+    const allUsersResult = await query('SELECT id, name, email, role FROM users');
+    console.log('Export: All users in database:', allUsersResult.rows);
+
+    // Step 1: Get all buyers with their assignments
+    const buyersResult = await query(
+      'SELECT id, name, email, assigned_product_ids FROM users WHERE role = $1 ORDER BY id ASC',
+      ['buyer']
+    );
+    const buyers = buyersResult.rows;
+    console.log('Export: Found buyers with role=buyer:', buyers.length, buyers);
+
+    // Step 2: Get all products
+    const productsResult = await query(
+      `SELECT product_connect_id, product_name, vendor_name
+       FROM products
+       WHERE product_connect_id IS NOT NULL
+       ORDER BY vendor_name ASC, product_name ASC`
+    );
+    const products = productsResult.rows;
+    console.log('Export: Found products:', products.length);
+
+    // Step 3: Build matrix (product-centric: rows = products, cols = buyers)
+    const matrixData = products.map(product => {
+      const row = {
+        product_connect_id: product.product_connect_id,
+        product_name: product.product_name,
+        vendor_name: product.vendor_name
+      };
+
+      // For each buyer, check if product is assigned
+      buyers.forEach(buyer => {
+        const assignedIds = buyer.assigned_product_ids || [];
+        const isAssigned = assignedIds.includes(product.product_connect_id);
+        row[`buyer_${buyer.id}`] = isAssigned ? 1 : 0;
+      });
+
+      return row;
+    });
+
+    // Step 4: Include buyer metadata for frontend to use in column headers
+    const buyerMetadata = buyers.map(buyer => ({
+      id: buyer.id,
+      name: buyer.name || buyer.email,
+      email: buyer.email
+    }));
+
+    console.log('Export: Sending response with buyers:', buyerMetadata.length);
+    res.json({
+      matrix: matrixData,
+      buyers: buyerMetadata
+    });
+  } catch (error) {
+    console.error('Error exporting assignments:', error);
+    res.status(500).json({ error: 'Error exporting assignments' });
+  }
+});
+
+// Import buyer-product assignments from matrix (Admin only)
+router.post('/bulk-assign-products', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { assignments } = req.body;
+
+    if (!Array.isArray(assignments) || assignments.length === 0) {
+      return res.status(400).json({ error: 'No assignment data provided' });
+    }
+
+    const errors = [];
+    let buyers_updated = 0;
+    const products_processed = new Set();
+
+    // Step 1: Extract buyer IDs from column headers
+    const buyerIds = new Set();
+    assignments.forEach(row => {
+      Object.keys(row).forEach(key => {
+        if (key.startsWith('buyer_')) {
+          buyerIds.add(parseInt(key.replace('buyer_', '')));
+        }
+      });
+    });
+
+    // Step 2: Validate all buyer IDs exist
+    const buyerCheck = await query(
+      'SELECT id FROM users WHERE id = ANY($1) AND role = $2',
+      [Array.from(buyerIds), 'buyer']
+    );
+    const validBuyerIds = buyerCheck.rows.map(r => r.id);
+    const invalidBuyerIds = Array.from(buyerIds).filter(id => !validBuyerIds.includes(id));
+
+    invalidBuyerIds.forEach(id => {
+      errors.push(`Buyer ID ${id} not found in database or is not a buyer`);
+    });
+
+    // Step 3: Extract and validate product IDs
+    const productIds = assignments
+      .map(row => row.product_connect_id)
+      .filter(id => id !== null && id !== undefined && id !== '');
+
+    const productCheck = await query(
+      'SELECT product_connect_id FROM products WHERE product_connect_id = ANY($1)',
+      [productIds]
+    );
+    const validProductIds = productCheck.rows.map(r => r.product_connect_id);
+    const invalidProductIds = productIds.filter(id => !validProductIds.includes(id));
+
+    invalidProductIds.forEach((id, index) => {
+      const rowNum = assignments.findIndex(row => row.product_connect_id === id) + 2;
+      errors.push(`Row ${rowNum}: Product Connect ID ${id} not found in database`);
+    });
+
+    // Step 4: Process each valid buyer
+    for (const buyerId of validBuyerIds) {
+      const assignedProducts = [];
+
+      // Collect all products assigned to this buyer
+      assignments.forEach(row => {
+        const productId = row.product_connect_id;
+
+        // Skip invalid products
+        if (!validProductIds.includes(productId)) {
+          return;
+        }
+
+        products_processed.add(productId);
+
+        const cellValue = row[`buyer_${buyerId}`];
+
+        // Parse cell value: 1, "1", true, "✓" = assigned
+        const isAssigned = parseCellValue(cellValue);
+
+        if (isAssigned) {
+          assignedProducts.push(productId);
+        }
+      });
+
+      // Step 5: Update buyer's assigned products
+      await query(
+        'UPDATE users SET assigned_product_ids = $1 WHERE id = $2',
+        [assignedProducts, buyerId]
+      );
+
+      buyers_updated++;
+    }
+
+    res.json({
+      success: true,
+      buyers_updated,
+      products_processed: products_processed.size,
+      errors: errors.length > 0 ? errors : undefined
+    });
+
+  } catch (error) {
+    console.error('Error bulk assigning products:', error);
+    res.status(500).json({ error: 'Error bulk assigning products: ' + error.message });
   }
 });
 

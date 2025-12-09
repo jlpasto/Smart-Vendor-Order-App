@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import api from '../../config/api';
 import { useSearch } from '../../context/SearchContext';
+import * as XLSX from 'xlsx';
+import Papa from 'papaparse';
 
 const AdminUsers = () => {
   const { globalSearchTerm } = useSearch();
@@ -13,6 +15,11 @@ const AdminUsers = () => {
   const [generatedPassword, setGeneratedPassword] = useState('');
   const [showVendorModal, setShowVendorModal] = useState(false);
   const [vendorModalUser, setVendorModalUser] = useState(null);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importFile, setImportFile] = useState(null);
+  const [importing, setImporting] = useState(false);
+  const [importResults, setImportResults] = useState(null);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -131,6 +138,280 @@ const AdminUsers = () => {
     setVendorModalUser(null);
   };
 
+  const exportAssignments = async () => {
+    try {
+      setExporting(true);
+
+      // Fetch matrix data from backend
+      const response = await api.get('/api/users/export-assignments');
+      console.log('Export API Response:', response.data);
+      console.log('Response data type:', typeof response.data);
+      console.log('Response data keys:', Object.keys(response.data));
+
+      const { matrix, buyers } = response.data;
+      console.log('Matrix:', matrix);
+      console.log('Buyers:', buyers);
+      console.log('Buyers length:', buyers ? buyers.length : 'undefined');
+
+      if (!buyers || buyers.length === 0) {
+        alert('No buyers found in the system');
+        setExporting(false);
+        return;
+      }
+
+      // Create ordered list of buyer column names
+      const buyerColumns = buyers.map(buyer => {
+        const displayName = buyer.name || buyer.email;
+        return {
+          id: buyer.id,
+          columnName: `${displayName} (ID: ${buyer.id})`
+        };
+      });
+
+      // Transform to Excel format with readable headers and boolean values for checkboxes
+      const excelData = matrix.map(row => {
+        const transformed = {
+          'Product Connect ID': row.product_connect_id,
+          'Product Name': row.product_name,
+          'Vendor Name': row.vendor_name
+        };
+
+        // Add buyer columns in order, with boolean values for checkboxes
+        buyerColumns.forEach(({ id, columnName }) => {
+          const isAssigned = row[`buyer_${id}`] === 1;
+          transformed[columnName] = isAssigned ? true : false;
+        });
+
+        return transformed;
+      });
+
+      // Generate Excel file
+      const ws = XLSX.utils.json_to_sheet(excelData);
+
+      // Add checkboxes to buyer columns
+      const range = XLSX.utils.decode_range(ws['!ref']);
+
+      // Find buyer column indices (starting from column D, index 3)
+      const buyerColumnIndices = [];
+      for (let C = 3; C < range.e.c + 1; C++) {
+        buyerColumnIndices.push(C);
+      }
+
+      // Set data validation for checkboxes in buyer columns
+      if (!ws['!dataValidation']) ws['!dataValidation'] = [];
+
+      buyerColumnIndices.forEach(colIdx => {
+        const colLetter = XLSX.utils.encode_col(colIdx);
+        // Apply checkbox validation from row 2 to last row (skip header)
+        const validation = {
+          sqref: `${colLetter}2:${colLetter}${range.e.r + 1}`,
+          type: 'checkbox'
+        };
+        ws['!dataValidation'].push(validation);
+      });
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Assignments');
+
+      const timestamp = new Date().toISOString().split('T')[0];
+      XLSX.writeFile(wb, `buyer_assignments_${timestamp}.xlsx`);
+
+      alert(`Successfully exported ${matrix.length} products with ${buyers.length} buyer columns`);
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Error exporting: ' + (error.response?.data?.error || error.message));
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const openImportModal = () => {
+    setShowImportModal(true);
+    setImportFile(null);
+    setImportResults(null);
+  };
+
+  const closeImportModal = () => {
+    setShowImportModal(false);
+    setImportFile(null);
+    setImportResults(null);
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const validTypes = ['text/csv', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
+      const fileExtension = file.name.split('.').pop().toLowerCase();
+
+      if (validTypes.includes(file.type) || ['csv', 'xlsx', 'xls'].includes(fileExtension)) {
+        setImportFile(file);
+        setImportResults(null);
+      } else {
+        alert('Please select a valid CSV or Excel file');
+        e.target.value = '';
+      }
+    }
+  };
+
+  const parseFileData = (file) => {
+    return new Promise((resolve, reject) => {
+      const fileExtension = file.name.split('.').pop().toLowerCase();
+
+      if (fileExtension === 'csv') {
+        Papa.parse(file, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (results) => resolve(results.data),
+          error: (error) => reject(error)
+        });
+      } else if (['xlsx', 'xls'].includes(fileExtension)) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+            resolve(jsonData);
+          } catch (error) {
+            reject(error);
+          }
+        };
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsArrayBuffer(file);
+      } else {
+        reject(new Error('Unsupported file type'));
+      }
+    });
+  };
+
+  const handleImport = async () => {
+    if (!importFile) {
+      alert('Please select a file');
+      return;
+    }
+
+    setImporting(true);
+    try {
+      const parsedData = await parseFileData(importFile);
+
+      if (!parsedData || parsedData.length === 0) {
+        alert('No data found in file');
+        setImporting(false);
+        return;
+      }
+
+      // Transform to API format
+      const transformedData = parsedData.map(row => {
+        const transformed = {
+          product_connect_id: row['Product Connect ID']
+        };
+
+        Object.keys(row).forEach(key => {
+          // Match both "Buyer X" and "Name (ID: X)" formats
+          const buyerMatchOld = key.match(/^Buyer\s+(\d+)$/i);
+          const buyerMatchNew = key.match(/\(ID:\s*(\d+)\)/i);
+
+          if (buyerMatchOld) {
+            const buyerId = buyerMatchOld[1];
+            transformed[`buyer_${buyerId}`] = row[key];
+          } else if (buyerMatchNew) {
+            const buyerId = buyerMatchNew[1];
+            transformed[`buyer_${buyerId}`] = row[key];
+          }
+        });
+
+        return transformed;
+      });
+
+      const response = await api.post('/api/users/bulk-assign-products', {
+        assignments: transformedData
+      });
+
+      setImportResults(response.data);
+
+      const errorCount = response.data.errors ? response.data.errors.length : 0;
+      alert(
+        `Import completed!\n\n` +
+        `✓ Buyers Updated: ${response.data.buyers_updated}\n` +
+        `✓ Products Processed: ${response.data.products_processed}\n` +
+        (errorCount > 0 ? `⚠️ Errors: ${errorCount}` : '')
+      );
+
+      fetchUsers();
+
+    } catch (error) {
+      console.error('Import error:', error);
+      alert('Error importing: ' + (error.response?.data?.error || error.message));
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const downloadTemplate = async () => {
+    try {
+      const response = await api.get('/api/users/export-assignments');
+      const { matrix, buyers } = response.data;
+
+      if (!buyers || buyers.length === 0) {
+        alert('No buyers found in the system');
+        return;
+      }
+
+      // Create ordered list of buyer column names
+      const buyerColumns = buyers.map(buyer => {
+        const displayName = buyer.name || buyer.email;
+        return {
+          id: buyer.id,
+          columnName: `${displayName} (ID: ${buyer.id})`
+        };
+      });
+
+      const template = matrix.slice(0, 5).map(row => {
+        const transformed = {
+          'Product Connect ID': row.product_connect_id,
+          'Product Name': row.product_name,
+          'Vendor Name': row.vendor_name
+        };
+
+        // Add buyer columns in order, with boolean values for checkboxes
+        buyerColumns.forEach(({ id, columnName }) => {
+          const isAssigned = row[`buyer_${id}`] === 1;
+          transformed[columnName] = isAssigned ? true : false;
+        });
+
+        return transformed;
+      });
+
+      const ws = XLSX.utils.json_to_sheet(template);
+
+      // Add checkboxes to buyer columns
+      const range = XLSX.utils.decode_range(ws['!ref']);
+      const buyerColumnIndices = [];
+      for (let C = 3; C < range.e.c + 1; C++) {
+        buyerColumnIndices.push(C);
+      }
+
+      if (!ws['!dataValidation']) ws['!dataValidation'] = [];
+      buyerColumnIndices.forEach(colIdx => {
+        const colLetter = XLSX.utils.encode_col(colIdx);
+        const validation = {
+          sqref: `${colLetter}2:${colLetter}${range.e.r + 1}`,
+          type: 'checkbox'
+        };
+        ws['!dataValidation'].push(validation);
+      });
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Assignments');
+      XLSX.writeFile(wb, 'buyer_assignment_template.xlsx');
+
+    } catch (error) {
+      console.error('Template download error:', error);
+      alert('Error downloading template: ' + error.message);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -154,9 +435,24 @@ const AdminUsers = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="page-title mb-0">Manage Buyers</h1>
-        <button onClick={openCreateModal} className="btn-primary">
-          + Add New Buyer
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={exportAssignments}
+            disabled={exporting}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {exporting ? 'Exporting...' : '📤 Export Assignments'}
+          </button>
+          <button
+            onClick={openImportModal}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-sm"
+          >
+            📥 Import Assignments
+          </button>
+          <button onClick={openCreateModal} className="btn-primary">
+            + Add New Buyer
+          </button>
+        </div>
       </div>
 
       {/* Users Table */}
@@ -386,6 +682,111 @@ const AdminUsers = () => {
                 className="btn-secondary flex-1"
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-2xl w-full p-8 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-3xl font-bold text-gray-900 mb-6">
+              Import Buyer Assignments
+            </h2>
+
+            {/* Instructions */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <h3 className="font-semibold text-blue-900 mb-2">📋 Instructions:</h3>
+              <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
+                <li>Upload CSV or Excel file (.csv, .xlsx, .xls)</li>
+                <li>Matrix format: Rows = Products, Columns = Buyers</li>
+                <li>Required columns: Product Connect ID, Product Name, Vendor Name</li>
+                <li>Buyer columns format: "Name (ID: X)" or "Buyer X"</li>
+                <li>Cell values: TRUE/checked (assigned), FALSE/blank (not assigned)</li>
+                <li>For Google Sheets: Select buyer columns → Data → Data validation → Checkbox</li>
+                <li>Import updates only buyers/products in the file</li>
+                <li>Invalid IDs will be skipped with error messages</li>
+              </ul>
+            </div>
+
+            {/* Template Download */}
+            <button
+              onClick={downloadTemplate}
+              className="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold mb-6"
+            >
+              📄 Download Template File
+            </button>
+
+            {/* File Upload */}
+            <div className="mb-6">
+              <label className="block text-lg font-semibold text-gray-700 mb-2">
+                Select File to Import
+              </label>
+              <input
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                onChange={handleFileSelect}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg"
+              />
+              {importFile && (
+                <p className="text-sm text-gray-600 mt-2">
+                  Selected: {importFile.name}
+                </p>
+              )}
+            </div>
+
+            {/* Import Results */}
+            {importResults && (
+              <div className={`border rounded-lg p-4 mb-6 ${
+                importResults.errors && importResults.errors.length > 0
+                  ? 'bg-yellow-50 border-yellow-200'
+                  : 'bg-green-50 border-green-200'
+              }`}>
+                <h3 className="font-semibold mb-2">
+                  {importResults.errors && importResults.errors.length > 0
+                    ? '⚠️ Import Completed with Warnings'
+                    : '✅ Import Successful'}
+                </h3>
+                <div className="text-sm space-y-1">
+                  <p>✓ Buyers Updated: {importResults.buyers_updated}</p>
+                  <p>✓ Products Processed: {importResults.products_processed}</p>
+
+                  {importResults.errors && importResults.errors.length > 0 && (
+                    <div className="mt-3">
+                      <p className="font-semibold text-red-800">Errors:</p>
+                      <ul className="list-disc list-inside max-h-40 overflow-y-auto">
+                        {importResults.errors.slice(0, 10).map((error, index) => (
+                          <li key={index} className="text-red-700">{error}</li>
+                        ))}
+                        {importResults.errors.length > 10 && (
+                          <li className="text-red-700">
+                            ... and {importResults.errors.length - 10} more errors
+                          </li>
+                        )}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex gap-4">
+              <button
+                onClick={handleImport}
+                disabled={!importFile || importing}
+                className="btn-primary flex-1 disabled:opacity-50"
+              >
+                {importing ? 'Importing...' : '📥 Import Assignments'}
+              </button>
+              <button
+                onClick={closeImportModal}
+                disabled={importing}
+                className="btn-secondary flex-1"
+              >
+                Close
               </button>
             </div>
           </div>
