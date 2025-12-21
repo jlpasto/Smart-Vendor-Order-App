@@ -219,12 +219,14 @@ const AdminOrders = () => {
     fetchOrders(); // Refresh orders
   };
 
-  // Group orders by batch
+  // Group orders by batch (or by user for ongoing cart items)
   const groupedOrders = orders.reduce((acc, order) => {
-    if (!acc[order.batch_order_number]) {
-      acc[order.batch_order_number] = [];
+    // For ongoing (cart) items without a batch number, group by user email
+    const groupKey = order.batch_order_number || `CART-${order.user_email}`;
+    if (!acc[groupKey]) {
+      acc[groupKey] = [];
     }
-    acc[order.batch_order_number].push(order);
+    acc[groupKey].push(order);
     return acc;
   }, {});
 
@@ -267,6 +269,7 @@ const AdminOrders = () => {
             >
               <option value="">All Statuses</option>
               <option value="pending">Pending</option>
+              <option value="in_cart">In Cart</option>
               <option value="completed">Completed</option>
               <option value="cancelled">Cancelled</option>
             </select>
@@ -313,13 +316,20 @@ const AdminOrders = () => {
           {Object.entries(groupedOrders).map(([batchNumber, batchOrders]) => {
             const batchTotal = batchOrders.reduce((sum, order) => sum + parseFloat(order.amount), 0);
             const batchStatus = batchOrders[0].status;
-            const batchDate = batchOrders[0].date_submitted;
+            const isInCart = batchStatus === 'in_cart';
+            const batchDate = isInCart ? batchOrders[0].cart_created_at : batchOrders[0].date_submitted;
             const customerEmail = batchOrders[0].user_email;
+            const customerName = batchOrders[0].user_name;
             const batchNotes = batchOrders[0].notes;
             const hasModifications = batchOrders.some(order => order.modified_by_admin);
             const totalModifications = batchOrders.reduce((sum, order) => sum + (order.modification_count || 0), 0);
             const isInEditMode = editModeBatch === batchNumber;
             const isExpanded = expandedBatches.has(batchNumber);
+
+            // Display name for the batch
+            const displayBatchName = isInCart
+              ? `${customerName || customerEmail.split('@')[0]}'s Cart`
+              : batchNumber;
 
             return (
               <div key={batchNumber} className="card">
@@ -342,8 +352,13 @@ const AdminOrders = () => {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                           </svg>
                         </button>
-                        <h3 className="text-lg font-bold text-gray-900">{batchNumber}</h3>
-                        {hasModifications && (
+                        <h3 className="text-lg font-bold text-gray-900">{displayBatchName}</h3>
+                        {isInCart && (
+                          <span className="px-2 py-0.5 bg-blue-100 border border-blue-400 text-blue-800 text-xs font-bold rounded-full">
+                            🛒 In Cart
+                          </span>
+                        )}
+                        {hasModifications && !isInCart && (
                           <span className="px-2 py-0.5 bg-yellow-100 border border-yellow-400 text-yellow-800 text-xs font-bold rounded-full">
                             ✏️ Modified ({totalModifications} {totalModifications === 1 ? 'change' : 'changes'})
                           </span>
@@ -351,16 +366,17 @@ const AdminOrders = () => {
                       </div>
                       <div className="flex flex-wrap gap-2 text-sm text-gray-600">
                         <span>👤 {customerEmail}</span>
-                        <span>📅 {new Date(batchDate).toLocaleDateString()}</span>
+                        <span>📅 {batchDate ? new Date(batchDate).toLocaleDateString() : 'N/A'}</span>
                         <span>📦 {batchOrders.length} items</span>
                         <span className="font-semibold text-primary-600">💰 ${batchTotal.toFixed(2)}</span>
                       </div>
                     </div>
                     <span className={`badge ${
                       batchStatus === 'pending' ? 'badge-pending' :
+                      batchStatus === 'in_cart' ? 'badge-in-cart' :
                       batchStatus === 'completed' ? 'badge-completed' : 'badge-cancelled'
                     }`}>
-                      {batchStatus.toUpperCase()}
+                      {batchStatus === 'in_cart' ? 'IN CART' : batchStatus.toUpperCase()}
                     </span>
                   </div>
 
@@ -458,38 +474,64 @@ const AdminOrders = () => {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex flex-wrap gap-3">
-                      <button
-                        onClick={() => toggleEditMode(batchNumber)}
-                        className={`btn-primary ${isInEditMode ? 'bg-gray-600 hover:bg-gray-700' : ''}`}
-                      >
-                        {isInEditMode ? '✓ Exit Edit Mode' : '✏️ Edit Order'}
-                      </button>
+                    {isInCart ? (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <p className="text-blue-800 text-sm">
+                          <strong>ℹ️ In Cart:</strong> This cart has not been submitted yet.
+                          Items will become editable once the customer submits their order.
+                        </p>
+                      </div>
+                    ) : batchStatus === 'completed' || batchStatus === 'cancelled' ? (
+                      <div className={`border rounded-lg p-4 ${
+                        batchStatus === 'completed' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+                      }`}>
+                        <p className={`text-sm ${
+                          batchStatus === 'completed' ? 'text-green-800' : 'text-red-800'
+                        }`}>
+                          <strong>🔒 {batchStatus === 'completed' ? 'Completed' : 'Cancelled'} Order:</strong> This order has been finalized and cannot be edited.
+                          {batchStatus === 'completed' ? ' The order has been successfully processed.' : ' This order was cancelled.'}
+                        </p>
+                        <button
+                          onClick={() => handleViewBatchHistory(batchNumber)}
+                          className="btn-secondary mt-3"
+                        >
+                          📜 View Order History
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap gap-3">
+                        <button
+                          onClick={() => toggleEditMode(batchNumber)}
+                          className={`btn-primary ${isInEditMode ? 'bg-gray-600 hover:bg-gray-700' : ''}`}
+                        >
+                          {isInEditMode ? '✓ Exit Edit Mode' : '✏️ Edit Order'}
+                        </button>
 
-                      {isInEditMode && (
-                        <>
-                          <button
-                            onClick={() => handleOpenAddItem(batchNumber)}
-                            className="btn-primary bg-green-600 hover:bg-green-700"
-                          >
-                            ➕ Add Item
-                          </button>
-                          <button
-                            onClick={() => handleViewBatchHistory(batchNumber)}
-                            className="btn-primary bg-purple-600 hover:bg-purple-700"
-                          >
-                            📜 View Batch History
-                          </button>
-                        </>
-                      )}
+                        {isInEditMode && (
+                          <>
+                            <button
+                              onClick={() => handleOpenAddItem(batchNumber)}
+                              className="btn-primary bg-green-600 hover:bg-green-700"
+                            >
+                              ➕ Add Item
+                            </button>
+                            <button
+                              onClick={() => handleViewBatchHistory(batchNumber)}
+                              className="btn-primary bg-purple-600 hover:bg-purple-700"
+                            >
+                              📜 View Batch History
+                            </button>
+                          </>
+                        )}
 
-                      <button
-                        onClick={() => openEditModal(batchOrders[0])}
-                        className="btn-secondary"
-                      >
-                        Update Status & Add Note
-                      </button>
-                    </div>
+                        <button
+                          onClick={() => openEditModal(batchOrders[0])}
+                          className="btn-secondary"
+                        >
+                          Update Status & Add Note
+                        </button>
+                      </div>
+                    )}
                   </>
                 )}
               </div>
@@ -524,6 +566,7 @@ const AdminOrders = () => {
                   className="select"
                 >
                   <option value="pending">Pending</option>
+                  <option value="in_cart">In Cart</option>
                   <option value="completed">Completed</option>
                   <option value="cancelled">Cancelled</option>
                 </select>

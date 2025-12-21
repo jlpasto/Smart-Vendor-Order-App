@@ -235,15 +235,45 @@ router.post('/submit', authenticate, async (req, res) => {
     console.log('User:', req.user);
     console.log('Request body:', JSON.stringify(req.body, null, 2));
 
-    const { items } = req.body; // Array of cart items
+    const { items, cartItemIds } = req.body;
     const userEmail = req.user.email;
     const userId = req.user.id;
     const userName = req.user.name;
 
     console.log(`👤 User: ${userEmail} (ID: ${userId})`);
-    console.log(`📋 Items count: ${items?.length || 0}`);
 
-    if (!items || items.length === 0) {
+    // Support both cart ID-based submission (new) and item array (legacy)
+    let ordersToSubmit = [];
+
+    if (cartItemIds && cartItemIds.length > 0) {
+      // NEW: Cart ID-based submission
+      console.log(`📋 Cart item IDs count: ${cartItemIds.length}`);
+
+      // Fetch all cart items from database
+      const placeholders = cartItemIds.map((_, idx) => `$${idx + 2}`).join(', ');
+      const cartResult = await query(
+        `SELECT * FROM orders
+         WHERE id IN (${placeholders})
+           AND user_id = $1
+           AND status = 'in_cart'`,
+        [userId, ...cartItemIds]
+      );
+
+      if (cartResult.rows.length === 0) {
+        console.log('❌ No valid cart items found');
+        return res.status(400).json({ error: 'No valid cart items found' });
+      }
+
+      if (cartResult.rows.length !== cartItemIds.length) {
+        console.log(`⚠️ Warning: Requested ${cartItemIds.length} items, found ${cartResult.rows.length}`);
+      }
+
+      ordersToSubmit = cartResult.rows;
+    } else if (items && items.length > 0) {
+      // LEGACY: Item array submission (for backward compatibility)
+      console.log(`📋 Items count (legacy): ${items.length}`);
+      ordersToSubmit = items;
+    } else {
       console.log('❌ No items in order');
       return res.status(400).json({ error: 'No items in order' });
     }
@@ -431,15 +461,72 @@ router.post('/submit', authenticate, async (req, res) => {
   }
 });
 
+// Get all in_cart items (Admin only)
+router.get('/ongoing', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { userEmail, fromDate, toDate } = req.query;
+    console.log('📦 Fetching in_cart items (admin)');
+
+    let queryText = `
+      SELECT
+        o.*,
+        u.name as user_name,
+        u.email as user_email
+      FROM orders o
+      JOIN users u ON o.user_id = u.id
+      WHERE o.status = 'in_cart'
+    `;
+    const queryParams = [];
+    let paramCount = 1;
+
+    if (userEmail) {
+      queryText += ` AND o.user_email = $${paramCount}`;
+      queryParams.push(userEmail);
+      paramCount++;
+    }
+
+    if (fromDate) {
+      queryText += ` AND o.cart_created_at >= $${paramCount}`;
+      queryParams.push(fromDate);
+      paramCount++;
+    }
+
+    if (toDate) {
+      queryText += ` AND o.cart_created_at <= $${paramCount}`;
+      queryParams.push(toDate);
+      paramCount++;
+    }
+
+    queryText += ' ORDER BY o.user_email, o.cart_created_at DESC';
+
+    const result = await query(queryText, queryParams);
+
+    console.log(`✓ Found ${result.rows.length} in_cart items`);
+
+    res.json({
+      success: true,
+      carts: result.rows
+    });
+  } catch (error) {
+    console.error('Error fetching in_cart items:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error fetching in_cart items',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
 // Get all orders (Admin only)
 router.get('/all', authenticate, requireAdmin, async (req, res) => {
   try {
     const { vendor, vendor_id, status, startDate, endDate } = req.query;
 
     let queryText = `
-      SELECT o.*, p.category
+      SELECT o.*, p.category, u.name as user_name
       FROM orders o
       LEFT JOIN products p ON o.product_connect_id = p.product_connect_id
+      LEFT JOIN users u ON o.user_id = u.id
       WHERE 1=1
     `;
     const queryParams = [];
@@ -461,6 +548,7 @@ router.get('/all', authenticate, requireAdmin, async (req, res) => {
       queryParams.push(status);
       paramCount++;
     }
+    // Note: When no status filter is selected (All Statuses), show ALL orders including cart items
 
     if (startDate) {
       queryText += ` AND o.date_submitted >= $${paramCount}`;
@@ -474,7 +562,8 @@ router.get('/all', authenticate, requireAdmin, async (req, res) => {
       paramCount++;
     }
 
-    queryText += ' ORDER BY o.date_submitted DESC';
+    // Order by appropriate date field - cart items by cart_created_at, others by date_submitted
+    queryText += ' ORDER BY COALESCE(o.date_submitted, o.cart_created_at) DESC';
 
     const result = await query(queryText, queryParams);
     res.json(result.rows);
@@ -490,7 +579,7 @@ router.patch('/:id/status', authenticate, requireAdmin, async (req, res) => {
     const { id } = req.params;
     const { status, notes } = req.body;
 
-    if (!['pending', 'completed', 'cancelled'].includes(status)) {
+    if (!['pending', 'in_cart', 'completed', 'cancelled'].includes(status)) {
       return res.status(400).json({ error: 'Invalid status' });
     }
 
@@ -530,7 +619,7 @@ router.patch('/batch/:batchNumber/status', authenticate, requireAdmin, async (re
     const { batchNumber } = req.params;
     const { status, notes } = req.body;
 
-    if (!['pending', 'completed', 'cancelled'].includes(status)) {
+    if (!['pending', 'in_cart', 'completed', 'cancelled'].includes(status)) {
       return res.status(400).json({ error: 'Invalid status' });
     }
 
