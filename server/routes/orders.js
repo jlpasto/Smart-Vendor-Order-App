@@ -32,11 +32,17 @@ router.get('/health', authenticate, async (req, res) => {
 });
 
 // Generate batch order number
-const generateBatchNumber = () => {
+const generateBatchNumber = (userName, userEmail) => {
   const now = new Date();
-  const year = now.getFullYear();
-  const timestamp = now.getTime().toString().slice(-6);
-  return `BATCH-${year}-${timestamp}`;
+  const date = now.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+
+  // Use name if available, otherwise use email prefix
+  const buyerName = userName || userEmail.split('@')[0];
+
+  // Add a unique identifier (last 4 digits of timestamp) to prevent collisions
+  const uniqueId = now.getTime().toString().slice(-4);
+
+  return `${buyerName} - ${date} #${uniqueId}`;
 };
 
 // Get all orders for current user
@@ -232,6 +238,7 @@ router.post('/submit', authenticate, async (req, res) => {
     const { items } = req.body; // Array of cart items
     const userEmail = req.user.email;
     const userId = req.user.id;
+    const userName = req.user.name;
 
     console.log(`👤 User: ${userEmail} (ID: ${userId})`);
     console.log(`📋 Items count: ${items?.length || 0}`);
@@ -241,7 +248,7 @@ router.post('/submit', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'No items in order' });
     }
 
-    const batchNumber = generateBatchNumber();
+    const batchNumber = generateBatchNumber(userName, userEmail);
     console.log(`🎫 Generated batch number: ${batchNumber}`);
     const createdOrders = [];
 

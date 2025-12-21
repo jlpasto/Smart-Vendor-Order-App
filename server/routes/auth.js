@@ -45,7 +45,7 @@ router.post('/signup', async (req, res) => {
 
     // Generate JWT token
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
+      { id: user.id, email: user.email, role: user.role, name: user.name },
       process.env.JWT_SECRET || 'default_secret_change_this',
       { expiresIn: '7d' }
     );
@@ -55,7 +55,8 @@ router.post('/signup', async (req, res) => {
       user: {
         id: user.id,
         email: user.email,
-        role: user.role
+        role: user.role,
+        name: user.name
       }
     });
   } catch (error) {
@@ -94,7 +95,7 @@ router.post('/login', async (req, res) => {
 
     // Generate JWT token
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
+      { id: user.id, email: user.email, role: user.role, name: user.name },
       process.env.JWT_SECRET || 'default_secret_change_this',
       { expiresIn: '7d' }
     );
@@ -104,7 +105,8 @@ router.post('/login', async (req, res) => {
       user: {
         id: user.id,
         email: user.email,
-        role: user.role
+        role: user.role,
+        name: user.name
       }
     });
   } catch (error) {
@@ -128,7 +130,8 @@ router.get('/verify', async (req, res) => {
       user: {
         id: decoded.id,
         email: decoded.email,
-        role: decoded.role
+        role: decoded.role,
+        name: decoded.name
       }
     });
   } catch (error) {
