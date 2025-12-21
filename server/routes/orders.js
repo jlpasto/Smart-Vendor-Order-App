@@ -262,6 +262,50 @@ router.post('/submit', authenticate, async (req, res) => {
       console.log(`💰 Pricing Mode: ${pricingMode}, Unit Price: ${unitPrice}, Case Price: ${casePrice}`);
       console.log(`💰 Price: ${price}, Quantity: ${item.quantity}, Amount: ${amount}`);
 
+      // Extract replacement preferences from cart item
+      let unavailableAction = item.unavailable_action || null;
+      let replacementProductId = item.replacement_product_id || null;
+
+      // Validate unavailable_action
+      if (unavailableAction) {
+        const validActions = ['curate', 'replace_same_vendor', 'replace_other_vendors', 'remove'];
+        if (!validActions.includes(unavailableAction)) {
+          console.log(`⚠️  Invalid unavailable_action: ${unavailableAction}, defaulting to 'curate'`);
+          unavailableAction = 'curate';
+        }
+      }
+
+      // Log warning if replacement action selected but no product ID
+      if ((unavailableAction === 'replace_same_vendor' || unavailableAction === 'replace_other_vendors') &&
+          !replacementProductId) {
+        console.log(`⚠️  Replacement action selected but no replacement product ID provided for item: ${item.product_name}`);
+      }
+
+      // Get replacement product details if specified
+      let replacementProductName = null;
+      let replacementVendorName = null;
+
+      if (replacementProductId) {
+        try {
+          const replacementResult = await query(
+            'SELECT product_name, vendor_name FROM products WHERE id = $1',
+            [replacementProductId]
+          );
+          if (replacementResult.rows.length > 0) {
+            replacementProductName = replacementResult.rows[0].product_name;
+            replacementVendorName = replacementResult.rows[0].vendor_name;
+            console.log(`✓ Replacement product found: ${replacementProductName} from ${replacementVendorName}`);
+          } else {
+            console.log(`⚠️  Replacement product ID ${replacementProductId} not found`);
+            // Set to null if product doesn't exist
+            replacementProductId = null;
+          }
+        } catch (replacementError) {
+          console.error('❌ Error looking up replacement product:', replacementError);
+          // Continue with null values
+        }
+      }
+
       // Get vendor_id by looking up vendor_name in vendors table
       let vendorId = null;
       const vendorName = item.vendor_name;
@@ -290,8 +334,9 @@ router.post('/submit', authenticate, async (req, res) => {
         `INSERT INTO orders (
           batch_order_number, product_connect_id, product_name, vendor_connect_id, vendor_name,
           quantity, amount, pricing_mode, unit_price, case_price,
-          status, user_email, user_id, date_submitted
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, CURRENT_TIMESTAMP)
+          status, user_email, user_id, date_submitted,
+          unavailable_action, replacement_product_id, replacement_product_name, replacement_vendor_name
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, CURRENT_TIMESTAMP, $14, $15, $16, $17)
         RETURNING *`,
         [
           batchNumber,
@@ -306,7 +351,11 @@ router.post('/submit', authenticate, async (req, res) => {
           casePrice,
           'pending',
           userEmail,
-          userId
+          userId,
+          unavailableAction,
+          replacementProductId,
+          replacementProductName,
+          replacementVendorName
         ]
       );
 
@@ -319,8 +368,9 @@ router.post('/submit', authenticate, async (req, res) => {
         `INSERT INTO order_snapshots (
           order_id, batch_order_number, snapshot_type,
           product_connect_id, product_name, vendor_name,
-          quantity, pricing_mode, unit_price, case_price, amount
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+          quantity, pricing_mode, unit_price, case_price, amount,
+          unavailable_action, replacement_product_id, replacement_product_name, replacement_vendor_name
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
         [
           createdOrder.id,
           batchNumber,
@@ -332,7 +382,11 @@ router.post('/submit', authenticate, async (req, res) => {
           pricingMode,
           unitPrice,
           casePrice,
-          amount
+          amount,
+          unavailableAction,
+          replacementProductId,
+          replacementProductName,
+          replacementVendorName
         ]
       );
       console.log(`✓ Original snapshot created`);

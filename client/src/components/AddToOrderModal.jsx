@@ -162,12 +162,16 @@ const AddToOrderModal = ({ product, isOpen, onClose, onAddToOrder }) => {
   };
 
   const handleAddToOrder = () => {
-    // Pass replacement product ID if any "replace" option is selected and a replacement is chosen
+    // Pass replacement product ID and name if any "replace" option is selected and a replacement is chosen
     const replacementProductId = (unavailableAction === 'replace_same_vendor' || unavailableAction === 'replace_other_vendors') && selectedReplacement
       ? selectedReplacement.id
       : null;
 
-    onAddToOrder(product, quantity, pricingMode, unavailableAction, replacementProductId);
+    const replacementProductName = (unavailableAction === 'replace_same_vendor' || unavailableAction === 'replace_other_vendors') && selectedReplacement
+      ? selectedReplacement.product_name
+      : null;
+
+    onAddToOrder(product, quantity, pricingMode, unavailableAction, replacementProductId, replacementProductName);
     onClose();
   };
 

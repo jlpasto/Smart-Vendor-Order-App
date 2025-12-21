@@ -110,6 +110,17 @@ const OrderEditForm = ({ order, onSave, onCancel, adminEmail }) => {
     setError(null);
   };
 
+  // Helper function to get human-readable replacement preference label
+  const getReplacementPreferenceLabel = (action) => {
+    const labels = {
+      'curate': 'Curate to replace if sold out',
+      'replace_same_vendor': 'Replace with similar item under same vendor',
+      'replace_other_vendors': 'Replace with similar item across other vendors',
+      'remove': 'Remove it from my order'
+    };
+    return labels[action] || action;
+  };
+
   return (
     <form onSubmit={handleSubmit} className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-4">
       {/* Product Name (Read-only) */}
@@ -127,6 +138,41 @@ const OrderEditForm = ({ order, onSave, onCancel, adminEmail }) => {
           {order.vendor_name}
         </p>
       </div>
+
+      {/* Replacement Preference (Read-only) */}
+      {order.unavailable_action && (
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-1">
+            User's Replacement Preference
+          </label>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+            <div className="flex items-start gap-2">
+              <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-900">
+                  {getReplacementPreferenceLabel(order.unavailable_action)}
+                </p>
+                {(order.unavailable_action === 'replace_same_vendor' ||
+                  order.unavailable_action === 'replace_other_vendors') &&
+                 order.replacement_product_name && (
+                  <div className="mt-2 bg-white border border-blue-200 rounded px-2 py-1.5">
+                    <p className="text-xs text-gray-600">Preferred Replacement:</p>
+                    <p className="text-sm font-semibold text-gray-900">{order.replacement_product_name}</p>
+                    {order.replacement_vendor_name && (
+                      <p className="text-xs text-gray-600">from {order.replacement_vendor_name}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 mt-1">
+            This preference was set by the customer and cannot be modified by admins.
+          </p>
+        </div>
+      )}
 
       {/* Two-column layout for editable fields */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

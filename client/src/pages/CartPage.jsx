@@ -3,13 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import api from '../config/api';
+import ReplacementPreferenceModal from '../components/ReplacementPreferenceModal';
 
 const CartPage = () => {
-  const { cart, removeFromCart, updateQuantity, updatePricingMode, clearCart, getCartTotal } = useCart();
+  const { cart, removeFromCart, updateQuantity, updatePricingMode, updateReplacementPreference, clearCart, getCartTotal } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [editingReplacementItem, setEditingReplacementItem] = useState(null);
+  const [showReplacementModal, setShowReplacementModal] = useState(false);
 
   const handleQuantityChange = (productId, newQuantity) => {
     const qty = parseInt(newQuantity);
@@ -22,6 +25,41 @@ const CartPage = () => {
     if (window.confirm('Remove this item from cart?')) {
       removeFromCart(productId);
     }
+  };
+
+  const handleEditReplacementPreference = (item) => {
+    setEditingReplacementItem(item);
+    setShowReplacementModal(true);
+  };
+
+  const handleCloseReplacementModal = () => {
+    setEditingReplacementItem(null);
+    setShowReplacementModal(false);
+  };
+
+  const handleSaveReplacementPreference = (unavailableAction, replacementProductId, replacementProductName) => {
+    if (!editingReplacementItem) return;
+
+    // Update the cart item with new replacement preferences
+    updateReplacementPreference(editingReplacementItem.id, unavailableAction, replacementProductId, replacementProductName);
+    handleCloseReplacementModal();
+  };
+
+  // Helper function to get human-readable replacement preference label
+  const getReplacementPreferenceLabel = (action) => {
+    const labels = {
+      'curate': 'Curate to replace if sold out',
+      'replace_same_vendor': 'Replace with similar item under same vendor',
+      'replace_other_vendors': 'Replace with similar item across other vendors',
+      'remove': 'Remove it from my order'
+    };
+    return labels[action] || 'Curate to replace if sold out';
+  };
+
+  // Helper function to get replacement product name from item
+  const getReplacementProductName = (item) => {
+    // Use the stored replacement_product_name if available, otherwise show ID
+    return item.replacement_product_name || `Product #${item.replacement_product_id}`;
   };
 
   const handleSubmitOrder = async () => {
@@ -641,6 +679,31 @@ const CartPage = () => {
                               </div>
                             );
                           })()}
+
+                          {/* Replacement Preference Display */}
+                          <div className="mt-3 border-t border-gray-200 pt-3">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <p className="text-xs font-semibold text-gray-600 mb-1">If unavailable:</p>
+                                <p className="text-sm text-gray-900">
+                                  {getReplacementPreferenceLabel(item.unavailable_action || 'curate')}
+                                </p>
+                                {(item.unavailable_action === 'replace_same_vendor' ||
+                                  item.unavailable_action === 'replace_other_vendors') &&
+                                 item.replacement_product_id && (
+                                  <p className="text-xs text-gray-600 mt-1">
+                                    Replacement: <span className="font-medium">{getReplacementProductName(item)}</span>
+                                  </p>
+                                )}
+                              </div>
+                              <button
+                                onClick={() => handleEditReplacementPreference(item)}
+                                className="text-xs text-primary-600 hover:text-primary-700 font-semibold ml-2"
+                              >
+                                Edit
+                              </button>
+                            </div>
+                          </div>
                         </div>
 
                         {/* Remove Button */}
@@ -737,6 +800,14 @@ const CartPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Replacement Preference Modal */}
+      <ReplacementPreferenceModal
+        item={editingReplacementItem}
+        isOpen={showReplacementModal}
+        onClose={handleCloseReplacementModal}
+        onSave={handleSaveReplacementPreference}
+      />
     </div>
   );
 };

@@ -35,7 +35,7 @@ export const CartProvider = ({ children }) => {
     localStorage.setItem(cartKey, JSON.stringify(cart));
   }, [cart, user]);
 
-  const addToCart = (product, quantity = 1, pricingMode = 'case', unavailableAction = 'curate', replacementProductId = null) => {
+  const addToCart = (product, quantity = 1, pricingMode = 'case', unavailableAction = 'curate', replacementProductId = null, replacementProductName = null) => {
     setCart(prevCart => {
       const existingItem = prevCart.find(item => item.id === product.id);
 
@@ -48,18 +48,20 @@ export const CartProvider = ({ children }) => {
                 quantity: item.quantity + quantity,
                 pricing_mode: pricingMode,
                 unavailable_action: unavailableAction,
-                replacement_product_id: replacementProductId
+                replacement_product_id: replacementProductId,
+                replacement_product_name: replacementProductName
               }
             : item
         );
       } else {
-        // Add new item to cart with pricing mode, unavailable action, and replacement product ID
+        // Add new item to cart with pricing mode, unavailable action, replacement product ID and name
         return [...prevCart, {
           ...product,
           quantity,
           pricing_mode: pricingMode,
           unavailable_action: unavailableAction,
-          replacement_product_id: replacementProductId
+          replacement_product_id: replacementProductId,
+          replacement_product_name: replacementProductName
         }];
       }
     });
@@ -94,6 +96,21 @@ export const CartProvider = ({ children }) => {
     );
   };
 
+  const updateReplacementPreference = (productId, unavailableAction, replacementProductId, replacementProductName = null) => {
+    setCart(prevCart =>
+      prevCart.map(item =>
+        item.id === productId
+          ? {
+              ...item,
+              unavailable_action: unavailableAction,
+              replacement_product_id: replacementProductId,
+              replacement_product_name: replacementProductName
+            }
+          : item
+      )
+    );
+  };
+
   const clearCart = () => {
     setCart([]);
   };
@@ -117,6 +134,7 @@ export const CartProvider = ({ children }) => {
     removeFromCart,
     updateQuantity,
     updatePricingMode,
+    updateReplacementPreference,
     clearCart,
     getCartTotal,
     getCartCount

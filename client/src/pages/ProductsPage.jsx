@@ -168,8 +168,8 @@ const ProductsPage = () => {
     setSelectedFilterField(null);
   };
 
-  const handleAddToCart = (product, quantity = 1, pricingMode = 'case', unavailableAction = 'curate', replacementProductId = null) => {
-    addToCart(product, quantity, pricingMode, unavailableAction, replacementProductId);
+  const handleAddToCart = (product, quantity = 1, pricingMode = 'case', unavailableAction = 'curate', replacementProductId = null, replacementProductName = null) => {
+    addToCart(product, quantity, pricingMode, unavailableAction, replacementProductId, replacementProductName);
     setAddedToCart({ ...addedToCart, [product.id]: true });
     setTimeout(() => {
       setAddedToCart({ ...addedToCart, [product.id]: false });
