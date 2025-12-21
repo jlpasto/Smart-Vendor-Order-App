@@ -20,6 +20,7 @@ import AdminOrders from './pages/admin/AdminOrders';
 import AdminProducts from './pages/admin/AdminProducts';
 import AdminVendors from './pages/admin/AdminVendors';
 import AdminUsers from './pages/admin/AdminUsers';
+import AdminBuyerOverview from './pages/admin/AdminBuyerOverview';
 
 function App() {
   return (
@@ -91,6 +92,14 @@ function App() {
                 element={
                   <ProtectedRoute requireAdmin>
                     <AdminUsers />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="admin/buyer-overview"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <AdminBuyerOverview />
                   </ProtectedRoute>
                 }
               />

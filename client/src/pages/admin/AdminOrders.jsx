@@ -1,17 +1,20 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import api from '../../config/api';
 import OrderEditForm from '../../components/OrderEditForm';
 import OrderHistoryPanel from '../../components/OrderHistoryPanel';
 import AddItemModal from '../../components/AddItemModal';
 
 const AdminOrders = () => {
+  const location = useLocation();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     vendor: '',
     status: '',
     startDate: '',
-    endDate: ''
+    endDate: '',
+    userEmail: '' // Add userEmail filter
   });
   const [vendors, setVendors] = useState([]);
   const [editingOrder, setEditingOrder] = useState(null);
@@ -35,6 +38,16 @@ const AdminOrders = () => {
   // Expandable batches state - track which batches are expanded (default: all expanded)
   const [expandedBatches, setExpandedBatches] = useState(new Set());
 
+  // Apply filters from location state (from Buyer Overview navigation)
+  useEffect(() => {
+    if (location.state?.filters) {
+      setFilters(prevFilters => ({
+        ...prevFilters,
+        ...location.state.filters
+      }));
+    }
+  }, [location.state]);
+
   useEffect(() => {
     fetchOrders();
     fetchVendors();
@@ -49,7 +62,16 @@ const AdminOrders = () => {
       if (filters.endDate) params.endDate = filters.endDate;
 
       const response = await api.get('/api/orders/all', { params });
-      setOrders(response.data);
+
+      // Apply userEmail filter on the client side if provided
+      let filteredOrders = response.data;
+      if (filters.userEmail) {
+        filteredOrders = filteredOrders.filter(order =>
+          order.user_email.toLowerCase().includes(filters.userEmail.toLowerCase())
+        );
+      }
+
+      setOrders(filteredOrders);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching orders:', error);
@@ -75,7 +97,8 @@ const AdminOrders = () => {
       vendor: '',
       status: '',
       startDate: '',
-      endDate: ''
+      endDate: '',
+      userEmail: ''
     });
   };
 
@@ -241,6 +264,18 @@ const AdminOrders = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <h1 className="page-title mb-6">Manage Orders</h1>
+
+      {/* Pre-applied filter notification */}
+      {filters.userEmail && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <p className="text-blue-800 text-sm">
+            <strong>📊 Filtered by buyer:</strong> {filters.userEmail}
+            {filters.startDate && filters.endDate && (
+              <span> | <strong>Date range:</strong> {filters.startDate} to {filters.endDate}</span>
+            )}
+          </p>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="card mb-8">

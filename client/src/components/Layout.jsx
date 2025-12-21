@@ -39,10 +39,11 @@ const Layout = () => {
   // Menu items for admin users
   const adminMenuItems = [
     { path: '/admin', label: 'Dashboard', icon: '📊' },
+    { path: '/admin/buyer-overview', label: 'Buyer Overview', icon: '👥' },
     { path: '/admin/products', label: 'Manage Products', icon: '📦' },
     { path: '/admin/vendors', label: 'Manage Vendors', icon: '🏪' },
     { path: '/admin/orders', label: 'Manage Orders', icon: '📋' },
-    { path: '/admin/users', label: 'Manage Buyers', icon: '👥' },
+    { path: '/admin/users', label: 'Manage Buyers', icon: '👤' },
     { path: '/products', label: 'Browse Products', icon: '🛍️' },
     { path: '/settings', label: 'Settings', icon: '⚙️' },
   ];

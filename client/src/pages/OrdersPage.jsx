@@ -44,10 +44,14 @@ const OrdersPage = () => {
     }
 
     try {
-      const response = await api.get(`/api/orders/batch/${batchNumber}`);
-      setBatchOrders({ ...batchOrders, [batchNumber]: response.data });
+      const response = await api.get(`/api/orders/batch/${encodeURIComponent(batchNumber)}`);
+      setBatchOrders(prevOrders => ({
+        ...prevOrders,
+        [batchNumber]: response.data
+      }));
     } catch (err) {
       console.error('Error fetching batch details:', err);
+      alert('Error loading order details. Please try again.');
     }
   };
 
@@ -56,7 +60,10 @@ const OrdersPage = () => {
       setExpandedBatch(null);
     } else {
       setExpandedBatch(batchNumber);
-      await fetchBatchDetails(batchNumber);
+      // Only fetch if we don't have the data yet
+      if (!batchOrders[batchNumber]) {
+        await fetchBatchDetails(batchNumber);
+      }
     }
   };
 
@@ -135,7 +142,7 @@ const OrdersPage = () => {
 
     try {
       // Fetch current product details for the batch
-      const response = await api.get(`/api/orders/batch/${batchNumber}/products`);
+      const response = await api.get(`/api/orders/batch/${encodeURIComponent(batchNumber)}/products`);
       const { products, unavailable } = response.data;
 
       if (products.length === 0) {
@@ -349,11 +356,18 @@ const OrdersPage = () => {
                     )}
 
                     {/* Expanded Order Details */}
-                    {expandedBatch === batch.batch_order_number && batchOrders[batch.batch_order_number] && (
+                    {expandedBatch === batch.batch_order_number && (
                       <div className="mt-6 border-t-2 border-gray-200 pt-6">
-                        <h4 className="text-lg font-semibold mb-4">Order Items:</h4>
-                        <div className="space-y-3">
-                          {batchOrders[batch.batch_order_number].map(order => (
+                        {!batchOrders[batch.batch_order_number] ? (
+                          <div className="flex justify-center items-center py-8">
+                            <div className="spinner w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full"></div>
+                            <span className="ml-3 text-gray-600">Loading order details...</span>
+                          </div>
+                        ) : (
+                          <>
+                            <h4 className="text-lg font-semibold mb-4">Order Items:</h4>
+                            <div className="space-y-3">
+                              {batchOrders[batch.batch_order_number].map(order => (
                             <div
                               key={order.id}
                               className="flex justify-between items-center bg-gray-50 p-4 rounded-lg"
@@ -381,7 +395,9 @@ const OrdersPage = () => {
                               </div>
                             </div>
                           ))}
-                        </div>
+                            </div>
+                          </>
+                        )}
                       </div>
                     )}
                   </div>

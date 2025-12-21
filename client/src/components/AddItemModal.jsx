@@ -271,7 +271,7 @@ const AddItemModal = ({ batchNumber, isOpen, onClose, onItemAdded }) => {
       try {
         const token = localStorage.getItem('token');
         const response = await axios.post(
-          `http://localhost:5000/api/orders/batch/${batchNumber}/add-item`,
+          `http://localhost:5000/api/orders/batch/${encodeURIComponent(batchNumber)}/add-item`,
           {
             product_connect_id: product.product_connect_id,
             product_name: product.product_name,

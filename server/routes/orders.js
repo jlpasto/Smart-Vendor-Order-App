@@ -677,6 +677,91 @@ router.get('/stats', authenticate, requireAdmin, async (req, res) => {
   }
 });
 
+// Get buyer overview data (Admin only)
+router.get('/buyer-overview', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+
+    // Ensure we have valid date parameters
+    const start = startDate || '1900-01-01';
+    const end = endDate || '2100-12-31';
+
+    const result = await query(`
+      SELECT
+        u.id as user_id,
+        u.name as user_name,
+        u.email as user_email,
+
+        -- Count items in cart (regardless of date)
+        COUNT(DISTINCT CASE WHEN o.status = 'in_cart' THEN o.id END) as in_cart_count,
+
+        -- Count distinct batches by status within date range
+        COUNT(DISTINCT CASE
+          WHEN o.status = 'pending'
+            AND o.date_submitted >= $1
+            AND o.date_submitted <= $2
+          THEN o.batch_order_number
+        END) as pending_batches,
+
+        COUNT(DISTINCT CASE
+          WHEN o.status = 'completed'
+            AND o.date_submitted >= $1
+            AND o.date_submitted <= $2
+          THEN o.batch_order_number
+        END) as completed_batches,
+
+        COUNT(DISTINCT CASE
+          WHEN o.status = 'cancelled'
+            AND o.date_submitted >= $1
+            AND o.date_submitted <= $2
+          THEN o.batch_order_number
+        END) as cancelled_batches,
+
+        -- Last activity (most recent cart update or order submission)
+        MAX(COALESCE(o.date_submitted, o.cart_created_at)) as last_activity_date,
+
+        -- Total revenue from completed orders in date range
+        COALESCE(SUM(CASE
+          WHEN o.status = 'completed'
+            AND o.date_submitted >= $1
+            AND o.date_submitted <= $2
+          THEN o.amount
+          ELSE 0
+        END), 0) as total_revenue
+
+      FROM users u
+      LEFT JOIN orders o ON u.id = o.user_id
+      WHERE u.role = 'buyer'
+      GROUP BY u.id, u.name, u.email
+      ORDER BY last_activity_date DESC NULLS LAST, u.name ASC
+    `, [start, end]);
+
+    const buyers = result.rows;
+
+    // Calculate summary statistics
+    const activeBuyers = buyers.filter(buyer =>
+      parseInt(buyer.in_cart_count) > 0 ||
+      parseInt(buyer.pending_batches) > 0 ||
+      parseInt(buyer.completed_batches) > 0 ||
+      parseInt(buyer.cancelled_batches) > 0
+    ).length;
+
+    const summary = {
+      totalBuyers: buyers.length,
+      activeBuyers: activeBuyers,
+      inactiveBuyers: buyers.length - activeBuyers
+    };
+
+    res.json({
+      buyers,
+      summary
+    });
+  } catch (error) {
+    console.error('Error fetching buyer overview:', error);
+    res.status(500).json({ error: 'Error fetching buyer overview' });
+  }
+});
+
 // ============================================
 // ORDER MODIFICATION ENDPOINTS (Admin only)
 // ============================================

@@ -58,7 +58,7 @@ const OrderHistoryPanel = ({ orderId, batchNumber, isOpen, onClose }) => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get(
-        `http://localhost:5000/api/orders/batch/${batchNumber}/history`,
+        `http://localhost:5000/api/orders/batch/${encodeURIComponent(batchNumber)}/history`,
         {
           headers: {
             Authorization: `Bearer ${token}`
