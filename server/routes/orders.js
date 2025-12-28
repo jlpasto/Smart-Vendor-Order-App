@@ -130,11 +130,22 @@ router.get('/batch/:batchNumber', authenticate, async (req, res) => {
   try {
     const { batchNumber } = req.params;
     const userEmail = req.user.email;
+    const userRole = req.user.role;
 
-    const result = await query(
-      'SELECT * FROM orders WHERE batch_order_number = $1 AND user_email = $2 ORDER BY id',
-      [batchNumber, userEmail]
-    );
+    let result;
+    if (userRole === 'admin') {
+      // Admins can view any batch
+      result = await query(
+        'SELECT * FROM orders WHERE batch_order_number = $1 ORDER BY id',
+        [batchNumber]
+      );
+    } else {
+      // Regular users can only view their own batches
+      result = await query(
+        'SELECT * FROM orders WHERE batch_order_number = $1 AND user_email = $2 ORDER BY id',
+        [batchNumber, userEmail]
+      );
+    }
 
     res.json(result.rows);
   } catch (error) {
@@ -152,11 +163,10 @@ router.get('/batch/:batchNumber/products', authenticate, async (req, res) => {
     // Get all orders in the batch with current product details
     const result = await query(
       `SELECT
-        o.product_connect_id,
+        o.product_id,
         o.product_name as ordered_product_name,
         o.quantity as quantity_ordered,
         p.id,
-        p.product_connect_id,
         p.product_name,
         p.vendor_name,
         p.wholesale_case_price,
@@ -173,7 +183,7 @@ router.get('/batch/:batchNumber/products', authenticate, async (req, res) => {
         p.sub_category,
         p.state
       FROM orders o
-      LEFT JOIN products p ON o.product_connect_id = p.product_connect_id
+      LEFT JOIN products p ON o.product_id = p.id
       WHERE o.batch_order_number = $1 AND o.user_email = $2
       ORDER BY o.id`,
       [batchNumber, userEmail]
@@ -208,7 +218,7 @@ router.get('/batch/:batchNumber/products', authenticate, async (req, res) => {
       } else {
         // Product no longer exists
         unavailable.push({
-          product_connect_id: row.product_connect_id,
+          product_id: row.product_id,
           product_name: row.ordered_product_name,
           reason: 'Product no longer available in catalog'
         });
@@ -282,10 +292,36 @@ router.post('/submit', authenticate, async (req, res) => {
     console.log(`🎫 Generated batch number: ${batchNumber}`);
     const createdOrders = [];
 
-    // Insert each item as an order
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      console.log(`\n📦 Processing item ${i + 1}/${items.length}:`, item.product_name);
+    // Process cart-based submission vs legacy item array
+    if (cartItemIds && cartItemIds.length > 0) {
+      // Cart-based submission: UPDATE existing cart items to pending status
+      console.log(`\n📝 Updating ${ordersToSubmit.length} cart items to pending status...`);
+
+      for (const cartItem of ordersToSubmit) {
+        const updateResult = await query(
+          `UPDATE orders
+           SET status = 'pending',
+               batch_order_number = $1,
+               date_submitted = CURRENT_TIMESTAMP
+           WHERE id = $2
+           RETURNING *`,
+          [batchNumber, cartItem.id]
+        );
+
+        if (updateResult.rows.length > 0) {
+          createdOrders.push(updateResult.rows[0]);
+          console.log(`✓ Updated cart item ${cartItem.id}: ${cartItem.product_name}`);
+        }
+      }
+
+      console.log(`\n✅ All ${createdOrders.length} cart items updated to pending`);
+    } else {
+      // Legacy item array submission: INSERT new orders
+      console.log(`\n📝 Creating ${ordersToSubmit.length} new orders...`);
+
+      for (let i = 0; i < ordersToSubmit.length; i++) {
+        const item = ordersToSubmit[i];
+        console.log(`\n📦 Processing item ${i + 1}/${ordersToSubmit.length}:`, item.product_name);
 
       // Extract pricing information
       const pricingMode = item.pricing_mode || 'case';
@@ -366,10 +402,17 @@ router.post('/submit', authenticate, async (req, res) => {
         }
       }
 
-      console.log(`💾 Inserting order into database...`);
+      // Validate product_id is present (critical for Buy Again functionality)
+      const productId = item.id;
+      if (!productId) {
+        console.error(`❌ ERROR: Missing product_id for item: ${item.product_name}`);
+        throw new Error(`Missing product_id for item: ${item.product_name}. Cannot submit order without product_id.`);
+      }
+
+      console.log(`💾 Inserting order into database... (product_id: ${productId})`);
       const result = await query(
         `INSERT INTO orders (
-          batch_order_number, product_connect_id, product_name, vendor_connect_id, vendor_name,
+          batch_order_number, product_id, product_name, vendor_id, vendor_name,
           quantity, amount, pricing_mode, unit_price, case_price,
           status, user_email, user_id, date_submitted,
           unavailable_action, replacement_product_id, replacement_product_name, replacement_vendor_name
@@ -377,7 +420,7 @@ router.post('/submit', authenticate, async (req, res) => {
         RETURNING *`,
         [
           batchNumber,
-          item.product_connect_id,
+          productId, // product_id must be present
           item.product_name,
           vendorId,
           vendorName,
@@ -412,7 +455,7 @@ router.post('/submit', authenticate, async (req, res) => {
           createdOrder.id,
           batchNumber,
           'original',
-          item.product_connect_id,
+          item.id, // product_id from the item
           item.product_name,
           vendorName,
           item.quantity,
@@ -429,9 +472,10 @@ router.post('/submit', authenticate, async (req, res) => {
       console.log(`✓ Original snapshot created`);
 
       createdOrders.push(createdOrder);
-    }
+      }
 
-    console.log(`\n✅ All ${createdOrders.length} orders inserted successfully`);
+      console.log(`\n✅ All ${createdOrders.length} orders inserted successfully`);
+    }
 
     // Send email confirmation
     console.log('\n📧 Sending email confirmation...');
@@ -525,7 +569,7 @@ router.get('/all', authenticate, requireAdmin, async (req, res) => {
     let queryText = `
       SELECT o.*, p.category, u.name as user_name
       FROM orders o
-      LEFT JOIN products p ON o.product_connect_id = p.product_connect_id
+      LEFT JOIN products p ON o.product_id = p.id
       LEFT JOIN users u ON o.user_id = u.id
       WHERE 1=1
     `;
@@ -551,14 +595,16 @@ router.get('/all', authenticate, requireAdmin, async (req, res) => {
     // Note: When no status filter is selected (All Statuses), show ALL orders including cart items
 
     if (startDate) {
-      queryText += ` AND o.date_submitted >= $${paramCount}`;
+      queryText += ` AND o.date_submitted >= $${paramCount}::timestamp`;
       queryParams.push(startDate);
       paramCount++;
     }
 
     if (endDate) {
-      queryText += ` AND o.date_submitted <= $${paramCount}`;
-      queryParams.push(endDate);
+      // Add 23:59:59 to endDate to include the entire day
+      const endDateWithTime = `${endDate} 23:59:59`;
+      queryText += ` AND o.date_submitted <= $${paramCount}::timestamp`;
+      queryParams.push(endDateWithTime);
       paramCount++;
     }
 
@@ -599,13 +645,6 @@ router.patch('/:id/status', authenticate, requireAdmin, async (req, res) => {
 
     const order = result.rows[0];
 
-    // Send status update email
-    try {
-      await sendStatusUpdateEmail(order.user_email, order, status, notes);
-    } catch (emailError) {
-      console.error('Error sending status update email:', emailError);
-    }
-
     res.json(order);
   } catch (error) {
     console.error('Error updating order status:', error);
@@ -635,14 +674,6 @@ router.patch('/batch/:batchNumber/status', authenticate, requireAdmin, async (re
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Batch not found' });
-    }
-
-    // Send email to user
-    const userEmail = result.rows[0].user_email;
-    try {
-      await sendStatusUpdateEmail(userEmail, result.rows[0], status, notes);
-    } catch (emailError) {
-      console.error('Error sending status update email:', emailError);
     }
 
     res.json({
@@ -682,9 +713,10 @@ router.get('/buyer-overview', authenticate, requireAdmin, async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
 
-    // Ensure we have valid date parameters
+    // Ensure we have valid date parameters with proper time boundaries
     const start = startDate || '1900-01-01';
-    const end = endDate || '2100-12-31';
+    // Add 23:59:59 to end date to include the entire day
+    const end = endDate ? `${endDate} 23:59:59` : '2100-12-31';
 
     const result = await query(`
       SELECT
@@ -698,22 +730,22 @@ router.get('/buyer-overview', authenticate, requireAdmin, async (req, res) => {
         -- Count distinct batches by status within date range
         COUNT(DISTINCT CASE
           WHEN o.status = 'pending'
-            AND o.date_submitted >= $1
-            AND o.date_submitted <= $2
+            AND o.date_submitted >= $1::timestamp
+            AND o.date_submitted <= $2::timestamp
           THEN o.batch_order_number
         END) as pending_batches,
 
         COUNT(DISTINCT CASE
           WHEN o.status = 'completed'
-            AND o.date_submitted >= $1
-            AND o.date_submitted <= $2
+            AND o.date_submitted >= $1::timestamp
+            AND o.date_submitted <= $2::timestamp
           THEN o.batch_order_number
         END) as completed_batches,
 
         COUNT(DISTINCT CASE
           WHEN o.status = 'cancelled'
-            AND o.date_submitted >= $1
-            AND o.date_submitted <= $2
+            AND o.date_submitted >= $1::timestamp
+            AND o.date_submitted <= $2::timestamp
           THEN o.batch_order_number
         END) as cancelled_batches,
 
@@ -723,8 +755,8 @@ router.get('/buyer-overview', authenticate, requireAdmin, async (req, res) => {
         -- Total revenue from completed orders in date range
         COALESCE(SUM(CASE
           WHEN o.status = 'completed'
-            AND o.date_submitted >= $1
-            AND o.date_submitted <= $2
+            AND o.date_submitted >= $1::timestamp
+            AND o.date_submitted <= $2::timestamp
           THEN o.amount
           ELSE 0
         END), 0) as total_revenue
@@ -922,7 +954,7 @@ router.post('/batch/:batchNumber/add-item', authenticate, requireAdmin, async (r
     // Insert new order
     const result = await query(`
       INSERT INTO orders (
-        batch_order_number, product_connect_id, product_name, vendor_connect_id, vendor_name,
+        batch_order_number, product_id, product_name, vendor_id, vendor_name,
         quantity, amount, pricing_mode, unit_price, case_price, admin_notes,
         status, user_email, user_id, modified_by_admin, date_submitted
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'pending', $12, $13, TRUE, CURRENT_TIMESTAMP)

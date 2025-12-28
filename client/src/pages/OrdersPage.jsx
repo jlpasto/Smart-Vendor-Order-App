@@ -30,7 +30,9 @@ const OrdersPage = () => {
       if (endDate) params.endDate = endDate;
 
       const response = await api.get('/api/orders/my-batches', { params });
-      setBatches(response.data);
+      // Filter out "in_cart" status orders
+      const filteredBatches = response.data.filter(batch => batch.status !== 'in_cart');
+      setBatches(filteredBatches);
       setLoading(false);
     } catch (err) {
       setError('Failed to load orders');
@@ -142,7 +144,11 @@ const OrdersPage = () => {
 
     try {
       // Fetch current product details for the batch
+      console.log('Fetching products for batch:', batchNumber);
       const response = await api.get(`/api/orders/batch/${encodeURIComponent(batchNumber)}/products`);
+      console.log('Buy Again API response:', response.data);
+      console.log('Unavailable items:', response.data.unavailable);
+
       const { products, unavailable } = response.data;
 
       if (products.length === 0) {
@@ -170,6 +176,7 @@ const OrdersPage = () => {
       navigate('/cart');
     } catch (error) {
       console.error('Error reordering batch:', error);
+      console.error('Error details:', error.response?.data);
       alert('Error adding items to cart. Please try again.');
     } finally {
       setReordering(false);
@@ -182,8 +189,23 @@ const OrdersPage = () => {
     setAddingItem(order.id);
 
     try {
-      // Fetch current product details using product_connect_id
-      const productId = order.product_connect_id || order.product_id; // Fallback for backwards compatibility
+      // Check for product_id - it should be in the order object from the batch details
+      const productId = order.product_id;
+
+      console.log('Adding item to cart:', {
+        orderId: order.id,
+        productId: productId,
+        productName: order.product_name
+      });
+
+      if (!productId) {
+        console.error('Missing product_id in order:', order);
+        alert(`❌ Product ID is missing for "${order.product_name}". This item cannot be added to cart. Please contact support.`);
+        setAddingItem(null);
+        return;
+      }
+
+      // Fetch current product details using product_id
       const response = await api.get(`/api/products/${productId}`);
       const product = response.data;
 
@@ -194,6 +216,12 @@ const OrdersPage = () => {
       alert(`✅ ${product.product_name} (qty: ${order.quantity}) added to cart!`);
     } catch (error) {
       console.error('Error adding item to cart:', error);
+      console.error('Error details:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        order: order
+      });
+
       if (error.response?.status === 404) {
         alert(`❌ "${order.product_name}" is no longer available in our catalog.`);
       } else {

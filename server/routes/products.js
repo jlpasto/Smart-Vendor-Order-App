@@ -347,7 +347,9 @@ router.get('/', authenticate, async (req, res) => {
       order,
       // Cursor-based pagination
       cursor,
-      limit
+      limit,
+      // Admin-only filter to fetch products for a specific buyer
+      buyerEmail
     } = req.query;
 
     // Pagination setup
@@ -358,12 +360,29 @@ router.get('/', authenticate, async (req, res) => {
     const queryParams = [];
     let paramCount = 1;
 
-    // Apply product filtering for non-admin users (buyers)
-    if (req.user && req.user.role !== 'admin') {
+    // Apply product filtering for non-admin users (buyers) OR for admin filtering by specific buyer
+    if ((req.user && req.user.role !== 'admin') || (req.user.role === 'admin' && buyerEmail)) {
+      // Determine which user to get assignments for
+      let targetUserId;
+      if (req.user.role === 'admin' && buyerEmail) {
+        // Admin is fetching products for a specific buyer
+        const buyerResult = await query(
+          'SELECT id FROM users WHERE email = $1 AND role = $2',
+          [buyerEmail, 'buyer']
+        );
+        if (buyerResult.rows.length === 0) {
+          return res.status(404).json({ error: 'Buyer not found' });
+        }
+        targetUserId = buyerResult.rows[0].id;
+      } else {
+        // Regular buyer fetching their own products
+        targetUserId = req.user.id;
+      }
+
       // Get user's assigned product IDs
       const userResult = await query(
         'SELECT assigned_product_ids FROM users WHERE id = $1',
-        [req.user.id]
+        [targetUserId]
       );
 
       if (userResult.rows.length > 0) {

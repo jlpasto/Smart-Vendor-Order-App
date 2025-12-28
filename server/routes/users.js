@@ -36,7 +36,7 @@ function parseCellValue(value) {
 router.get('/', authenticate, requireAdmin, async (req, res) => {
   try {
     const result = await query(
-      'SELECT id, name, email, id_no, role, assigned_vendor_ids, assigned_product_ids, created_at FROM users ORDER BY created_at DESC'
+      'SELECT id, name, email, id_no, territory, role, assigned_vendor_ids, assigned_product_ids, created_at FROM users ORDER BY created_at DESC'
     );
     res.json(result.rows);
   } catch (error) {
@@ -54,7 +54,7 @@ router.get('/export-assignments', authenticate, requireAdmin, async (req, res) =
 
     // Step 1: Get all buyers with their assignments
     const buyersResult = await query(
-      'SELECT id, name, email, assigned_product_ids FROM users WHERE role = $1 ORDER BY id ASC',
+      'SELECT id, name, email, territory, assigned_product_ids FROM users WHERE role = $1 ORDER BY id ASC',
       ['buyer']
     );
     const buyers = buyersResult.rows;
@@ -92,7 +92,8 @@ router.get('/export-assignments', authenticate, requireAdmin, async (req, res) =
     const buyerMetadata = buyers.map(buyer => ({
       id: buyer.id,
       name: buyer.name || buyer.email,
-      email: buyer.email
+      email: buyer.email,
+      territory: buyer.territory || ''
     }));
 
     console.log('Export: Sending response with buyers:', buyerMetadata.length);
@@ -210,7 +211,7 @@ router.get('/:id', authenticate, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const result = await query(
-      'SELECT id, name, email, id_no, role, assigned_vendor_ids, assigned_product_ids, created_at FROM users WHERE id = $1',
+      'SELECT id, name, email, id_no, territory, role, assigned_vendor_ids, assigned_product_ids, created_at FROM users WHERE id = $1',
       [id]
     );
 
@@ -228,7 +229,7 @@ router.get('/:id', authenticate, requireAdmin, async (req, res) => {
 // Create user (Admin only)
 router.post('/', authenticate, requireAdmin, async (req, res) => {
   try {
-    const { name, email, id_no, password } = req.body;
+    const { name, email, id_no, territory, password } = req.body;
 
     // Validate required fields
     if (!email) {
@@ -248,10 +249,10 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
     const hashedPassword = await bcrypt.hash(finalPassword, 10);
 
     const result = await query(
-      `INSERT INTO users (name, email, password, id_no, role)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, name, email, id_no, role, created_at`,
-      [name, email, hashedPassword, id_no, 'buyer']
+      `INSERT INTO users (name, email, password, id_no, territory, role)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id, name, email, id_no, territory, role, created_at`,
+      [name, email, hashedPassword, id_no, territory, 'buyer']
     );
 
     // Return the created user with the PLAINTEXT password (only in response, not stored)
@@ -269,7 +270,7 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
 router.put('/:id', authenticate, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, id_no, password, role, assigned_vendors, assigned_products } = req.body;
+    const { name, email, id_no, territory, password, role, assigned_vendors, assigned_products } = req.body;
 
     // Build dynamic update query
     const updates = [];
@@ -299,6 +300,12 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
     if (id_no !== undefined) {
       updates.push(`id_no = $${paramCount}`);
       values.push(id_no);
+      paramCount++;
+    }
+
+    if (territory !== undefined) {
+      updates.push(`territory = $${paramCount}`);
+      values.push(territory);
       paramCount++;
     }
 
@@ -370,7 +377,7 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
     const result = await query(
       `UPDATE users SET ${updates.join(', ')}
        WHERE id = $${paramCount}
-       RETURNING id, name, email, id_no, role, assigned_vendor_ids, assigned_product_ids, created_at`,
+       RETURNING id, name, email, id_no, territory, role, assigned_vendor_ids, assigned_product_ids, created_at`,
       values
     );
 

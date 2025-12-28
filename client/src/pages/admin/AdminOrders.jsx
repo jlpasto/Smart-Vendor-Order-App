@@ -67,7 +67,7 @@ const AdminOrders = () => {
       let filteredOrders = response.data;
       if (filters.userEmail) {
         filteredOrders = filteredOrders.filter(order =>
-          order.user_email.toLowerCase().includes(filters.userEmail.toLowerCase())
+          order.user_email.toLowerCase() === filters.userEmail.toLowerCase()
         );
       }
 
@@ -124,7 +124,7 @@ const AdminOrders = () => {
         notes: adminNotes
       });
 
-      alert('Order status updated successfully! Email notification sent to customer.');
+      alert('Order status updated successfully!');
       closeEditModal();
       fetchOrders();
     } catch (error) {
@@ -269,7 +269,7 @@ const AdminOrders = () => {
       {filters.userEmail && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
           <p className="text-blue-800 text-sm">
-            <strong>📊 Filtered by buyer:</strong> {filters.userEmail}
+            <strong>📊 Filtered by buyer:</strong> {filters.userName || filters.userEmail.split('@')[0]} ({filters.userEmail})
             {filters.startDate && filters.endDate && (
               <span> | <strong>Date range:</strong> {filters.startDate} to {filters.endDate}</span>
             )}
@@ -509,14 +509,7 @@ const AdminOrders = () => {
                     </div>
 
                     {/* Actions */}
-                    {isInCart ? (
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <p className="text-blue-800 text-sm">
-                          <strong>ℹ️ In Cart:</strong> This cart has not been submitted yet.
-                          Items will become editable once the customer submits their order.
-                        </p>
-                      </div>
-                    ) : batchStatus === 'completed' || batchStatus === 'cancelled' ? (
+                    {batchStatus === 'completed' || batchStatus === 'cancelled' ? (
                       <div className={`border rounded-lg p-4 ${
                         batchStatus === 'completed' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
                       }`}>
@@ -600,10 +593,16 @@ const AdminOrders = () => {
                   onChange={(e) => setNewStatus(e.target.value)}
                   className="select"
                 >
-                  <option value="pending">Pending</option>
-                  <option value="in_cart">In Cart</option>
-                  <option value="completed">Completed</option>
-                  <option value="cancelled">Cancelled</option>
+                  {editingOrder.status === 'in_cart' ? (
+                    <option value="pending">Pending</option>
+                  ) : (
+                    <>
+                      <option value="pending">Pending</option>
+                      <option value="in_cart">In Cart</option>
+                      <option value="completed">Completed</option>
+                      <option value="cancelled">Cancelled</option>
+                    </>
+                  )}
                 </select>
               </div>
 
@@ -626,7 +625,7 @@ const AdminOrders = () => {
                   disabled={updating}
                   className="btn-primary flex-1"
                 >
-                  {updating ? 'Updating...' : 'Update & Send Email'}
+                  {updating ? 'Updating...' : 'Update Status'}
                 </button>
                 <button
                   onClick={closeEditModal}

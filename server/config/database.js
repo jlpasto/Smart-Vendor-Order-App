@@ -71,6 +71,9 @@ export const initDatabase = async () => {
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='id_no') THEN
           ALTER TABLE users ADD COLUMN id_no VARCHAR(100);
         END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='territory') THEN
+          ALTER TABLE users ADD COLUMN territory VARCHAR(255);
+        END IF;
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='assigned_vendor_ids') THEN
           ALTER TABLE users ADD COLUMN assigned_vendor_ids INTEGER[] DEFAULT '{}';
         END IF;

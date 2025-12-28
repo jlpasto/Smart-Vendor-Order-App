@@ -7,6 +7,7 @@ const AddItemModal = ({ batchNumber, isOpen, onClose, onItemAdded }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [products, setProducts] = useState([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
+  const [buyerEmail, setBuyerEmail] = useState(null);
 
   // Multi-selection state (using Set and Map for performance)
   const [selectedProductIds, setSelectedProductIds] = useState(new Set());
@@ -19,13 +20,20 @@ const AddItemModal = ({ batchNumber, isOpen, onClose, onItemAdded }) => {
   const [error, setError] = useState(null);
   const [validationErrors, setValidationErrors] = useState(new Map());
 
-  // Load products when modal opens
+  // Load buyer email and products when modal opens
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && batchNumber) {
+      loadBuyerInfo();
+    }
+  }, [isOpen, batchNumber]);
+
+  // Load products when buyer email is available
+  useEffect(() => {
+    if (buyerEmail) {
       loadProducts();
       resetForm();
     }
-  }, [isOpen]);
+  }, [buyerEmail]);
 
   // Memoize filtered products for performance
   const filteredProducts = useMemo(() => {
@@ -57,15 +65,37 @@ const AddItemModal = ({ batchNumber, isOpen, onClose, onItemAdded }) => {
     return total;
   }, [selectedProductsData, itemConfigs]);
 
+  const loadBuyerInfo = async () => {
+    try {
+      // Fetch batch details to get buyer email
+      const response = await api.get(`/api/orders/batch/${encodeURIComponent(batchNumber)}`);
+      if (response.data && response.data.length > 0) {
+        const buyerEmailFromBatch = response.data[0].user_email;
+        setBuyerEmail(buyerEmailFromBatch);
+      } else {
+        setError('Could not load buyer information for this batch');
+      }
+    } catch (err) {
+      console.error('Error loading buyer info:', err);
+      setError('Failed to load buyer information');
+    }
+  };
+
   const loadProducts = async () => {
+    if (!buyerEmail) {
+      console.log('No buyer email available yet');
+      return;
+    }
+
     setIsLoadingProducts(true);
     try {
       const response = await api.get('/api/products', {
         params: {
-          limit: 1000 // Load all products for selection
+          buyerEmail: buyerEmail, // Filter products by buyer's assignments
+          limit: 10000 // Load all assigned products
         }
       });
-      console.log('Products API response:', response.data);
+      console.log('Products API response for buyer', buyerEmail, ':', response.data);
       // API returns { items: [], pagination: {}, meta: {} } when using cursor pagination
       const productData = response.data.items || response.data || [];
       console.log('Setting products to:', productData);
@@ -343,6 +373,11 @@ const AddItemModal = ({ batchNumber, isOpen, onClose, onItemAdded }) => {
             <div>
               <h2 className="text-xl font-bold">Add Items to Batch</h2>
               <p className="text-sm text-green-100 mt-1">Batch: {batchNumber}</p>
+              {buyerEmail && (
+                <p className="text-xs text-green-200 mt-1">
+                  Showing products assigned to: {buyerEmail}
+                </p>
+              )}
             </div>
             <button
               onClick={onClose}

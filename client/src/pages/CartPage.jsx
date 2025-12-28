@@ -48,12 +48,12 @@ const CartPage = () => {
   // Helper function to get human-readable replacement preference label
   const getReplacementPreferenceLabel = (action) => {
     const labels = {
-      'curate': 'Curate to replace if sold out',
+      'curate': 'Cureate to replace if sold out',
       'replace_same_vendor': 'Replace with similar item under same vendor',
       'replace_other_vendors': 'Replace with similar item across other vendors',
       'remove': 'Remove it from my order'
     };
-    return labels[action] || 'Curate to replace if sold out';
+    return labels[action] || 'Cureate to replace if sold out';
   };
 
   // Helper function to get replacement product name from item
@@ -73,8 +73,16 @@ const CartPage = () => {
       setError('');
 
       try {
+        // Extract cart item IDs from cart (database row IDs)
+        const cartItemIds = cart
+          .filter(item => item.cartItemId) // Only include items that have been saved to database
+          .map(item => item.cartItemId);
+
+        console.log('Submitting cart with IDs:', cartItemIds);
+
         const response = await api.post('/api/orders/submit', {
-          items: cart
+          cartItemIds: cartItemIds.length > 0 ? cartItemIds : undefined,
+          items: cartItemIds.length === 0 ? cart : undefined // Fallback to legacy for guest users
         });
 
         // Show success message

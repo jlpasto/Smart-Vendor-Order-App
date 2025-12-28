@@ -115,6 +115,7 @@ export default function AdminBuyerOverview() {
       state: {
         filters: {
           userEmail: buyer.user_email,
+          userName: buyer.user_name,
           startDate: startDate,
           endDate: endDate,
           status: '' // Show all statuses

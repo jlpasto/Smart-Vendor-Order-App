@@ -159,12 +159,13 @@ const AdminUsers = () => {
         return;
       }
 
-      // Create ordered list of buyer column names
+      // Create ordered list of buyer column names with territory
       const buyerColumns = buyers.map(buyer => {
         const displayName = buyer.name || buyer.email;
+        const territory = buyer.territory ? ` [${buyer.territory}]` : '';
         return {
           id: buyer.id,
-          columnName: `${displayName} (ID: ${buyer.id})`
+          columnName: `${displayName}${territory} (ID: ${buyer.id})`
         };
       });
 
@@ -358,12 +359,13 @@ const AdminUsers = () => {
         return;
       }
 
-      // Create ordered list of buyer column names
+      // Create ordered list of buyer column names with territory
       const buyerColumns = buyers.map(buyer => {
         const displayName = buyer.name || buyer.email;
+        const territory = buyer.territory ? ` [${buyer.territory}]` : '';
         return {
           id: buyer.id,
-          columnName: `${displayName} (ID: ${buyer.id})`
+          columnName: `${displayName}${territory} (ID: ${buyer.id})`
         };
       });
 

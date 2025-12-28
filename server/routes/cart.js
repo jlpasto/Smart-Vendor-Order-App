@@ -60,6 +60,14 @@ router.post('/add', authenticate, async (req, res) => {
     console.log(`➕ Adding to cart for user ${userId}: ${product_name} (qty: ${quantity})`);
 
     // Validate required fields
+    if (!product_id) {
+      console.error('❌ Missing product_id in cart add request');
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required field: product_id'
+      });
+    }
+
     if (!product_name || !quantity || !pricing_mode) {
       return res.status(400).json({
         success: false,
