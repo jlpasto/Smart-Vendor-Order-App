@@ -266,15 +266,12 @@ export default function AdminBuyerOverview() {
                     )}
                   </div>
                 </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredBuyers.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
                     {searchQuery ? 'No buyers match your search' : 'No buyers found'}
                   </td>
                 </tr>
@@ -336,20 +333,6 @@ export default function AdminBuyerOverview() {
                         <div className="text-sm text-gray-900">
                           {formatDateForDisplay(buyer.last_activity_date)}
                         </div>
-                      </td>
-
-                      {/* Actions */}
-                      <td className="px-6 py-4 text-center">
-                        {isActive ? (
-                          <button
-                            onClick={() => handleViewOrders(buyer)}
-                            className="btn-primary text-sm px-4 py-2"
-                          >
-                            View Orders
-                          </button>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
                       </td>
                     </tr>
                   );
@@ -421,25 +404,11 @@ export default function AdminBuyerOverview() {
                 </div>
 
                 {/* Last Activity */}
-                <div className="mb-4 text-sm">
+                <div className="text-sm">
                   <span className="text-gray-500">Last Activity: </span>
                   <span className="text-gray-900">
                     {formatDateForDisplay(buyer.last_activity_date)}
                   </span>
-                </div>
-
-                {/* Action Button */}
-                <div>
-                  {isActive ? (
-                    <button
-                      onClick={() => handleViewOrders(buyer)}
-                      className="btn-primary w-full"
-                    >
-                      View Orders
-                    </button>
-                  ) : (
-                    <div className="text-center text-gray-400 py-2">No activity</div>
-                  )}
                 </div>
               </div>
             );
