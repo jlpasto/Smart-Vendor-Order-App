@@ -13,9 +13,10 @@ const LoginPage = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // If already logged in, redirect to home
+    // If already logged in, redirect based on role
     if (user) {
-      navigate('/');
+      const isAdminUser = user.role === 'admin' || user.role === 'superadmin';
+      navigate(isAdminUser ? '/admin' : '/products');
     }
 
     // If login is disabled, redirect to home
@@ -37,7 +38,8 @@ const LoginPage = () => {
     }
 
     if (result.success) {
-      navigate('/');
+      const isAdminUser = result.user?.role === 'admin' || result.user?.role === 'superadmin';
+      navigate(isAdminUser ? '/admin' : '/products');
     } else {
       setError(result.error);
       setLoading(false);

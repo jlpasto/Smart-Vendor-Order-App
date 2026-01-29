@@ -622,18 +622,6 @@ const AdminUsers = () => {
                   )}
 
                   <div>
-                    <label className="block text-lg font-semibold text-gray-700 mb-2">Role</label>
-                    <select
-                      value={formData.role || 'buyer'}
-                      onChange={(e) => handleInputChange('role', e.target.value)}
-                      className="input"
-                    >
-                      <option value="buyer">Buyer</option>
-                      <option value="admin">Admin</option>
-                    </select>
-                  </div>
-
-                  <div>
                     <label className="block text-lg font-semibold text-gray-700 mb-2">
                       Reset Password
                     </label>
