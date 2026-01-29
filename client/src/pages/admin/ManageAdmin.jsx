@@ -112,7 +112,7 @@ const ManageAdmin = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Manage Admins</h1>
+        <h1 className="page-title mb-0">Manage Admins</h1>
         <button onClick={openCreateModal} className="btn-primary">
           + Add New Admin
         </button>
@@ -123,19 +123,19 @@ const ManageAdmin = () => {
         <table className="w-full">
           <thead>
             <tr className="border-b-2 border-gray-200 bg-gray-50">
-              <th className="text-left py-4 px-6 font-semibold text-gray-700">ID</th>
-              <th className="text-left py-4 px-6 font-semibold text-gray-700">Username</th>
-              <th className="text-left py-4 px-6 font-semibold text-gray-700">Role</th>
-              <th className="text-left py-4 px-6 font-semibold text-gray-700">Created At</th>
-              <th className="text-left py-4 px-6 font-semibold text-gray-700">Actions</th>
+              <th className="text-left py-3 px-4 font-semibold text-gray-700">ID</th>
+              <th className="text-left py-3 px-4 font-semibold text-gray-700">Username</th>
+              <th className="text-left py-3 px-4 font-semibold text-gray-700">Role</th>
+              <th className="text-left py-3 px-4 font-semibold text-gray-700">Created At</th>
+              <th className="text-left py-3 px-4 font-semibold text-gray-700">Actions</th>
             </tr>
           </thead>
           <tbody>
             {filteredAdmins.map(admin => (
               <tr key={admin.id} className="border-b border-gray-100 hover:bg-gray-50">
-                <td className="py-4 px-6 text-gray-600">{admin.id}</td>
-                <td className="py-4 px-6 font-medium text-gray-900">{admin.email}</td>
-                <td className="py-4 px-6">
+                <td className="py-3 px-4 text-gray-600">{admin.id}</td>
+                <td className="py-3 px-4 font-medium text-gray-900">{admin.email}</td>
+                <td className="py-3 px-4">
                   {admin.role === 'superadmin' ? (
                     <span className="px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
                       🔐 Super Admin
@@ -146,10 +146,10 @@ const ManageAdmin = () => {
                     </span>
                   )}
                 </td>
-                <td className="py-4 px-6 text-gray-600">
+                <td className="py-3 px-4 text-gray-600">
                   {new Date(admin.created_at).toLocaleDateString()}
                 </td>
-                <td className="py-4 px-6">
+                <td className="py-3 px-4">
                   {admin.role === 'superadmin' ? (
                     <span className="text-gray-400 text-sm italic">Read only</span>
                   ) : (

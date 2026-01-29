@@ -151,10 +151,10 @@ export default function AdminBuyerOverview() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-4xl font-bold text-gray-800 mb-2">Buyer Overview Dashboard</h1>
+        <h1 className="page-title mb-2">Buyer Overview Dashboard</h1>
         <p className="text-gray-600">Track order activity across all buyers</p>
       </div>
 
@@ -233,34 +233,34 @@ export default function AdminBuyerOverview() {
       <div className="card overflow-hidden hidden lg:block">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
+            <thead>
+              <tr className="border-b-2 border-gray-200 bg-gray-50">
                 <th
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="text-left py-3 px-4 font-semibold text-gray-700 cursor-pointer hover:bg-gray-100"
                   onClick={() => toggleSort('name')}
                 >
                   <div className="flex items-center gap-2">
-                    Buyer Name/Email
+                    BUYER NAME/EMAIL
                     {sortBy === 'name' && (
                       <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
                     )}
                   </div>
                 </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  In Cart
+                <th className="text-center py-3 px-4 font-semibold text-gray-700">
+                  IN CART
                 </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Pending
+                <th className="text-center py-3 px-4 font-semibold text-gray-700">
+                  PENDING
                 </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Completed
+                <th className="text-center py-3 px-4 font-semibold text-gray-700">
+                  COMPLETED
                 </th>
                 <th
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="text-left py-3 px-4 font-semibold text-gray-700 cursor-pointer hover:bg-gray-100"
                   onClick={() => toggleSort('lastActivity')}
                 >
                   <div className="flex items-center gap-2">
-                    Last Activity
+                    LAST ACTIVITY
                     {sortBy === 'lastActivity' && (
                       <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
                     )}
@@ -268,10 +268,10 @@ export default function AdminBuyerOverview() {
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody>
               {filteredBuyers.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan="5" className="py-12 px-4 text-center text-gray-500">
                     {searchQuery ? 'No buyers match your search' : 'No buyers found'}
                   </td>
                 </tr>
@@ -281,22 +281,22 @@ export default function AdminBuyerOverview() {
                   return (
                     <tr
                       key={buyer.user_id}
-                      className={`transition-colors ${
+                      className={`border-b border-gray-100 transition-colors ${
                         isActive
-                          ? 'bg-white hover:bg-blue-50'
+                          ? 'bg-white hover:bg-gray-50'
                           : 'bg-gray-50 hover:bg-gray-100'
                       }`}
                     >
                       {/* Buyer Name/Email */}
-                      <td className="px-6 py-4">
-                        <div className="text-sm font-medium text-gray-900">
+                      <td className="py-3 px-4">
+                        <div className="font-medium text-gray-900">
                           {buyer.user_name || buyer.user_email.split('@')[0]}
                         </div>
                         <div className="text-sm text-gray-500">{buyer.user_email}</div>
                       </td>
 
                       {/* In Cart */}
-                      <td className="px-6 py-4 text-center">
+                      <td className="py-3 px-4 text-center">
                         {parseInt(buyer.in_cart_count) > 0 ? (
                           <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-100 text-blue-800 font-medium text-sm">
                             🛒 {buyer.in_cart_count}
@@ -307,7 +307,7 @@ export default function AdminBuyerOverview() {
                       </td>
 
                       {/* Pending */}
-                      <td className="px-6 py-4 text-center">
+                      <td className="py-3 px-4 text-center">
                         {parseInt(buyer.pending_batches) > 0 ? (
                           <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-yellow-100 text-yellow-800 font-medium text-sm">
                             ⏳ {buyer.pending_batches}
@@ -318,7 +318,7 @@ export default function AdminBuyerOverview() {
                       </td>
 
                       {/* Completed */}
-                      <td className="px-6 py-4 text-center">
+                      <td className="py-3 px-4 text-center">
                         {parseInt(buyer.completed_batches) > 0 ? (
                           <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-green-100 text-green-800 font-medium text-sm">
                             ✓ {buyer.completed_batches}
@@ -329,8 +329,8 @@ export default function AdminBuyerOverview() {
                       </td>
 
                       {/* Last Activity */}
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-900">
+                      <td className="py-3 px-4">
+                        <div className="text-gray-600">
                           {formatDateForDisplay(buyer.last_activity_date)}
                         </div>
                       </td>
