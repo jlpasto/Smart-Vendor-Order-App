@@ -80,6 +80,9 @@ export const initDatabase = async () => {
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='assigned_product_ids') THEN
           ALTER TABLE users ADD COLUMN assigned_product_ids INTEGER[] DEFAULT '{}';
         END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='access_code') THEN
+          ALTER TABLE users ADD COLUMN access_code VARCHAR(20) UNIQUE;
+        END IF;
       END $$;
     `);
 

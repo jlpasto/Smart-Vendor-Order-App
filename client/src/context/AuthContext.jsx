@@ -99,6 +99,25 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const loginWithCode = async (accessCode) => {
+    try {
+      const response = await api.post('/api/auth/login-code', { accessCode });
+      const { token, user: userData } = response.data;
+
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(userData));
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+      setUser(userData);
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Invalid access code'
+      };
+    }
+  };
+
   const logout = () => {
     // Clear all authentication data
     localStorage.removeItem('token');
@@ -140,6 +159,7 @@ export const AuthProvider = ({ children }) => {
     loginEnabled,
     signup,
     login,
+    loginWithCode,
     logout,
     isAdmin,
     isSuperAdmin,

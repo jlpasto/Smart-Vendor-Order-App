@@ -3,11 +3,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const LoginPage = () => {
+  const [loginMode, setLoginMode] = useState('code'); // 'code' or 'password'
+  const [accessCode, setAccessCode] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login, user, loginEnabled } = useAuth();
+  const { login, loginWithCode, user, loginEnabled } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -27,7 +29,12 @@ const LoginPage = () => {
     setError('');
     setLoading(true);
 
-    const result = await login(email, password);
+    let result;
+    if (loginMode === 'code') {
+      result = await loginWithCode(accessCode);
+    } else {
+      result = await login(email, password);
+    }
 
     if (result.success) {
       navigate('/');
@@ -55,37 +62,87 @@ const LoginPage = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="email" className="block text-lg font-semibold text-gray-700 mb-2">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="input"
-              placeholder="your@email.com"
-              required
-              autoFocus
-            />
-          </div>
+        {/* Login Mode Toggle */}
+        <div className="flex mb-6 bg-gray-100 rounded-lg p-1">
+          <button
+            type="button"
+            onClick={() => { setLoginMode('code'); setError(''); }}
+            className={`flex-1 py-2 px-4 rounded-md font-semibold transition-colors ${
+              loginMode === 'code'
+                ? 'bg-white text-primary-600 shadow-sm'
+                : 'text-gray-600 hover:text-gray-800'
+            }`}
+          >
+            Access Code
+          </button>
+          <button
+            type="button"
+            onClick={() => { setLoginMode('password'); setError(''); }}
+            className={`flex-1 py-2 px-4 rounded-md font-semibold transition-colors ${
+              loginMode === 'password'
+                ? 'bg-white text-primary-600 shadow-sm'
+                : 'text-gray-600 hover:text-gray-800'
+            }`}
+          >
+            Email & Password
+          </button>
+        </div>
 
-          <div>
-            <label htmlFor="password" className="block text-lg font-semibold text-gray-700 mb-2">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="input"
-              placeholder="••••••••"
-              required
-            />
-          </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {loginMode === 'code' ? (
+            <div>
+              <label htmlFor="accessCode" className="block text-lg font-semibold text-gray-700 mb-2">
+                Access Code
+              </label>
+              <input
+                id="accessCode"
+                type="text"
+                value={accessCode}
+                onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
+                className="input font-mono text-center text-xl tracking-widest"
+                placeholder="XXXXXXXX"
+                required
+                autoFocus
+                maxLength={8}
+              />
+              <p className="text-sm text-gray-500 mt-2">
+                Enter your 8-character access code
+              </p>
+            </div>
+          ) : (
+            <>
+              <div>
+                <label htmlFor="email" className="block text-lg font-semibold text-gray-700 mb-2">
+                  Email
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="input"
+                  placeholder="your@email.com"
+                  required
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label htmlFor="password" className="block text-lg font-semibold text-gray-700 mb-2">
+                  Password
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="input"
+                  placeholder=""
+                  required
+                />
+              </div>
+            </>
+          )}
 
           <button
             type="submit"

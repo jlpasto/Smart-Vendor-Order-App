@@ -115,6 +115,49 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// Login with Access Code (for buyers)
+router.post('/login-code', async (req, res) => {
+  try {
+    const { accessCode } = req.body;
+
+    if (!accessCode) {
+      return res.status(400).json({ error: 'Access code is required' });
+    }
+
+    // Find user by access code (case-insensitive)
+    const result = await query(
+      'SELECT * FROM users WHERE UPPER(access_code) = UPPER($1)',
+      [accessCode.trim()]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: 'Invalid access code' });
+    }
+
+    const user = result.rows[0];
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role, name: user.name },
+      process.env.JWT_SECRET || 'default_secret_change_this',
+      { expiresIn: '7d' }
+    );
+
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        name: user.name
+      }
+    });
+  } catch (error) {
+    console.error('Access code login error:', error);
+    res.status(500).json({ error: 'Server error during login' });
+  }
+});
+
 // Verify token (for protected routes)
 router.get('/verify', async (req, res) => {
   try {

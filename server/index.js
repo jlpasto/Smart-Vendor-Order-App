@@ -11,9 +11,13 @@ import cartRoutes from './routes/cart.js';
 import authRoutes from './routes/auth.js';
 import vendorRoutes from './routes/vendors.js';
 import userRoutes from './routes/users.js';
+import { initDatabase } from './config/database.js';
 
 // Load environment variables
 dotenv.config();
+
+// Initialize database (runs migrations for any new columns)
+initDatabase().catch(err => console.error('Database initialization error:', err));
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

@@ -16,6 +16,28 @@ const generatePassword = () => {
   return password;
 };
 
+// Generate unique alphanumeric access code
+const generateAccessCode = async () => {
+  const length = 8;
+  const charset = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Removed confusing chars like 0, O, 1, I
+
+  let attempts = 0;
+  while (attempts < 10) {
+    let code = '';
+    for (let i = 0; i < length; i++) {
+      code += charset.charAt(Math.floor(Math.random() * charset.length));
+    }
+
+    // Check if code already exists
+    const existing = await query('SELECT id FROM users WHERE access_code = $1', [code]);
+    if (existing.rows.length === 0) {
+      return code;
+    }
+    attempts++;
+  }
+  throw new Error('Failed to generate unique access code');
+};
+
 // Helper function to parse cell values
 function parseCellValue(value) {
   if (value === null || value === undefined || value === '') return false;
@@ -36,7 +58,7 @@ function parseCellValue(value) {
 router.get('/', authenticate, requireAdmin, async (req, res) => {
   try {
     const result = await query(
-      `SELECT id, name, email, id_no, territory, role, assigned_vendor_ids, assigned_product_ids, created_at
+      `SELECT id, name, email, access_code, id_no, territory, role, assigned_vendor_ids, assigned_product_ids, created_at
        FROM users
        WHERE role = 'buyer'
        ORDER BY created_at DESC`
@@ -305,7 +327,7 @@ router.get('/:id', authenticate, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const result = await query(
-      'SELECT id, name, email, id_no, territory, role, assigned_vendor_ids, assigned_product_ids, created_at FROM users WHERE id = $1',
+      'SELECT id, name, email, access_code, id_no, territory, role, assigned_vendor_ids, assigned_product_ids, created_at FROM users WHERE id = $1',
       [id]
     );
 
@@ -323,18 +345,18 @@ router.get('/:id', authenticate, requireAdmin, async (req, res) => {
 // Create user (Admin only)
 router.post('/', authenticate, requireAdmin, async (req, res) => {
   try {
-    const { name, email, id_no, territory, password } = req.body;
+    const { name, password } = req.body;
 
-    // Validate required fields
-    if (!email) {
-      return res.status(400).json({ error: 'Email is required' });
+    // Name is required for buyers
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Name is required' });
     }
 
-    // Check if email already exists
-    const existingUser = await query('SELECT id FROM users WHERE email = $1', [email]);
-    if (existingUser.rows.length > 0) {
-      return res.status(400).json({ error: 'Email already exists' });
-    }
+    // Generate unique access code
+    const accessCode = await generateAccessCode();
+
+    // Auto-generate email using access code (for internal system use)
+    const email = `buyer_${accessCode.toLowerCase()}@internal.local`;
 
     // Use provided password or generate random one
     const finalPassword = password || generatePassword();
@@ -343,13 +365,13 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
     const hashedPassword = await bcrypt.hash(finalPassword, 10);
 
     const result = await query(
-      `INSERT INTO users (name, email, password, id_no, territory, role)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING id, name, email, id_no, territory, role, created_at`,
-      [name, email, hashedPassword, id_no, territory, 'buyer']
+      `INSERT INTO users (name, email, password, access_code, role)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, name, email, access_code, role, created_at`,
+      [name.trim(), email, hashedPassword, accessCode, 'buyer']
     );
 
-    // Return the created user with the PLAINTEXT password (only in response, not stored)
+    // Return the created user with the PLAINTEXT password and access code
     res.status(201).json({
       ...result.rows[0],
       password: finalPassword // Include plaintext password in response so admin can share it
@@ -471,7 +493,7 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
     const result = await query(
       `UPDATE users SET ${updates.join(', ')}
        WHERE id = $${paramCount}
-       RETURNING id, name, email, id_no, territory, role, assigned_vendor_ids, assigned_product_ids, created_at`,
+       RETURNING id, name, email, access_code, id_no, territory, role, assigned_vendor_ids, assigned_product_ids, created_at`,
       values
     );
 

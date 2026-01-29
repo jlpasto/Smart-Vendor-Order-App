@@ -52,8 +52,6 @@ const AdminUsers = () => {
     setGeneratedPassword(randomPassword);
     setFormData({
       name: '',
-      email: '',
-      id_no: '',
       password: randomPassword,
       role: 'buyer'
     });
@@ -65,8 +63,6 @@ const AdminUsers = () => {
     setGeneratedPassword('');
     setFormData({
       name: user.name || '',
-      email: user.email,
-      id_no: user.id_no || '',
       role: user.role
     });
     setShowModal(true);
@@ -99,7 +95,7 @@ const AdminUsers = () => {
       } else {
         // Create new user
         const response = await api.post('/api/users', formData);
-        alert(`User created successfully!\n\nEmail: ${response.data.email}\nPassword: ${response.data.password}\n\nPlease save this password, it won't be shown again.`);
+        alert(`Buyer created successfully!\n\nName: ${response.data.name}\nAccess Code: ${response.data.access_code}\nPassword: ${response.data.password}\n\nThe buyer can login using either:\n- Access Code only (quick login)\n- Name + Password\n\nPlease save these credentials, they won't be shown again.`);
       }
       closeModal();
       fetchUsers();
@@ -426,8 +422,7 @@ const AdminUsers = () => {
   const filteredUsers = users.filter(user =>
     user.role !== 'admin' && (
       user.name?.toLowerCase().includes(globalSearchTerm.toLowerCase()) ||
-      user.email?.toLowerCase().includes(globalSearchTerm.toLowerCase()) ||
-      user.id_no?.toLowerCase().includes(globalSearchTerm.toLowerCase()) ||
+      user.access_code?.toLowerCase().includes(globalSearchTerm.toLowerCase()) ||
       user.role?.toLowerCase().includes(globalSearchTerm.toLowerCase()) ||
       user.id.toString().includes(globalSearchTerm)
     )
@@ -464,8 +459,7 @@ const AdminUsers = () => {
             <tr className="border-b-2 border-gray-200">
               <th className="text-left py-3 px-4 font-semibold text-gray-700">ID</th>
               <th className="text-left py-3 px-4 font-semibold text-gray-700">Name</th>
-              <th className="text-left py-3 px-4 font-semibold text-gray-700">Email</th>
-              <th className="text-left py-3 px-4 font-semibold text-gray-700">ID No</th>
+              <th className="text-left py-3 px-4 font-semibold text-gray-700">Access Code</th>
               <th className="text-left py-3 px-4 font-semibold text-gray-700">Role</th>
               <th className="text-left py-3 px-4 font-semibold text-gray-700">Assigned Products</th>
               <th className="text-left py-3 px-4 font-semibold text-gray-700">Created At</th>
@@ -477,8 +471,15 @@ const AdminUsers = () => {
               <tr key={user.id} className="border-b border-gray-100 hover:bg-gray-50">
                 <td className="py-3 px-4">{user.id}</td>
                 <td className="py-3 px-4">{user.name || '-'}</td>
-                <td className="py-3 px-4">{user.email}</td>
-                <td className="py-3 px-4">{user.id_no || '-'}</td>
+                <td className="py-3 px-4">
+                  {user.access_code ? (
+                    <span className="font-mono bg-gray-100 px-2 py-1 rounded text-sm">
+                      {user.access_code}
+                    </span>
+                  ) : (
+                    <span className="text-gray-400">-</span>
+                  )}
+                </td>
                 <td className="py-3 px-4">
                   <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
                     user.role === 'admin'
@@ -541,71 +542,85 @@ const AdminUsers = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl max-w-2xl w-full p-8">
             <h2 className="text-3xl font-bold text-gray-900 mb-6">
-              {editingUser ? 'Edit User' : 'Add New User'}
+              {editingUser ? 'Edit Buyer' : 'Add New Buyer'}
             </h2>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-lg font-semibold text-gray-700 mb-2">Name</label>
+                <label className="block text-lg font-semibold text-gray-700 mb-2">Name *</label>
                 <input
                   type="text"
                   value={formData.name || ''}
                   onChange={(e) => handleInputChange('name', e.target.value)}
                   className="input"
                   placeholder="Enter full name"
-                />
-              </div>
-
-              <div>
-                <label className="block text-lg font-semibold text-gray-700 mb-2">Email *</label>
-                <input
-                  type="email"
-                  value={formData.email || ''}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  className="input"
-                  placeholder="user@example.com"
                   required
                 />
               </div>
 
-              <div>
-                <label className="block text-lg font-semibold text-gray-700 mb-2">ID No</label>
-                <input
-                  type="text"
-                  value={formData.id_no || ''}
-                  onChange={(e) => handleInputChange('id_no', e.target.value)}
-                  className="input"
-                  placeholder="Enter ID number"
-                />
-              </div>
-
               {!editingUser && (
-                <div>
-                  <label className="block text-lg font-semibold text-gray-700 mb-2">
-                    Password (Auto-generated)
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={formData.password || ''}
-                      readOnly
-                      className="input flex-1 bg-gray-50"
-                    />
-                    <button
-                      onClick={handleRegeneratePassword}
-                      className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-semibold"
-                    >
-                      🔄 Regenerate
-                    </button>
+                <>
+                  <div>
+                    <label className="block text-lg font-semibold text-gray-700 mb-2">
+                      Password (Auto-generated)
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={formData.password || ''}
+                        readOnly
+                        className="input flex-1 bg-gray-50"
+                      />
+                      <button
+                        onClick={handleRegeneratePassword}
+                        className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-semibold"
+                      >
+                        Regenerate
+                      </button>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1">
+                      This password will be shown only once. Make sure to save it.
+                    </p>
                   </div>
-                  <p className="text-sm text-gray-600 mt-1">
-                    This password will be shown only once. Make sure to save it.
-                  </p>
-                </div>
+
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p className="text-sm text-blue-800">
+                      <strong>Access Code</strong> will be auto-generated when the buyer is created.
+                      This code allows the buyer to login without entering name/password.
+                    </p>
+                  </div>
+                </>
               )}
 
               {editingUser && (
                 <>
+                  {editingUser.access_code && (
+                    <div>
+                      <label className="block text-lg font-semibold text-gray-700 mb-2">Access Code</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={editingUser.access_code}
+                          readOnly
+                          className="input flex-1 bg-gray-50 font-mono"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(editingUser.access_code);
+                            alert('Access code copied to clipboard!');
+                          }}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+                        >
+                          Copy
+                        </button>
+                      </div>
+                      <p className="text-sm text-gray-600 mt-1">
+                        This code allows the buyer to login without entering name/password.
+                      </p>
+                    </div>
+                  )}
+
                   <div>
                     <label className="block text-lg font-semibold text-gray-700 mb-2">Role</label>
                     <select
@@ -676,7 +691,7 @@ const AdminUsers = () => {
                 disabled={saving}
                 className="btn-primary flex-1"
               >
-                {saving ? 'Saving...' : (editingUser ? 'Update User' : 'Create User')}
+                {saving ? 'Saving...' : (editingUser ? 'Update Buyer' : 'Create Buyer')}
               </button>
               <button
                 onClick={closeModal}
