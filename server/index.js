@@ -17,7 +17,12 @@ import { initDatabase } from './config/database.js';
 dotenv.config();
 
 // Initialize database (runs migrations for any new columns)
-initDatabase().catch(err => console.error('Database initialization error:', err));
+// Skip if SKIP_DB_INIT=true is set in environment
+if (process.env.SKIP_DB_INIT !== 'true') {
+  initDatabase().catch(err => console.error('Database initialization error:', err));
+} else {
+  console.log('⏭️  Skipping database initialization (SKIP_DB_INIT=true)');
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
