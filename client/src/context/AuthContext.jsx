@@ -119,7 +119,11 @@ export const AuthProvider = ({ children }) => {
   };
 
   const isAdmin = () => {
-    return user?.role === 'admin';
+    return user?.role === 'admin' || user?.role === 'superadmin';
+  };
+
+  const isSuperAdmin = () => {
+    return user?.role === 'superadmin';
   };
 
   // Function to set demo user (only works when login is disabled)
@@ -138,6 +142,7 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     isAdmin,
+    isSuperAdmin,
     setDemoUser
   };
 

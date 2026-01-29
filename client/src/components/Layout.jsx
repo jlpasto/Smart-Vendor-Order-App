@@ -6,7 +6,7 @@ import { useSidebar } from '../context/SidebarContext';
 import DemoUserSwitcher from './DemoUserSwitcher';
 
 const Layout = () => {
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout, isAdmin, isSuperAdmin } = useAuth();
   const { getCartCount } = useCart();
   const { globalSearchTerm, setGlobalSearchTerm } = useSearch();
   const { sidebarOpen, setSidebarOpen } = useSidebar();
@@ -44,6 +44,8 @@ const Layout = () => {
     { path: '/admin/vendors', label: 'Manage Vendors', icon: '🏪' },
     { path: '/admin/orders', label: 'Manage Orders', icon: '📋' },
     { path: '/admin/users', label: 'Manage Buyers', icon: '👤' },
+    // Conditionally add Manage Admins for superadmin only
+    ...(isSuperAdmin() ? [{ path: '/admin/manage-admins', label: 'Manage Admins', icon: '🔐' }] : []),
     { path: '/products', label: 'Browse Products', icon: '🛍️' },
     { path: '/settings', label: 'Settings', icon: '⚙️' },
   ];
@@ -115,9 +117,9 @@ const Layout = () => {
           {user && sidebarOpen && (
             <div className="px-4 py-2">
               <div className="flex items-center space-x-2 mb-1">
-                <span className="text-lg">{isAdmin() ? '👨‍💼' : '👤'}</span>
+                <span className="text-lg">{isSuperAdmin() ? '🔐' : isAdmin() ? '👨‍💼' : '👤'}</span>
                 <span className="text-xs font-bold text-gray-500 uppercase">
-                  {isAdmin() ? 'Admin' : 'User'}
+                  {isSuperAdmin() ? 'Super Admin' : isAdmin() ? 'Admin' : 'User'}
                 </span>
               </div>
               <p className="text-sm text-gray-600 truncate">{user.email}</p>
@@ -125,7 +127,7 @@ const Layout = () => {
           )}
           {user && !sidebarOpen && (
             <div className="flex justify-center">
-              <span className="text-2xl">{isAdmin() ? '👨‍💼' : '👤'}</span>
+              <span className="text-2xl">{isSuperAdmin() ? '🔐' : isAdmin() ? '👨‍💼' : '👤'}</span>
             </div>
           )}
         </div>
@@ -175,6 +177,7 @@ const Layout = () => {
                       placeholder={
                         location.pathname === '/admin/vendors' ? 'Search Vendors' :
                         location.pathname === '/admin/users' ? 'Search Buyers' :
+                        location.pathname === '/admin/manage-admins' ? 'Search Admins' :
                         'Search Products'
                       }
                       value={globalSearchTerm}

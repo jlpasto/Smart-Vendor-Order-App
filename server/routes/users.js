@@ -1,7 +1,7 @@
 import express from 'express';
 import bcrypt from 'bcrypt';
 import { query } from '../config/database.js';
-import { authenticate, requireAdmin } from '../middleware/auth.js';
+import { authenticate, requireAdmin, requireSuperAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -32,11 +32,14 @@ function parseCellValue(value) {
   return parseFloat(value) !== 0;
 }
 
-// Get all users (Admin only)
+// Get all buyers (Admin only) - excludes admin and superadmin users
 router.get('/', authenticate, requireAdmin, async (req, res) => {
   try {
     const result = await query(
-      'SELECT id, name, email, id_no, territory, role, assigned_vendor_ids, assigned_product_ids, created_at FROM users ORDER BY created_at DESC'
+      `SELECT id, name, email, id_no, territory, role, assigned_vendor_ids, assigned_product_ids, created_at
+       FROM users
+       WHERE role = 'buyer'
+       ORDER BY created_at DESC`
     );
     res.json(result.rows);
   } catch (error) {
@@ -203,6 +206,97 @@ router.post('/bulk-assign-products', authenticate, requireAdmin, async (req, res
   } catch (error) {
     console.error('Error bulk assigning products:', error);
     res.status(500).json({ error: 'Error bulk assigning products: ' + error.message });
+  }
+});
+
+// ============================================
+// SUPERADMIN ENDPOINTS - Manage Admin Users
+// These must come BEFORE /:id routes
+// ============================================
+
+// Get all admin users (Superadmin only)
+router.get('/admins', authenticate, requireSuperAdmin, async (req, res) => {
+  try {
+    const result = await query(
+      `SELECT id, name, email, role, created_at FROM users
+       WHERE role IN ('admin', 'superadmin')
+       ORDER BY role DESC, created_at DESC`
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching admin users:', error);
+    res.status(500).json({ error: 'Error fetching admin users' });
+  }
+});
+
+// Create admin user (Superadmin only)
+router.post('/admin', authenticate, requireSuperAdmin, async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Validate required fields
+    if (!email) {
+      return res.status(400).json({ error: 'Username is required' });
+    }
+
+    // Check if username already exists (case-insensitive)
+    const existingUser = await query('SELECT id FROM users WHERE LOWER(email) = LOWER($1)', [email]);
+    if (existingUser.rows.length > 0) {
+      return res.status(400).json({ error: 'Username already exists' });
+    }
+
+    // Use provided password or generate random one
+    const finalPassword = password || generatePassword();
+
+    // Hash the password with bcrypt before storing
+    const hashedPassword = await bcrypt.hash(finalPassword, 10);
+
+    const result = await query(
+      `INSERT INTO users (email, password, role)
+       VALUES ($1, $2, $3)
+       RETURNING id, email, role, created_at`,
+      [email, hashedPassword, 'admin']
+    );
+
+    // Return the created admin user with the PLAINTEXT password (only in response, not stored)
+    res.status(201).json({
+      ...result.rows[0],
+      password: finalPassword // Include plaintext password in response so superadmin can share it
+    });
+  } catch (error) {
+    console.error('Error creating admin user:', error);
+    res.status(500).json({ error: 'Error creating admin user' });
+  }
+});
+
+// Delete admin user (Superadmin only)
+router.delete('/admin/:id', authenticate, requireSuperAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Prevent deleting yourself
+    if (parseInt(id) === req.user.id) {
+      return res.status(400).json({ error: 'You cannot delete your own account' });
+    }
+
+    // Only allow deleting admin users, not superadmins
+    const userCheck = await query('SELECT role FROM users WHERE id = $1', [id]);
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    if (userCheck.rows[0].role === 'superadmin') {
+      return res.status(403).json({ error: 'Cannot delete superadmin users' });
+    }
+    if (userCheck.rows[0].role !== 'admin') {
+      return res.status(400).json({ error: 'This endpoint is only for deleting admin users' });
+    }
+
+    await query('DELETE FROM users WHERE id = $1', [id]);
+
+    res.json({ message: 'Admin user deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting admin user:', error);
+    res.status(500).json({ error: 'Error deleting admin user' });
   }
 });
 

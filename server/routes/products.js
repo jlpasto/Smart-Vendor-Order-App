@@ -361,10 +361,11 @@ router.get('/', authenticate, async (req, res) => {
     let paramCount = 1;
 
     // Apply product filtering for non-admin users (buyers) OR for admin filtering by specific buyer
-    if ((req.user && req.user.role !== 'admin') || (req.user.role === 'admin' && buyerEmail)) {
+    const isAdminRole = req.user.role === 'admin' || req.user.role === 'superadmin';
+    if ((req.user && !isAdminRole) || (isAdminRole && buyerEmail)) {
       // Determine which user to get assignments for
       let targetUserId;
-      if (req.user.role === 'admin' && buyerEmail) {
+      if (isAdminRole && buyerEmail) {
         // Admin is fetching products for a specific buyer
         const buyerResult = await query(
           'SELECT id FROM users WHERE email = $1 AND role = $2',
