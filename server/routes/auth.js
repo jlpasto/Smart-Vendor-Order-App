@@ -74,7 +74,7 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    // Find user (case-insensitive)
+    // Find user by email/username (case-insensitive)
     const result = await query(
       'SELECT * FROM users WHERE LOWER(email) = LOWER($1)',
       [email]

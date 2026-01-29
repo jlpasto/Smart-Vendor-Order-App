@@ -26,7 +26,8 @@
       "Bash(find:*)",
       "Bash(echo:*)",
       "Bash(cat:*)",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "Bash(dir \"c:\\\\Users\\\\JL\\\\Documents\\\\Smart Vendor Order App\\\\client\\\\.env*\")"
     ],
     "deny": [],
     "ask": []
