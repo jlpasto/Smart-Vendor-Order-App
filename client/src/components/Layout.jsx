@@ -33,7 +33,6 @@ const Layout = () => {
     { path: '/products', label: 'Products', icon: '📦' },
     { path: '/cart', label: 'Purchase Order', icon: '🛒' },
     { path: '/orders', label: 'My Orders', icon: '📋' },
-    { path: '/settings', label: 'Settings', icon: '⚙️' },
   ];
 
   // Menu items for admin users
@@ -47,7 +46,6 @@ const Layout = () => {
     // Conditionally add Manage Admins for superadmin only
     ...(isSuperAdmin() ? [{ path: '/admin/manage-admins', label: 'Manage Admins', icon: '🔐' }] : []),
     { path: '/products', label: 'Browse Products', icon: '🛍️' },
-    { path: '/settings', label: 'Settings', icon: '⚙️' },
   ];
 
   // Select menu items based on user role
