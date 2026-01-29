@@ -49,8 +49,12 @@ const LoginPage = () => {
       <div className="card max-w-md w-full">
         {/* Logo */}
         <div className="text-center mb-6">
-          <div className="w-16 h-16 bg-primary-600 rounded-lg flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-bold text-3xl">W</span>
+          <div className="w-40 h-20 mx-auto mb-4 rounded-lg bg-primary-600 p-2">
+            <img
+              src="/images/logo.webp"
+              alt="Logo"
+              className="w-full h-full object-contain"
+            />
           </div>
           <h1 className="text-3xl font-display font-bold text-gray-900">Welcome Back</h1>
           <p className="text-gray-600 mt-2">Sign in to your account</p>
