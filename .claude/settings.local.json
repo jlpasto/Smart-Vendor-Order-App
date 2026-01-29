@@ -25,7 +25,8 @@
       "Bash(npm run:*)",
       "Bash(find:*)",
       "Bash(echo:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(tree:*)"
     ],
     "deny": [],
     "ask": []
