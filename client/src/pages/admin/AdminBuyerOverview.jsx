@@ -230,9 +230,8 @@ export default function AdminBuyerOverview() {
       </div>
 
       {/* Buyers Table - Desktop */}
-      <div className="card overflow-hidden hidden lg:block">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+      <div className="bg-white rounded-xl shadow-lg overflow-x-auto hidden lg:block">
+        <table className="w-full">
             <thead>
               <tr className="border-b-2 border-gray-200 bg-gray-50">
                 <th
@@ -340,7 +339,6 @@ export default function AdminBuyerOverview() {
               )}
             </tbody>
           </table>
-        </div>
       </div>
 
       {/* Buyers Cards - Mobile/Tablet */}
