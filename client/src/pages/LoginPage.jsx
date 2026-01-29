@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const LoginPage = () => {
@@ -113,7 +113,7 @@ const LoginPage = () => {
             <>
               <div>
                 <label htmlFor="email" className="block text-lg font-semibold text-gray-700 mb-2">
-                  Email
+                  Name
                 </label>
                 <input
                   id="email"
@@ -121,7 +121,7 @@ const LoginPage = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="input"
-                  placeholder="your@email.com"
+                  placeholder="Enter your name"
                   required
                   autoFocus
                 />
@@ -137,7 +137,7 @@ const LoginPage = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="input"
-                  placeholder=""
+                  placeholder="Enter your password"
                   required
                 />
               </div>
@@ -153,14 +153,6 @@ const LoginPage = () => {
           </button>
         </form>
 
-        <div className="mt-6 text-center">
-          <p className="text-gray-600">
-            Don't have an account?{' '}
-            <Link to="/signup" className="text-primary-600 font-semibold hover:text-primary-700">
-              Sign Up
-            </Link>
-          </p>
-        </div>
       </div>
     </div>
   );
