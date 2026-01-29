@@ -3,6 +3,7 @@ import api from '../config/api';
 import { useCart } from '../context/CartContext';
 import { useSearch } from '../context/SearchContext';
 import { useFilter } from '../context/FilterContext';
+import { useAuth } from '../context/AuthContext';
 import ProductDetailModal from '../components/ProductDetailModal';
 import AddToOrderModal from '../components/AddToOrderModal';
 import FilterIcon from '../components/FilterIcon';
@@ -39,6 +40,7 @@ const ProductsPage = () => {
   // Use filter context
   const { globalSearchTerm } = useSearch();
   const { filters } = useFilter();
+  const { isAdmin } = useAuth();
 
   const { addToCart } = useCart();
   const [addedToCart, setAddedToCart] = useState({});
@@ -429,22 +431,24 @@ const ProductsPage = () => {
                         </div>
                       </div>
 
-                      {/* Add Button */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpenAddToOrderModal(product);
-                        }}
-                        disabled={addedToCart[product.id]}
-                        className={`w-full py-1.5 rounded-md text-xs font-semibold transition-colors mt-auto ${
-                          addedToCart[product.id]
-                            ? 'bg-green-500 text-white'
-                            : 'bg-primary-600 hover:bg-primary-700 text-white'
-                    }`}
-                        aria-label="Add to order"
-                      >
-                        {addedToCart[product.id] ? '✓ Added' : '+ Add to Order'}
-                      </button>
+                      {/* Add Button - Hidden for admins */}
+                      {!isAdmin() && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenAddToOrderModal(product);
+                          }}
+                          disabled={addedToCart[product.id]}
+                          className={`w-full py-1.5 rounded-md text-xs font-semibold transition-colors mt-auto ${
+                            addedToCart[product.id]
+                              ? 'bg-green-500 text-white'
+                              : 'bg-primary-600 hover:bg-primary-700 text-white'
+                          }`}
+                          aria-label="Add to order"
+                        >
+                          {addedToCart[product.id] ? '✓ Added' : '+ Add to Order'}
+                        </button>
+                      )}
                     </div>
                   </div>
             ))}
@@ -505,22 +509,24 @@ const ProductsPage = () => {
                   </div>
                 </div>
 
-                {/* Add Button */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleOpenAddToOrderModal(product);
-                  }}
-                  disabled={addedToCart[product.id]}
-                  className={`w-full py-1.5 rounded-md text-xs font-semibold transition-colors mt-auto ${
-                    addedToCart[product.id]
-                      ? 'bg-green-500 text-white'
-                      : 'bg-primary-600 hover:bg-primary-700 text-white'
-                  }`}
-                  aria-label="Add to order"
-                >
-                  {addedToCart[product.id] ? '✓ Added' : '+ Add to Order'}
-                </button>
+                {/* Add Button - Hidden for admins */}
+                {!isAdmin() && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenAddToOrderModal(product);
+                    }}
+                    disabled={addedToCart[product.id]}
+                    className={`w-full py-1.5 rounded-md text-xs font-semibold transition-colors mt-auto ${
+                      addedToCart[product.id]
+                        ? 'bg-green-500 text-white'
+                        : 'bg-primary-600 hover:bg-primary-700 text-white'
+                    }`}
+                    aria-label="Add to order"
+                  >
+                    {addedToCart[product.id] ? '✓ Added' : '+ Add to Order'}
+                  </button>
+                )}
               </div>
             </div>
           ))}
