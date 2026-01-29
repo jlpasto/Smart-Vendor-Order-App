@@ -10,13 +10,13 @@ const AdminOrders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
-    vendor: '',
+    buyer: '',
     status: '',
     startDate: '',
     endDate: '',
     userEmail: '' // Add userEmail filter
   });
-  const [vendors, setVendors] = useState([]);
+  const [buyers, setBuyers] = useState([]);
   const [editingOrder, setEditingOrder] = useState(null);
   const [newStatus, setNewStatus] = useState('');
   const [adminNotes, setAdminNotes] = useState('');
@@ -50,21 +50,26 @@ const AdminOrders = () => {
 
   useEffect(() => {
     fetchOrders();
-    fetchVendors();
+    fetchBuyers();
   }, [filters]);
 
   const fetchOrders = async () => {
     try {
       const params = {};
-      if (filters.vendor) params.vendor = filters.vendor;
       if (filters.status) params.status = filters.status;
       if (filters.startDate) params.startDate = filters.startDate;
       if (filters.endDate) params.endDate = filters.endDate;
 
       const response = await api.get('/api/orders/all', { params });
 
-      // Apply userEmail filter on the client side if provided
+      // Apply buyer filter on the client side
       let filteredOrders = response.data;
+      if (filters.buyer) {
+        filteredOrders = filteredOrders.filter(order =>
+          order.user_email.toLowerCase() === filters.buyer.toLowerCase()
+        );
+      }
+      // Apply userEmail filter on the client side if provided (from navigation)
       if (filters.userEmail) {
         filteredOrders = filteredOrders.filter(order =>
           order.user_email.toLowerCase() === filters.userEmail.toLowerCase()
@@ -79,12 +84,12 @@ const AdminOrders = () => {
     }
   };
 
-  const fetchVendors = async () => {
+  const fetchBuyers = async () => {
     try {
-      const response = await api.get('/api/products/filters/vendors');
-      setVendors(response.data);
+      const response = await api.get('/api/users');
+      setBuyers(response.data);
     } catch (error) {
-      console.error('Error fetching vendors:', error);
+      console.error('Error fetching buyers:', error);
     }
   };
 
@@ -94,7 +99,7 @@ const AdminOrders = () => {
 
   const clearFilters = () => {
     setFilters({
-      vendor: '',
+      buyer: '',
       status: '',
       startDate: '',
       endDate: '',
@@ -282,15 +287,15 @@ const AdminOrders = () => {
         <h2 className="text-lg font-semibold mb-3">Filters</h2>
         <div className="grid md:grid-cols-4 gap-4">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Vendor</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Buyer</label>
             <select
-              value={filters.vendor}
-              onChange={(e) => handleFilterChange('vendor', e.target.value)}
+              value={filters.buyer}
+              onChange={(e) => handleFilterChange('buyer', e.target.value)}
               className="select"
             >
-              <option value="">All Vendors</option>
-              {vendors.map(vendor => (
-                <option key={vendor} value={vendor}>{vendor}</option>
+              <option value="">All Buyers</option>
+              {buyers.map(buyer => (
+                <option key={buyer.id} value={buyer.email}>{buyer.name || buyer.email}</option>
               ))}
             </select>
           </div>
