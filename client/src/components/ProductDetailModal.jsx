@@ -187,12 +187,6 @@ const ProductDetailModal = ({ product, isOpen, onClose, onNext, onPrev }) => {
 
           {/* Product Details */}
           <div className="space-y-6">
-            {/* ID */}
-            <div className="border-b border-gray-200 pb-4">
-              <label className="block text-sm font-semibold text-gray-500 mb-1">ID</label>
-              <p className="text-lg text-gray-900">{product.id}</p>
-            </div>
-
             {/* Vendor Connect ID */}
             {product.vendor_connect_id && (
               <div className="border-b border-gray-200 pb-4">

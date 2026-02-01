@@ -53,6 +53,7 @@ export const FilterProvider = ({ children }) => {
     popular: false,
     seasonal: false,
     new: false,
+    favorites_only: false,
   });
 
   // Update a single filter
@@ -107,6 +108,7 @@ export const FilterProvider = ({ children }) => {
       popular: false,
       seasonal: false,
       new: false,
+      favorites_only: false,
     });
   };
 

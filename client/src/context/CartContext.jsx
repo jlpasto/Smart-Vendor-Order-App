@@ -58,6 +58,13 @@ export const CartProvider = ({ children }) => {
           replacement_product_id: item.replacement_product_id,
           replacement_product_name: item.replacement_product_name,
           cart_created_at: item.cart_created_at,
+          // Validation fields
+          is_split_case: item.is_split_case,
+          case_pack: item.case_pack,
+          minimum_units: item.minimum_units,
+          case_minimum: item.case_minimum,
+          minimum_cost: item.minimum_cost,
+          product_image: item.product_image,
           // Keep any other fields from database
           ...item
         }));
@@ -145,7 +152,14 @@ export const CartProvider = ({ children }) => {
         case_price: product.wholesale_case_price,
         unavailable_action: unavailableAction,
         replacement_product_id: replacementProductId,
-        replacement_product_name: replacementProductName
+        replacement_product_name: replacementProductName,
+        // Validation fields
+        is_split_case: product.is_split_case,
+        case_pack: product.case_pack,
+        minimum_units: product.minimum_units,
+        case_minimum: product.case_minimum,
+        minimum_cost: product.minimum_cost,
+        product_image: product.product_image
       });
 
       const cartItem = response.data.cartItem;
@@ -167,6 +181,13 @@ export const CartProvider = ({ children }) => {
           unavailable_action: cartItem.unavailable_action,
           replacement_product_id: cartItem.replacement_product_id,
           replacement_product_name: cartItem.replacement_product_name,
+          // Validation fields
+          is_split_case: cartItem.is_split_case,
+          case_pack: cartItem.case_pack,
+          minimum_units: cartItem.minimum_units,
+          case_minimum: cartItem.case_minimum,
+          minimum_cost: cartItem.minimum_cost,
+          product_image: cartItem.product_image,
           ...cartItem
         };
 

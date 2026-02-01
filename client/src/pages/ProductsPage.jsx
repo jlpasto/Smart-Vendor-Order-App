@@ -199,25 +199,33 @@ const ProductsPage = () => {
   };
 
   const handleNextProduct = () => {
-    const currentIndex = products.findIndex(p => p.id === selectedProduct.id);
-    if (currentIndex < products.length - 1) {
-      setSelectedProduct(products[currentIndex + 1]);
+    const currentIndex = filteredProducts.findIndex(p => p.id === selectedProduct.id);
+    if (currentIndex < filteredProducts.length - 1) {
+      setSelectedProduct(filteredProducts[currentIndex + 1]);
     }
   };
 
   const handlePrevProduct = () => {
-    const currentIndex = products.findIndex(p => p.id === selectedProduct.id);
+    const currentIndex = filteredProducts.findIndex(p => p.id === selectedProduct.id);
     if (currentIndex > 0) {
-      setSelectedProduct(products[currentIndex - 1]);
+      setSelectedProduct(filteredProducts[currentIndex - 1]);
     }
   };
+
+  // Filter products by favorites if favorites_only filter is active
+  const filteredProducts = useMemo(() => {
+    if (filters.favorites_only && !isAdmin()) {
+      return products.filter(product => favorites.includes(product.id));
+    }
+    return products;
+  }, [products, filters.favorites_only, favorites, isAdmin]);
 
   // Group products by vendor (memoized for performance)
   // Only group when sorting by vendor_name, otherwise return null for flat list
   const groupedProducts = useMemo(() => {
     if (sortField === 'vendor_name') {
       const groups = {};
-      products.forEach(product => {
+      filteredProducts.forEach(product => {
         if (!groups[product.vendor_name]) {
           groups[product.vendor_name] = [];
         }
@@ -227,7 +235,7 @@ const ProductsPage = () => {
     }
     // Return null for flat list when not sorting by vendor
     return null;
-  }, [products, sortField]);
+  }, [filteredProducts, sortField]);
 
   if (loading) {
     return (
@@ -321,9 +329,11 @@ const ProductsPage = () => {
           </div>
 
       {/* No results */}
-      {products.length === 0 && !loading && (
+      {filteredProducts.length === 0 && !loading && (
         <div className="bg-white rounded-lg shadow-sm text-center py-12">
-          <p className="text-xl text-gray-600">No products found matching your filters</p>
+          <p className="text-xl text-gray-600">
+            {filters.favorites_only ? 'No favorite products found' : 'No products found matching your filters'}
+          </p>
         </div>
       )}
 
@@ -400,10 +410,27 @@ const ProductsPage = () => {
                         alt={product.product_name}
                         className="absolute top-0 left-0 w-full h-full object-cover"
                       />
-                      {/* Product ID Badge */}
-                      <div className="absolute top-1 right-1 bg-black bg-opacity-50 text-white text-xs px-1.5 py-0.5 rounded">
-                        #{product.id}
-                      </div>
+                      {/* Favorite Button - Only for Buyers */}
+                      {!isAdmin() && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleFavorite(product.id);
+                          }}
+                          className="absolute top-2 left-2 p-1.5 bg-white bg-opacity-90 hover:bg-opacity-100 rounded-full shadow-md transition-all hover:scale-110"
+                          aria-label={favorites.includes(product.id) ? 'Remove from favorites' : 'Add to favorites'}
+                        >
+                          <svg
+                            className={`w-5 h-5 ${favorites.includes(product.id) ? 'text-red-500 fill-current' : 'text-gray-400'}`}
+                            fill={favorites.includes(product.id) ? 'currentColor' : 'none'}
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                          </svg>
+                        </button>
+                      )}
                     </div>
 
                     {/* Product Details */}
@@ -458,9 +485,9 @@ const ProductsPage = () => {
       })}
 
       {/* Flat Product Grid - When sorting by product or other fields */}
-      {!groupedProducts && products.length > 0 && (
+      {!groupedProducts && filteredProducts.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-          {products.map(product => (
+          {filteredProducts.map(product => (
             <div
               key={product.id}
               className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer overflow-hidden flex flex-col"
@@ -473,10 +500,27 @@ const ProductsPage = () => {
                   alt={product.product_name}
                   className="absolute top-0 left-0 w-full h-full object-cover"
                 />
-                {/* Product ID Badge */}
-                <div className="absolute top-1 right-1 bg-black bg-opacity-50 text-white text-xs px-1.5 py-0.5 rounded">
-                  #{product.id}
-                </div>
+                {/* Favorite Button - Only for Buyers */}
+                {!isAdmin() && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFavorite(product.id);
+                    }}
+                    className="absolute top-2 left-2 p-1.5 bg-white bg-opacity-90 hover:bg-opacity-100 rounded-full shadow-md transition-all hover:scale-110"
+                    aria-label={favorites.includes(product.id) ? 'Remove from favorites' : 'Add to favorites'}
+                  >
+                    <svg
+                      className={`w-5 h-5 ${favorites.includes(product.id) ? 'text-red-500 fill-current' : 'text-gray-400'}`}
+                      fill={favorites.includes(product.id) ? 'currentColor' : 'none'}
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                  </button>
+                )}
               </div>
 
               {/* Product Details */}
@@ -571,10 +615,10 @@ const ProductsPage = () => {
       )}
 
       {/* End of Results */}
-      {!hasMore && products.length > 0 && (
+      {!hasMore && filteredProducts.length > 0 && (
         <div className="text-center py-12 border-t border-gray-200">
           <p className="text-xl font-semibold text-gray-700">You've reached the end!</p>
-          <p className="text-gray-500 mt-2">Showing all {products.length} products</p>
+          <p className="text-gray-500 mt-2">Showing all {filteredProducts.length} products</p>
           <button
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             className="mt-4 px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
@@ -587,7 +631,7 @@ const ProductsPage = () => {
       {/* Screen reader announcements */}
       <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
         {loadingMore && 'Loading more products'}
-        {!hasMore && `All ${products.length} products loaded`}
+        {!hasMore && `All ${filteredProducts.length} products loaded`}
       </div>
 
       {/* Product Detail Modal */}
@@ -596,12 +640,12 @@ const ProductsPage = () => {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         onNext={
-          selectedProduct && products.findIndex(p => p.id === selectedProduct.id) < products.length - 1
+          selectedProduct && filteredProducts.findIndex(p => p.id === selectedProduct.id) < filteredProducts.length - 1
             ? handleNextProduct
             : null
         }
         onPrev={
-          selectedProduct && products.findIndex(p => p.id === selectedProduct.id) > 0
+          selectedProduct && filteredProducts.findIndex(p => p.id === selectedProduct.id) > 0
             ? handlePrevProduct
             : null
         }

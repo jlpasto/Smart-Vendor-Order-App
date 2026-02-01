@@ -1,6 +1,6 @@
 import express from 'express';
 import { query } from '../config/database.js';
-import { authenticate, requireAdmin } from '../middleware/auth.js';
+import { authenticate, requireAdmin, requireSuperAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -23,7 +23,7 @@ const decodeCursor = (cursor) => {
 };
 
 // Bulk import vendors (Admin only) - MUST be before /:id route
-router.post('/bulk-import', authenticate, requireAdmin, async (req, res) => {
+router.post('/bulk-import', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     const { vendors } = req.body;
 
@@ -156,7 +156,7 @@ router.post('/bulk-import', authenticate, requireAdmin, async (req, res) => {
 });
 
 // Get all vendors for export (Admin only) - returns all vendors without pagination
-router.get('/export', authenticate, requireAdmin, async (req, res) => {
+router.get('/export', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     const { search, state, territory, sort, order } = req.query;
 
@@ -205,7 +205,7 @@ router.get('/export', authenticate, requireAdmin, async (req, res) => {
 });
 
 // Get all vendors (Admin only)
-router.get('/', authenticate, requireAdmin, async (req, res) => {
+router.get('/', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     const { search, state, territory, cursor, limit, sort, order } = req.query;
 
@@ -313,7 +313,7 @@ router.get('/', authenticate, requireAdmin, async (req, res) => {
 });
 
 // Get single vendor (Admin only)
-router.get('/:id', authenticate, requireAdmin, async (req, res) => {
+router.get('/:id', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const result = await query('SELECT * FROM vendors WHERE id = $1', [id]);
@@ -330,7 +330,7 @@ router.get('/:id', authenticate, requireAdmin, async (req, res) => {
 });
 
 // Get unique states (for filters) - Admin only
-router.get('/filters/states', authenticate, requireAdmin, async (req, res) => {
+router.get('/filters/states', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     const result = await query(
       'SELECT DISTINCT state FROM vendors WHERE state IS NOT NULL ORDER BY state'
@@ -343,7 +343,7 @@ router.get('/filters/states', authenticate, requireAdmin, async (req, res) => {
 });
 
 // Get unique territories (for filters) - Admin only
-router.get('/filters/territories', authenticate, requireAdmin, async (req, res) => {
+router.get('/filters/territories', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     const result = await query(
       'SELECT DISTINCT territory FROM vendors WHERE territory IS NOT NULL ORDER BY territory'
@@ -356,7 +356,7 @@ router.get('/filters/territories', authenticate, requireAdmin, async (req, res) 
 });
 
 // Create vendor (Admin only)
-router.post('/', authenticate, requireAdmin, async (req, res) => {
+router.post('/', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     const {
       vendor_connect_id,
@@ -397,7 +397,7 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
 });
 
 // Update vendor (Admin only)
-router.put('/:id', authenticate, requireAdmin, async (req, res) => {
+router.put('/:id', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const {
@@ -440,7 +440,7 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
 });
 
 // Delete vendor (Admin only)
-router.delete('/:id', authenticate, requireAdmin, async (req, res) => {
+router.delete('/:id', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const result = await query('DELETE FROM vendors WHERE id = $1 RETURNING *', [id]);

@@ -39,12 +39,14 @@ const Layout = () => {
   const adminMenuItems = [
     { path: '/admin', label: 'Dashboard', icon: '📊' },
     { path: '/admin/buyer-overview', label: 'Buyer Overview', icon: '👥' },
-    { path: '/admin/products', label: 'Manage Products', icon: '📦' },
-    { path: '/admin/vendors', label: 'Manage Vendors', icon: '🏪' },
     { path: '/admin/orders', label: 'Manage Orders', icon: '📋' },
-    { path: '/admin/users', label: 'Manage Buyers', icon: '👤' },
-    // Conditionally add Manage Admins for superadmin only
-    ...(isSuperAdmin() ? [{ path: '/admin/manage-admins', label: 'Manage Admins', icon: '🔐' }] : []),
+    // Superadmin-only management features
+    ...(isSuperAdmin() ? [
+      { path: '/admin/products', label: 'Manage Products', icon: '📦' },
+      { path: '/admin/vendors', label: 'Manage Vendors', icon: '🏪' },
+      { path: '/admin/users', label: 'Manage Buyers', icon: '👤' },
+      { path: '/admin/manage-admins', label: 'Manage Admins', icon: '🔐' }
+    ] : []),
     { path: '/products', label: 'Browse Products', icon: '🛍️' },
   ];
 

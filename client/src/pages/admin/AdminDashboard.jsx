@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../config/api';
+import { useAuth } from '../../context/AuthContext';
 
 const AdminDashboard = () => {
+  const { isSuperAdmin } = useAuth();
   const [stats, setStats] = useState(null);
   const [recentOrders, setRecentOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -44,31 +46,33 @@ const AdminDashboard = () => {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid md:grid-cols-2 gap-4 mb-8">
-        <Link to="/admin/orders" className="card hover:shadow-lg transition-shadow bg-primary-50 border-2 border-primary-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-2xl font-bold text-primary-900">Manage Orders</h3>
-              <p className="text-primary-700 mt-2">View and update order statuses</p>
+      {isSuperAdmin() && (
+        <div className="grid md:grid-cols-2 gap-4 mb-8">
+          <Link to="/admin/orders" className="card hover:shadow-lg transition-shadow bg-primary-50 border-2 border-primary-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-2xl font-bold text-primary-900">Manage Orders</h3>
+                <p className="text-primary-700 mt-2">View and update order statuses</p>
+              </div>
+              <svg className="w-12 h-12 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
             </div>
-            <svg className="w-12 h-12 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
-          </div>
-        </Link>
+          </Link>
 
-        <Link to="/admin/products" className="card hover:shadow-lg transition-shadow bg-green-50 border-2 border-green-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-2xl font-bold text-green-900">Manage Products</h3>
-              <p className="text-green-700 mt-2">Add, edit, or remove products</p>
+          <Link to="/admin/products" className="card hover:shadow-lg transition-shadow bg-green-50 border-2 border-green-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-2xl font-bold text-green-900">Manage Products</h3>
+                <p className="text-green-700 mt-2">Add, edit, or remove products</p>
+              </div>
+              <svg className="w-12 h-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
             </div>
-            <svg className="w-12 h-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-            </svg>
-          </div>
-        </Link>
-      </div>
+          </Link>
+        </div>
+      )}
 
       {/* Statistics */}
       {stats && (

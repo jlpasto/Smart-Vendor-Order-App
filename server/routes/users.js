@@ -55,7 +55,7 @@ function parseCellValue(value) {
 }
 
 // Get all buyers (Admin only) - excludes admin and superadmin users
-router.get('/', authenticate, requireAdmin, async (req, res) => {
+router.get('/', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     const result = await query(
       `SELECT id, name, email, access_code, id_no, territory, role, assigned_vendor_ids, assigned_product_ids, created_at
@@ -71,7 +71,7 @@ router.get('/', authenticate, requireAdmin, async (req, res) => {
 });
 
 // Export buyer-product assignments as matrix (Admin only)
-router.get('/export-assignments', authenticate, requireAdmin, async (req, res) => {
+router.get('/export-assignments', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     // Debug: Check all users and their roles
     const allUsersResult = await query('SELECT id, name, email, role FROM users');
@@ -133,7 +133,7 @@ router.get('/export-assignments', authenticate, requireAdmin, async (req, res) =
 });
 
 // Import buyer-product assignments from matrix (Admin only)
-router.post('/bulk-assign-products', authenticate, requireAdmin, async (req, res) => {
+router.post('/bulk-assign-products', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     const { assignments } = req.body;
 
@@ -323,7 +323,7 @@ router.delete('/admin/:id', authenticate, requireSuperAdmin, async (req, res) =>
 });
 
 // Get single user (Admin only)
-router.get('/:id', authenticate, requireAdmin, async (req, res) => {
+router.get('/:id', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const result = await query(
@@ -343,7 +343,7 @@ router.get('/:id', authenticate, requireAdmin, async (req, res) => {
 });
 
 // Create user (Admin only)
-router.post('/', authenticate, requireAdmin, async (req, res) => {
+router.post('/', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     const { name, password } = req.body;
 
@@ -383,7 +383,7 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
 });
 
 // Update user (Admin only)
-router.put('/:id', authenticate, requireAdmin, async (req, res) => {
+router.put('/:id', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { name, email, id_no, territory, password, role, assigned_vendors, assigned_products } = req.body;
@@ -509,7 +509,7 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
 });
 
 // Delete user (Admin only)
-router.delete('/:id', authenticate, requireAdmin, async (req, res) => {
+router.delete('/:id', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     const { id } = req.params;
 

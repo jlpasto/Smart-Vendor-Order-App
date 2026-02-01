@@ -1,6 +1,6 @@
 import express from 'express';
 import { query } from '../config/database.js';
-import { authenticate, requireAdmin } from '../middleware/auth.js';
+import { authenticate, requireAdmin, requireSuperAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -23,7 +23,7 @@ const decodeCursor = (cursor) => {
 };
 
 // Get all products for export (Admin only) - returns all filtered products without pagination
-router.get('/export', authenticate, requireAdmin, async (req, res) => {
+router.get('/export', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     const {
       search,
@@ -727,7 +727,7 @@ router.get('/', authenticate, async (req, res) => {
 });
 
 // Get all product IDs (for "Select All Pages" feature)
-router.get('/ids', authenticate, requireAdmin, async (req, res) => {
+router.get('/ids', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     // Use the same filtering logic as the main GET endpoint
     const {
@@ -931,7 +931,7 @@ router.get('/ids', authenticate, requireAdmin, async (req, res) => {
 // Get products grouped by vendor (for product assignment UI)
 // IMPORTANT: This must come BEFORE /:id route to avoid matching "grouped-by-vendor" as an ID
 // Returns product_connect_id for each product
-router.get('/grouped-by-vendor', authenticate, requireAdmin, async (req, res) => {
+router.get('/grouped-by-vendor', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     // Get all products grouped by vendor_name
     const productsResult = await query(`
@@ -1230,7 +1230,7 @@ router.get('/filters/seasonal-featured', async (req, res) => {
 });
 
 // Create product (Admin only)
-router.post('/', authenticate, requireAdmin, async (req, res) => {
+router.post('/', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     const {
       product_connect_id,
@@ -1282,7 +1282,7 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
 });
 
 // Update product (Admin only)
-router.put('/:id', authenticate, requireAdmin, async (req, res) => {
+router.put('/:id', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const {
@@ -1341,7 +1341,7 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
 });
 
 // Delete product (Admin only)
-router.delete('/:id', authenticate, requireAdmin, async (req, res) => {
+router.delete('/:id', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const result = await query('DELETE FROM products WHERE id = $1 RETURNING *', [id]);
@@ -1358,7 +1358,7 @@ router.delete('/:id', authenticate, requireAdmin, async (req, res) => {
 });
 
 // Bulk delete products (Admin only)
-router.post('/bulk-delete', authenticate, requireAdmin, async (req, res) => {
+router.post('/bulk-delete', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     const { productIds } = req.body;
 
@@ -1385,7 +1385,7 @@ router.post('/bulk-delete', authenticate, requireAdmin, async (req, res) => {
 });
 
 // Bulk import products (Admin only)
-router.post('/bulk-import', authenticate, requireAdmin, async (req, res) => {
+router.post('/bulk-import', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     const { products } = req.body;
 

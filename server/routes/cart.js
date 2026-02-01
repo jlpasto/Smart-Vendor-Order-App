@@ -54,7 +54,14 @@ router.post('/add', authenticate, async (req, res) => {
       case_price,
       unavailable_action,
       replacement_product_id,
-      replacement_product_name
+      replacement_product_name,
+      // Validation fields
+      is_split_case,
+      case_pack,
+      minimum_units,
+      case_minimum,
+      minimum_cost,
+      product_image
     } = req.body;
 
     console.log(`➕ Adding to cart for user ${userId}: ${product_name} (qty: ${quantity})`);
@@ -124,8 +131,14 @@ router.post('/add', authenticate, async (req, res) => {
           unavailable_action = $6,
           replacement_product_id = $7,
           replacement_product_name = $8,
+          is_split_case = COALESCE($9, is_split_case),
+          case_pack = COALESCE($10, case_pack),
+          minimum_units = COALESCE($11, minimum_units),
+          case_minimum = COALESCE($12, case_minimum),
+          minimum_cost = COALESCE($13, minimum_cost),
+          product_image = COALESCE($14, product_image),
           updated_at = CURRENT_TIMESTAMP
-         WHERE id = $9 AND user_id = $10
+         WHERE id = $15 AND user_id = $16
          RETURNING *`,
         [
           newQuantity,
@@ -136,6 +149,12 @@ router.post('/add', authenticate, async (req, res) => {
           unavailable_action || 'curate',
           replacement_product_id,
           replacement_product_name,
+          is_split_case,
+          case_pack,
+          minimum_units,
+          case_minimum,
+          minimum_cost,
+          product_image,
           existing.id,
           userId
         ]
@@ -151,8 +170,9 @@ router.post('/add', authenticate, async (req, res) => {
           user_id, user_email, product_id, product_name, vendor_connect_id, vendor_name,
           quantity, amount, pricing_mode, unit_price, case_price,
           status, cart_created_at,
-          unavailable_action, replacement_product_id, replacement_product_name
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'in_cart', CURRENT_TIMESTAMP, $12, $13, $14)
+          unavailable_action, replacement_product_id, replacement_product_name,
+          is_split_case, case_pack, minimum_units, case_minimum, minimum_cost, product_image
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'in_cart', CURRENT_TIMESTAMP, $12, $13, $14, $15, $16, $17, $18, $19, $20)
         RETURNING *`,
         [
           userId,
@@ -168,7 +188,13 @@ router.post('/add', authenticate, async (req, res) => {
           case_price,
           unavailable_action || 'curate',
           replacement_product_id,
-          replacement_product_name
+          replacement_product_name,
+          is_split_case,
+          case_pack,
+          minimum_units,
+          case_minimum,
+          minimum_cost,
+          product_image
         ]
       );
 

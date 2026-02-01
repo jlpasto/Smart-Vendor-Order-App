@@ -6,6 +6,7 @@ const FilterFieldList = ({ onSelectField, onClearAll }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
   const filterFields = [
+    { key: 'favorites_only', label: 'Favorites', icon: '❤️', type: 'toggle' },
     { key: 'id', label: 'ID', icon: '#', type: 'text' },
     { key: 'vendor_connect_id', label: 'Vendor Connect ID', icon: '🔗', type: 'text' },
     { key: 'vendor', label: 'Vendor Name', icon: '🏪', type: 'checkbox' },

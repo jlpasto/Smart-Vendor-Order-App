@@ -75,7 +75,7 @@ function App() {
               <Route
                 path="admin/products"
                 element={
-                  <ProtectedRoute requireAdmin>
+                  <ProtectedRoute requireSuperAdmin>
                     <AdminProducts />
                   </ProtectedRoute>
                 }
@@ -83,7 +83,7 @@ function App() {
               <Route
                 path="admin/vendors"
                 element={
-                  <ProtectedRoute requireAdmin>
+                  <ProtectedRoute requireSuperAdmin>
                     <AdminVendors />
                   </ProtectedRoute>
                 }
@@ -91,7 +91,7 @@ function App() {
               <Route
                 path="admin/users"
                 element={
-                  <ProtectedRoute requireAdmin>
+                  <ProtectedRoute requireSuperAdmin>
                     <AdminUsers />
                   </ProtectedRoute>
                 }
