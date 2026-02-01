@@ -1,7 +1,7 @@
 import express from 'express';
 import { query } from '../config/database.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
-import { sendOrderConfirmation, sendStatusUpdateEmail } from '../utils/email.js';
+import { sendOrderConfirmation, sendStatusUpdateEmail, sendSupportNotification } from '../utils/email.js';
 
 const router = express.Router();
 
@@ -484,6 +484,18 @@ router.post('/submit', authenticate, async (req, res) => {
       console.log('✓ Email sent successfully');
     } catch (emailError) {
       console.error('⚠️  Error sending order confirmation email:', emailError);
+      // Don't fail the order if email fails
+    }
+
+    // Send support notification
+    console.log('\n📧 Sending support notification...');
+    try {
+      const itemCount = createdOrders.length;
+      const totalAmount = createdOrders.reduce((sum, order) => sum + parseFloat(order.amount), 0);
+      await sendSupportNotification(userName, batchNumber, itemCount, totalAmount);
+      console.log('✓ Support notification sent successfully');
+    } catch (emailError) {
+      console.error('⚠️  Error sending support notification:', emailError);
       // Don't fail the order if email fails
     }
 

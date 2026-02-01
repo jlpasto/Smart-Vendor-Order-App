@@ -6,18 +6,18 @@ dotenv.config();
 // Create email transporter
 const createTransporter = () => {
   // If email is not configured, return null (will skip sending)
-  if (!process.env.EMAIL_HOST || !process.env.EMAIL_USER) {
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) {
     console.warn('⚠️ Email not configured. Emails will not be sent.');
     return null;
   }
 
   return nodemailer.createTransporter({
-    host: process.env.EMAIL_HOST,
-    port: process.env.EMAIL_PORT || 587,
+    host: process.env.SMTP_HOST,
+    port: process.env.SMTP_PORT || 587,
     secure: false,
     auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASSWORD
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS
     }
   });
 };
@@ -36,7 +36,7 @@ export const sendOrderConfirmation = async (userEmail, batchNumber, orders) => {
     ).join('\n');
 
     const mailOptions = {
-      from: process.env.EMAIL_USER,
+      from: `"${process.env.EMAIL_FROM_NAME || 'Order System'}" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
       to: userEmail,
       subject: `Order Confirmation - ${batchNumber}`,
       html: `
@@ -90,7 +90,7 @@ export const sendStatusUpdateEmail = async (userEmail, order, newStatus, notes) 
     const statusColor = statusColors[newStatus] || '#6b7280';
 
     const mailOptions = {
-      from: process.env.EMAIL_USER,
+      from: `"${process.env.EMAIL_FROM_NAME || 'Order System'}" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
       to: userEmail,
       subject: `Order Status Update - ${order.batch_order_number}`,
       html: `
@@ -131,6 +131,46 @@ export const sendStatusUpdateEmail = async (userEmail, order, newStatus, notes) 
     console.log(`✅ Status update email sent to ${userEmail}`);
   } catch (error) {
     console.error('❌ Error sending status update email:', error);
+    throw error;
+  }
+};
+
+// Send support notification email
+export const sendSupportNotification = async (buyerName, batchNumber, itemCount, totalAmount) => {
+  const transporter = createTransporter();
+  if (!transporter) return;
+
+  const supportEmail = process.env.EMAIL_TO || 'support@cureate.co';
+
+  try {
+    const mailOptions = {
+      from: `"${process.env.EMAIL_FROM_NAME || 'Order System'}" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
+      to: supportEmail,
+      subject: `New Order Submitted - ${batchNumber}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #1e40af;">New Order Notification</h2>
+          <p>Hi,</p>
+          <p>An order has been submitted by buyer <strong>${buyerName}</strong>.</p>
+
+          <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 10px 0;"><strong>Batch Number:</strong> ${batchNumber}</p>
+            <p style="margin: 10px 0;"><strong>Number of Items:</strong> ${itemCount}</p>
+            <p style="margin: 10px 0;"><strong>Total:</strong> $${totalAmount.toFixed(2)}</p>
+          </div>
+
+          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+          <p style="color: #999; font-size: 12px;">
+            This is an automated notification from ${process.env.EMAIL_FROM_NAME || 'Cureate Order App'}.
+          </p>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ Support notification sent to ${supportEmail}`);
+  } catch (error) {
+    console.error('❌ Error sending support notification:', error);
     throw error;
   }
 };
