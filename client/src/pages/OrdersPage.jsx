@@ -256,15 +256,15 @@ const OrdersPage = () => {
   const groupedBatches = groupByMonth(batches);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <h1 className="page-title mb-6">My Orders</h1>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <h1 className="text-2xl font-display font-bold text-gray-900 mb-4">My Orders</h1>
 
       {/* Date Range Filter */}
-      <div className="card mb-8">
-        <h2 className="text-xl font-semibold mb-4">Filter by Date Range</h2>
-        <div className="grid md:grid-cols-3 gap-4">
+      <div className="card mb-6 p-4">
+        <h2 className="text-base font-semibold mb-2">Filter by Date Range</h2>
+        <div className="grid md:grid-cols-3 gap-3">
           <div>
-            <label htmlFor="startDate" className="block text-lg font-semibold text-gray-700 mb-2">
+            <label htmlFor="startDate" className="block text-xs font-semibold text-gray-700 mb-1">
               Start Date
             </label>
             <input
@@ -272,11 +272,11 @@ const OrdersPage = () => {
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="input"
+              className="input text-sm py-1.5 px-2"
             />
           </div>
           <div>
-            <label htmlFor="endDate" className="block text-lg font-semibold text-gray-700 mb-2">
+            <label htmlFor="endDate" className="block text-xs font-semibold text-gray-700 mb-1">
               End Date
             </label>
             <input
@@ -284,13 +284,13 @@ const OrdersPage = () => {
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="input"
+              className="input text-sm py-1.5 px-2"
             />
           </div>
           <div className="flex items-end">
             <button
               onClick={() => { setStartDate(''); setEndDate(''); }}
-              className="btn-secondary w-full"
+              className="btn-secondary w-full px-3 py-1.5 text-sm"
             >
               Clear Dates
             </button>
@@ -299,39 +299,39 @@ const OrdersPage = () => {
       </div>
 
       {batches.length === 0 ? (
-        <div className="card text-center py-16">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">No Orders Found</h2>
-          <p className="text-xl text-gray-600 mb-8">
+        <div className="card text-center py-12 p-4">
+          <h2 className="text-xl font-bold text-gray-900 mb-3">No Orders Found</h2>
+          <p className="text-base text-gray-600 mb-6">
             {startDate || endDate
               ? 'No orders found for the selected date range'
               : "You haven't placed any orders yet"}
           </p>
           <button
             onClick={() => window.location.href = '/products'}
-            className="btn-primary"
+            className="btn-primary px-4 py-2 text-sm"
           >
             Browse Products
           </button>
         </div>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-6">
           {Object.entries(groupedBatches).map(([monthYear, monthBatches]) => (
             <div key={monthYear}>
-              <h2 className="section-title">{monthYear}</h2>
+              <h2 className="text-lg font-display font-semibold text-gray-800 mb-3">{monthYear}</h2>
 
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {monthBatches.map(batch => (
-                  <div key={batch.batch_order_number} className="card">
+                  <div key={batch.batch_order_number} className="card p-4">
                     {/* Batch Header */}
                     <div
-                      className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 cursor-pointer"
+                      className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 cursor-pointer"
                       onClick={() => toggleBatch(batch.batch_order_number)}
                     >
                       <div className="flex-1">
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">
+                        <h3 className="text-base font-bold text-gray-900 mb-1">
                           {batch.batch_order_number}
                         </h3>
-                        <div className="flex flex-wrap gap-3 text-base text-gray-600">
+                        <div className="flex flex-wrap gap-2 text-xs text-gray-600">
                           <span>
                             📅 {new Date(batch.date_submitted).toLocaleDateString()}
                           </span>
@@ -344,7 +344,7 @@ const OrdersPage = () => {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3 flex-wrap">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className={getStatusBadge(batch.status)}>
                           {batch.status.toUpperCase()}
                         </span>
@@ -354,7 +354,7 @@ const OrdersPage = () => {
                             handleBuyAgain(batch.batch_order_number);
                           }}
                           disabled={reordering && reorderBatch === batch.batch_order_number}
-                          className="btn-primary text-sm px-3 py-2"
+                          className="btn-primary text-sm px-3 py-1.5"
                         >
                           {reordering && reorderBatch === batch.batch_order_number
                             ? 'Adding...'
@@ -365,11 +365,11 @@ const OrdersPage = () => {
                             e.stopPropagation();
                             downloadPDF(batch);
                           }}
-                          className="btn-secondary text-sm px-3 py-2"
+                          className="btn-secondary text-sm px-3 py-1.5"
                         >
                           Download PDF
                         </button>
-                        <button className="text-3xl text-gray-500">
+                        <button className="text-2xl text-gray-500">
                           {expandedBatch === batch.batch_order_number ? '▲' : '▼'}
                         </button>
                       </div>
@@ -377,46 +377,46 @@ const OrdersPage = () => {
 
                     {/* Admin Notes */}
                     {batch.notes && (
-                      <div className="mt-4 bg-amber-50 border-l-4 border-amber-500 p-4 rounded">
-                        <p className="text-sm font-semibold text-amber-900 mb-1">Admin Note:</p>
-                        <p className="text-amber-800">{batch.notes}</p>
+                      <div className="mt-3 bg-amber-50 border-l-4 border-amber-500 p-3 rounded">
+                        <p className="text-xs font-semibold text-amber-900 mb-1">Admin Note:</p>
+                        <p className="text-xs text-amber-800">{batch.notes}</p>
                       </div>
                     )}
 
                     {/* Expanded Order Details */}
                     {expandedBatch === batch.batch_order_number && (
-                      <div className="mt-6 border-t-2 border-gray-200 pt-6">
+                      <div className="mt-4 border-t-2 border-gray-200 pt-4">
                         {!batchOrders[batch.batch_order_number] ? (
-                          <div className="flex justify-center items-center py-8">
-                            <div className="spinner w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full"></div>
-                            <span className="ml-3 text-gray-600">Loading order details...</span>
+                          <div className="flex justify-center items-center py-6">
+                            <div className="spinner w-6 h-6 border-4 border-primary-600 border-t-transparent rounded-full"></div>
+                            <span className="ml-2 text-sm text-gray-600">Loading order details...</span>
                           </div>
                         ) : (
                           <>
-                            <h4 className="text-lg font-semibold mb-4">Order Items:</h4>
-                            <div className="space-y-3">
+                            <h4 className="text-sm font-semibold mb-3">Order Items:</h4>
+                            <div className="space-y-2">
                               {batchOrders[batch.batch_order_number].map(order => (
                             <div
                               key={order.id}
-                              className="flex justify-between items-center bg-gray-50 p-4 rounded-lg"
+                              className="flex justify-between items-center bg-gray-50 p-3 rounded-lg"
                             >
                               <div className="flex-1">
-                                <p className="font-semibold text-gray-900">{order.product_name}</p>
-                                <p className="text-sm text-gray-600">Quantity: {order.quantity}</p>
+                                <p className="font-semibold text-sm text-gray-900">{order.product_name}</p>
+                                <p className="text-xs text-gray-600">Quantity: {order.quantity}</p>
                                 {order.vendor_name && (
-                                  <p className="text-sm text-gray-500">Vendor: {order.vendor_name}</p>
+                                  <p className="text-xs text-gray-500">Vendor: {order.vendor_name}</p>
                                 )}
                               </div>
-                              <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-2">
                                 <div className="text-right">
-                                  <p className="text-base font-bold text-primary-600">
+                                  <p className="text-sm font-bold text-primary-600">
                                     ${parseFloat(order.amount).toFixed(2)}
                                   </p>
                                 </div>
                                 <button
                                   onClick={() => handleAddItemToCart(order)}
                                   disabled={addingItem === order.id}
-                                  className="btn-secondary text-sm px-3 py-2 whitespace-nowrap"
+                                  className="btn-secondary text-xs px-2 py-1.5 whitespace-nowrap"
                                 >
                                   {addingItem === order.id ? 'Adding...' : 'Add to Cart'}
                                 </button>
