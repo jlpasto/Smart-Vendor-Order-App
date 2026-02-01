@@ -69,8 +69,25 @@ const OrdersPage = () => {
     }
   };
 
-  const downloadPDF = (batch) => {
-    const orders = batchOrders[batch.batch_order_number] || [];
+  const downloadPDF = async (batch) => {
+    // Ensure batch details are loaded
+    let orders = batchOrders[batch.batch_order_number];
+
+    if (!orders) {
+      try {
+        const response = await api.get(`/api/orders/batch/${encodeURIComponent(batch.batch_order_number)}`);
+        orders = response.data;
+        // Update state for future use
+        setBatchOrders(prevOrders => ({
+          ...prevOrders,
+          [batch.batch_order_number]: orders
+        }));
+      } catch (err) {
+        console.error('Error fetching batch details for PDF:', err);
+        alert('Error loading order details. Please try again.');
+        return;
+      }
+    }
 
     const doc = new jsPDF();
 
@@ -89,19 +106,21 @@ const OrdersPage = () => {
       doc.text(`Admin Note: ${batch.notes}`, 14, 56);
     }
 
-    // Orders table
+    // Orders table with vendor column
     const tableData = orders.map(order => [
       order.product_name,
+      order.vendor_name || 'N/A',
       order.quantity.toString(),
       `$${parseFloat(order.amount).toFixed(2)}`
     ]);
 
     doc.autoTable({
       startY: batch.notes ? 62 : 55,
-      head: [['Product', 'Quantity', 'Amount']],
+      head: [['Product', 'Vendor', 'Quantity', 'Amount']],
       body: tableData,
       foot: [[
         'Total',
+        '',
         orders.reduce((sum, o) => sum + o.quantity, 0).toString(),
         `$${parseFloat(batch.total_amount).toFixed(2)}`
       ]],
