@@ -27,7 +27,8 @@
       "Bash(echo:*)",
       "Bash(cat:*)",
       "Bash(tree:*)",
-      "Bash(dir \"c:\\\\Users\\\\JL\\\\Documents\\\\Smart Vendor Order App\\\\client\\\\.env*\")"
+      "Bash(dir \"c:\\\\Users\\\\JL\\\\Documents\\\\Smart Vendor Order App\\\\client\\\\.env*\")",
+      "Bash(PGPASSWORD=OSambgLFMzfl4TiOQY0EHlLSd9jHo0QE psql:*)"
     ],
     "deny": [],
     "ask": []
