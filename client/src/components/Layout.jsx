@@ -160,8 +160,8 @@ const Layout = () => {
                 </svg>
               </button>
 
-              {/* Search Box - Center (hidden on specific pages) */}
-              {!location.pathname.match(/^\/(admin\/?$|admin\/orders|admin\/buyer-overview|settings)/) && (
+              {/* Search Box - Center (only shown on specific pages) */}
+              {location.pathname.match(/^\/(products|admin\/products|admin\/vendors|admin\/users|admin\/manage-admins)/) && (
                 <div className="flex-1 max-w-2xl mx-auto">
                   <div className="relative">
                     <svg
@@ -188,7 +188,7 @@ const Layout = () => {
                   </div>
                 </div>
               )}
-              {location.pathname.match(/^\/(admin\/?$|admin\/orders|admin\/buyer-overview|settings)/) && (
+              {!location.pathname.match(/^\/(products|admin\/products|admin\/vendors|admin\/users|admin\/manage-admins)/) && (
                 <div className="flex-1"></div>
               )}
 
