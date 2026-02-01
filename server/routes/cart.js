@@ -14,7 +14,7 @@ router.get('/', authenticate, async (req, res) => {
 
     const result = await query(
       `SELECT * FROM orders
-       WHERE user_id = $1 AND status = 'in_cart'
+       WHERE user_id = $1 AND status = 'ongoing'
        ORDER BY cart_created_at DESC`,
       [userId]
     );
@@ -106,7 +106,7 @@ router.post('/add', authenticate, async (req, res) => {
     // Check if this exact product is already in the user's cart
     const existingResult = await query(
       `SELECT * FROM orders
-       WHERE user_id = $1 AND product_id = $2 AND status = 'in_cart'
+       WHERE user_id = $1 AND product_id = $2 AND status = 'ongoing'
        LIMIT 1`,
       [userId, product_id]
     );
@@ -172,7 +172,7 @@ router.post('/add', authenticate, async (req, res) => {
           status, cart_created_at,
           unavailable_action, replacement_product_id, replacement_product_name,
           is_split_case, case_pack, minimum_units, case_minimum, minimum_cost, product_image
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'in_cart', CURRENT_TIMESTAMP, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'ongoing', CURRENT_TIMESTAMP, $12, $13, $14, $15, $16, $17, $18, $19, $20)
         RETURNING *`,
         [
           userId,
@@ -238,9 +238,9 @@ router.patch('/:id', authenticate, async (req, res) => {
 
     console.log(`📝 Updating cart item ${cartItemId} for user ${userId}`);
 
-    // Verify item belongs to user and is in cart (status='in_cart')
+    // Verify item belongs to user and is in cart (status='ongoing')
     const checkResult = await query(
-      'SELECT * FROM orders WHERE id = $1 AND user_id = $2 AND status = \'in_cart\'',
+      'SELECT * FROM orders WHERE id = $1 AND user_id = $2 AND status = \'ongoing\'',
       [cartItemId, userId]
     );
 
@@ -319,7 +319,7 @@ router.delete('/:id', authenticate, async (req, res) => {
     console.log(`🗑️  Removing cart item ${cartItemId} for user ${userId}`);
 
     const result = await query(
-      'DELETE FROM orders WHERE id = $1 AND user_id = $2 AND status = \'in_cart\' RETURNING *',
+      'DELETE FROM orders WHERE id = $1 AND user_id = $2 AND status = \'ongoing\' RETURNING *',
       [cartItemId, userId]
     );
 
@@ -356,7 +356,7 @@ router.delete('/clear/all', authenticate, async (req, res) => {
     console.log(`🗑️  Clearing cart for user ${userId}`);
 
     const result = await query(
-      'DELETE FROM orders WHERE user_id = $1 AND status = \'in_cart\' RETURNING id',
+      'DELETE FROM orders WHERE user_id = $1 AND status = \'ongoing\' RETURNING id',
       [userId]
     );
 

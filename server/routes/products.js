@@ -1021,10 +1021,27 @@ router.get('/:id/similar', authenticate, async (req, res) => {
     const product = productResult.rows[0];
     let similarProducts = [];
 
-    // Build vendor filter condition
-    const vendorCondition = onlySameVendor
-      ? 'AND p.vendor_connect_id = $4'
-      : 'AND p.vendor_connect_id != $4';
+    // Build vendor filter condition - handle NULL vendor_connect_id
+    let vendorCondition, vendorParams;
+    if (onlySameVendor) {
+      // Same vendor: match by vendor_name as fallback if vendor_connect_id is null
+      if (product.vendor_connect_id) {
+        vendorCondition = 'AND (p.vendor_connect_id = $4 OR (p.vendor_connect_id IS NULL AND p.vendor_name = $5))';
+        vendorParams = [product.vendor_connect_id, product.vendor_name];
+      } else {
+        vendorCondition = 'AND p.vendor_name = $4';
+        vendorParams = [product.vendor_name];
+      }
+    } else {
+      // Other vendors: exclude current vendor by vendor_name
+      if (product.vendor_connect_id) {
+        vendorCondition = 'AND p.vendor_connect_id != $4 AND (p.vendor_connect_id IS NOT NULL OR p.vendor_name != $5)';
+        vendorParams = [product.vendor_connect_id, product.vendor_name];
+      } else {
+        vendorCondition = 'AND p.vendor_name != $4';
+        vendorParams = [product.vendor_name];
+      }
+    }
 
     // Try to find products with same sub_category first
     if (product.sub_category) {
@@ -1035,7 +1052,7 @@ router.get('/:id/similar', authenticate, async (req, res) => {
          WHERE p.sub_category = $1 AND p.id != $2 ${vendorCondition}
          ORDER BY p.product_name ASC
          LIMIT $3`,
-        [product.sub_category, id, parseInt(limit), product.vendor_connect_id]
+        [product.sub_category, id, parseInt(limit), ...vendorParams]
       );
       similarProducts = subCategoryResult.rows;
     }
@@ -1049,7 +1066,7 @@ router.get('/:id/similar', authenticate, async (req, res) => {
          WHERE p.main_category = $1 AND p.id != $2 ${vendorCondition}
          ORDER BY p.product_name ASC
          LIMIT $3`,
-        [product.main_category, id, parseInt(limit), product.vendor_connect_id]
+        [product.main_category, id, parseInt(limit), ...vendorParams]
       );
       similarProducts = mainCategoryResult.rows;
     }

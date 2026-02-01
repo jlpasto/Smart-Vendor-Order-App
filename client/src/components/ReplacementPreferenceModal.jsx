@@ -33,13 +33,21 @@ const ReplacementPreferenceModal = ({ item, isOpen, onClose, onSave }) => {
         setLoadingSimilar(true);
         try {
           const sameVendorOnly = unavailableAction === 'replace_same_vendor';
+          console.log('🔍 Fetching similar products:', {
+            productId: item.id,
+            unavailableAction,
+            sameVendorOnly,
+            itemData: item
+          });
           const response = await api.get(`/api/products/${item.id}/similar`, {
             params: {
               limit: 10,
               sameVendorOnly
             }
           });
+          console.log('📦 Similar products response:', response.data);
           const products = response.data.similarProducts || [];
+          console.log('✅ Similar products found:', products.length);
           setSimilarProducts(products);
 
           // If we had a replacement_product_id, try to find it in the similar products
@@ -50,7 +58,18 @@ const ReplacementPreferenceModal = ({ item, isOpen, onClose, onSave }) => {
             }
           }
         } catch (error) {
-          console.error('Error fetching similar products:', error);
+          console.error('❌ Error fetching similar products:', error);
+          console.error('Error details:', {
+            message: error.message,
+            response: error.response?.data,
+            status: error.response?.status,
+            requestedProductId: item?.id,
+            itemDetails: item
+          });
+          // Show helpful error if product not found
+          if (error.response?.status === 404) {
+            console.warn('⚠️ Product not found in database. This cart item may reference a deleted product.');
+          }
           setSimilarProducts([]);
         } finally {
           setLoadingSimilar(false);

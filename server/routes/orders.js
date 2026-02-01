@@ -265,7 +265,7 @@ router.post('/submit', authenticate, async (req, res) => {
         `SELECT * FROM orders
          WHERE id IN (${placeholders})
            AND user_id = $1
-           AND status = 'in_cart'`,
+           AND status = 'ongoing'`,
         [userId, ...cartItemIds]
       );
 
@@ -412,7 +412,7 @@ router.post('/submit', authenticate, async (req, res) => {
       console.log(`💾 Inserting order into database... (product_id: ${productId})`);
       const result = await query(
         `INSERT INTO orders (
-          batch_order_number, product_id, product_name, vendor_id, vendor_name,
+          batch_order_number, product_id, product_name, vendor_connect_id, vendor_name,
           quantity, amount, pricing_mode, unit_price, case_price,
           status, user_email, user_id, date_submitted,
           unavailable_action, replacement_product_id, replacement_product_name, replacement_vendor_name
