@@ -267,13 +267,13 @@ const AdminOrders = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <h1 className="page-title mb-6">Manage Orders</h1>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <h1 className="text-2xl font-display font-bold text-gray-900 mb-4">Manage Orders</h1>
 
       {/* Pre-applied filter notification */}
       {filters.userEmail && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-          <p className="text-blue-800 text-sm">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+          <p className="text-blue-800 text-xs">
             <strong>📊 Filtered by buyer:</strong> {filters.userName || filters.userEmail.split('@')[0]} ({filters.userEmail})
             {filters.startDate && filters.endDate && (
               <span> | <strong>Date range:</strong> {filters.startDate} to {filters.endDate}</span>
@@ -283,15 +283,15 @@ const AdminOrders = () => {
       )}
 
       {/* Filters */}
-      <div className="card mb-8">
-        <h2 className="text-lg font-semibold mb-3">Filters</h2>
-        <div className="grid md:grid-cols-4 gap-4">
+      <div className="card mb-6 p-4">
+        <h2 className="text-base font-semibold mb-2">Filters</h2>
+        <div className="grid md:grid-cols-4 gap-3">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Buyer</label>
+            <label className="block text-xs font-semibold text-gray-700 mb-1">Buyer</label>
             <select
               value={filters.buyer}
               onChange={(e) => handleFilterChange('buyer', e.target.value)}
-              className="select"
+              className="select text-sm py-1.5 px-2"
             >
               <option value="">All Buyers</option>
               {buyers.map(buyer => (
@@ -301,11 +301,11 @@ const AdminOrders = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Status</label>
+            <label className="block text-xs font-semibold text-gray-700 mb-1">Status</label>
             <select
               value={filters.status}
               onChange={(e) => handleFilterChange('status', e.target.value)}
-              className="select"
+              className="select text-sm py-1.5 px-2"
             >
               <option value="">All Statuses</option>
               <option value="pending">Pending</option>
@@ -316,43 +316,43 @@ const AdminOrders = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Start Date</label>
+            <label className="block text-xs font-semibold text-gray-700 mb-1">Start Date</label>
             <input
               type="date"
               value={filters.startDate}
               onChange={(e) => handleFilterChange('startDate', e.target.value)}
-              className="input"
+              className="input text-sm py-1.5 px-2"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">End Date</label>
+            <label className="block text-xs font-semibold text-gray-700 mb-1">End Date</label>
             <input
               type="date"
               value={filters.endDate}
               onChange={(e) => handleFilterChange('endDate', e.target.value)}
-              className="input"
+              className="input text-sm py-1.5 px-2"
             />
           </div>
         </div>
 
-        <button onClick={clearFilters} className="btn-secondary mt-4">
+        <button onClick={clearFilters} className="btn-secondary mt-3 px-3 py-1.5 text-sm">
           Clear All Filters
         </button>
       </div>
 
       {/* Orders Count */}
-      <p className="text-xl text-gray-700 mb-6">
+      <p className="text-sm text-gray-700 mb-4">
         Showing <strong>{orders.length}</strong> orders in <strong>{Object.keys(groupedOrders).length}</strong> batches
       </p>
 
       {/* Orders List - Grouped by Batch */}
       {Object.keys(groupedOrders).length === 0 ? (
-        <div className="card text-center py-12">
-          <p className="text-2xl text-gray-600">No orders found</p>
+        <div className="card text-center py-8 p-4">
+          <p className="text-lg text-gray-600">No orders found</p>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {Object.entries(groupedOrders).map(([batchNumber, batchOrders]) => {
             const batchTotal = batchOrders.reduce((sum, order) => sum + parseFloat(order.amount), 0);
             const batchStatus = batchOrders[0].status;
@@ -372,19 +372,19 @@ const AdminOrders = () => {
               : batchNumber;
 
             return (
-              <div key={batchNumber} className="card">
+              <div key={batchNumber} className="card p-4">
                 {/* Batch Header */}
-                <div className="bg-gray-50 -m-6 p-6 rounded-t-xl mb-6">
-                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div className="bg-gray-50 -m-4 p-4 rounded-t-xl mb-4">
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <button
                           onClick={() => toggleBatchExpansion(batchNumber)}
-                          className="p-1 hover:bg-gray-200 rounded transition-colors"
+                          className="p-0.5 hover:bg-gray-200 rounded transition-colors"
                           title={isExpanded ? "Collapse batch" : "Expand batch"}
                         >
                           <svg
-                            className={`w-5 h-5 text-gray-600 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                            className={`w-4 h-4 text-gray-600 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -392,19 +392,19 @@ const AdminOrders = () => {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                           </svg>
                         </button>
-                        <h3 className="text-lg font-bold text-gray-900">{displayBatchName}</h3>
+                        <h3 className="text-base font-bold text-gray-900">{displayBatchName}</h3>
                         {isInCart && (
-                          <span className="px-2 py-0.5 bg-blue-100 border border-blue-400 text-blue-800 text-xs font-bold rounded-full">
+                          <span className="px-1.5 py-0.5 bg-blue-100 border border-blue-400 text-blue-800 text-[10px] font-bold rounded-full">
                             🛒 In Cart
                           </span>
                         )}
                         {hasModifications && !isInCart && (
-                          <span className="px-2 py-0.5 bg-yellow-100 border border-yellow-400 text-yellow-800 text-xs font-bold rounded-full">
+                          <span className="px-1.5 py-0.5 bg-yellow-100 border border-yellow-400 text-yellow-800 text-[10px] font-bold rounded-full">
                             ✏️ Modified ({totalModifications} {totalModifications === 1 ? 'change' : 'changes'})
                           </span>
                         )}
                       </div>
-                      <div className="flex flex-wrap gap-2 text-sm text-gray-600">
+                      <div className="flex flex-wrap gap-2 text-xs text-gray-600">
                         <span>👤 {customerEmail}</span>
                         <span>📅 {batchDate ? new Date(batchDate).toLocaleDateString() : 'N/A'}</span>
                         <span>📦 {batchOrders.length} items</span>
@@ -431,7 +431,7 @@ const AdminOrders = () => {
                 {/* Batch Items - Only show when expanded */}
                 {isExpanded && (
                   <>
-                    <div className="space-y-3 mb-6">
+                    <div className="space-y-2 mb-4">
                       {batchOrders.map(order => {
                     const isEditing = isInEditMode && editingOrderId === order.id;
 
@@ -445,61 +445,61 @@ const AdminOrders = () => {
                             adminEmail={localStorage.getItem('userEmail')}
                           />
                         ) : (
-                          <div className={`flex justify-between items-center bg-gray-50 p-4 rounded-lg ${
+                          <div className={`flex justify-between items-center bg-gray-50 p-3 rounded-lg ${
                             order.modified_by_admin ? 'border-2 border-yellow-300' : ''
                           }`}>
                             <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <p className="font-semibold text-gray-900">{order.product_name}</p>
+                              <div className="flex items-center gap-2 mb-0.5">
+                                <p className="font-semibold text-sm text-gray-900">{order.product_name}</p>
                                 {order.modified_by_admin && (
-                                  <span className="px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs font-bold rounded">
+                                  <span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-800 text-[10px] font-bold rounded">
                                     Modified
                                   </span>
                                 )}
                               </div>
-                              <p className="text-gray-600 text-sm">
+                              <p className="text-gray-600 text-xs">
                                 {order.vendor_name && `Vendor: ${order.vendor_name} | `}
                                 Quantity: {order.quantity} |
                                 Mode: {order.pricing_mode === 'unit' ? 'By Unit' : 'By Case'}
                               </p>
                               {order.admin_notes && (
-                                <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
+                                <div className="mt-1.5 p-1.5 bg-blue-50 border border-blue-200 rounded text-[10px]">
                                   <span className="font-semibold text-blue-900">Note: </span>
                                   <span className="text-gray-700">{order.admin_notes}</span>
                                 </div>
                               )}
                             </div>
-                            <div className="flex items-center gap-4">
-                              <p className="text-xl font-bold text-primary-600">
+                            <div className="flex items-center gap-3">
+                              <p className="text-base font-bold text-primary-600">
                                 ${parseFloat(order.amount).toFixed(2)}
                               </p>
 
                               {isInEditMode && (
-                                <div className="flex gap-2">
+                                <div className="flex gap-1.5">
                                   <button
                                     onClick={() => handleEditOrder(order.id)}
-                                    className="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                                    className="p-1.5 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
                                     title="Edit item"
                                   >
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                     </svg>
                                   </button>
                                   <button
                                     onClick={() => handleViewOrderHistory(order.id)}
-                                    className="p-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+                                    className="p-1.5 bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors"
                                     title="View history"
                                   >
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
                                   </button>
                                   <button
                                     onClick={() => handleDeleteOrder(order.id)}
-                                    className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                                    className="p-1.5 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
                                     title="Remove item"
                                   >
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                     </svg>
                                   </button>
@@ -515,10 +515,10 @@ const AdminOrders = () => {
 
                     {/* Actions */}
                     {batchStatus === 'completed' || batchStatus === 'cancelled' ? (
-                      <div className={`border rounded-lg p-4 ${
+                      <div className={`border rounded-lg p-3 ${
                         batchStatus === 'completed' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
                       }`}>
-                        <p className={`text-sm ${
+                        <p className={`text-xs ${
                           batchStatus === 'completed' ? 'text-green-800' : 'text-red-800'
                         }`}>
                           <strong>🔒 {batchStatus === 'completed' ? 'Completed' : 'Cancelled'} Order:</strong> This order has been finalized and cannot be edited.
@@ -526,16 +526,16 @@ const AdminOrders = () => {
                         </p>
                         <button
                           onClick={() => handleViewBatchHistory(batchNumber)}
-                          className="btn-secondary mt-3"
+                          className="btn-secondary mt-2 px-3 py-1.5 text-sm"
                         >
                           📜 View Order History
                         </button>
                       </div>
                     ) : (
-                      <div className="flex flex-wrap gap-3">
+                      <div className="flex flex-wrap gap-2">
                         <button
                           onClick={() => toggleEditMode(batchNumber)}
-                          className={`btn-primary ${isInEditMode ? 'bg-gray-600 hover:bg-gray-700' : ''}`}
+                          className={`btn-primary px-3 py-1.5 text-sm ${isInEditMode ? 'bg-gray-600 hover:bg-gray-700' : ''}`}
                         >
                           {isInEditMode ? '✓ Exit Edit Mode' : '✏️ Edit Order'}
                         </button>
@@ -544,13 +544,13 @@ const AdminOrders = () => {
                           <>
                             <button
                               onClick={() => handleOpenAddItem(batchNumber)}
-                              className="btn-primary bg-green-600 hover:bg-green-700"
+                              className="btn-primary px-3 py-1.5 text-sm bg-green-600 hover:bg-green-700"
                             >
                               ➕ Add Item
                             </button>
                             <button
                               onClick={() => handleViewBatchHistory(batchNumber)}
-                              className="btn-primary bg-purple-600 hover:bg-purple-700"
+                              className="btn-primary px-3 py-1.5 text-sm bg-purple-600 hover:bg-purple-700"
                             >
                               📜 View Batch History
                             </button>
@@ -559,7 +559,7 @@ const AdminOrders = () => {
 
                         <button
                           onClick={() => openEditModal(batchOrders[0])}
-                          className="btn-secondary"
+                          className="btn-secondary px-3 py-1.5 text-sm"
                         >
                           Update Status & Add Note
                         </button>
@@ -576,21 +576,21 @@ const AdminOrders = () => {
       {/* Edit Status Modal */}
       {editingOrder && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl max-w-2xl w-full p-8">
-            <h2 className="text-3xl font-bold text-gray-900 mb-6">Update Order Status</h2>
+          <div className="bg-white rounded-xl max-w-2xl w-full p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Update Order Status</h2>
 
-            <div className="space-y-6">
+            <div className="space-y-4">
               <div>
-                <p className="text-gray-600 mb-2">
+                <p className="text-gray-600 text-sm mb-1">
                   <strong>Batch:</strong> {editingOrder.batch_order_number}
                 </p>
-                <p className="text-gray-600">
+                <p className="text-gray-600 text-sm">
                   <strong>Customer:</strong> {editingOrder.user_email}
                 </p>
               </div>
 
               <div>
-                <label className="block text-lg font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
                   New Status
                 </label>
                 <select
@@ -612,30 +612,30 @@ const AdminOrders = () => {
               </div>
 
               <div>
-                <label className="block text-lg font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Admin Notes (visible to customer)
                 </label>
                 <textarea
                   value={adminNotes}
                   onChange={(e) => setAdminNotes(e.target.value)}
-                  rows="4"
-                  className="input"
+                  rows="3"
+                  className="input text-sm"
                   placeholder="Add notes for the customer..."
                 />
               </div>
 
-              <div className="flex gap-4">
+              <div className="flex gap-3">
                 <button
                   onClick={handleUpdateStatus}
                   disabled={updating}
-                  className="btn-primary flex-1"
+                  className="btn-primary flex-1 px-4 py-2 text-sm"
                 >
                   {updating ? 'Updating...' : 'Update Status'}
                 </button>
                 <button
                   onClick={closeEditModal}
                   disabled={updating}
-                  className="btn-secondary flex-1"
+                  className="btn-secondary flex-1 px-4 py-2 text-sm"
                 >
                   Cancel
                 </button>
