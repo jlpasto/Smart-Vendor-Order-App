@@ -86,7 +86,7 @@ const CartPage = () => {
         });
 
         // Show success message
-        alert(`✅ Order submitted successfully!\n\nBatch Number: ${response.data.batchNumber}\n\nYou will receive an email confirmation shortly.`);
+        alert(`✅ Order submitted successfully!\n\nBatch Number: ${response.data.batchNumber}`);
 
         // Clear cart
         clearCart();
@@ -800,11 +800,6 @@ const CartPage = () => {
               Add More Products
             </button>
 
-            <div className="mt-6 p-4 bg-blue-50 border-2 border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-900">
-                <strong>ℹ️ Note:</strong> After submitting, you'll receive an email confirmation with your batch order number.
-              </p>
-            </div>
           </div>
         </div>
       </div>
