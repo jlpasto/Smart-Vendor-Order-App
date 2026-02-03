@@ -113,7 +113,7 @@ const OrderEditForm = ({ order, onSave, onCancel, adminEmail }) => {
   // Helper function to get human-readable replacement preference label
   const getReplacementPreferenceLabel = (action) => {
     const labels = {
-      'curate': 'Curate to replace if sold out',
+      'curate': 'Cureate to replace if sold out',
       'replace_same_vendor': 'Replace with similar item under same vendor',
       'replace_other_vendors': 'Replace with similar item across other vendors',
       'remove': 'Remove it from my order'

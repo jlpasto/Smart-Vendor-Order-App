@@ -177,7 +177,7 @@ const ReplacementPreferenceModal = ({ item, isOpen, onClose, onSave }) => {
               value={unavailableAction}
               onChange={(e) => handleUnavailableActionChange(e.target.value)}
             >
-              <option value="curate">Curate to replace if sold out</option>
+              <option value="curate">Cureate to replace if sold out</option>
               <option value="replace_same_vendor">Replace with similar item under same vendor</option>
               <option value="replace_other_vendors">Replace with similar item across other vendors</option>
               <option value="remove">Remove it from my order</option>
