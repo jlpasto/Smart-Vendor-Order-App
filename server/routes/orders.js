@@ -1,7 +1,7 @@
 import express from 'express';
 import { query } from '../config/database.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
-import { sendOrderConfirmation, sendStatusUpdateEmail, sendSupportNotification } from '../utils/email.js';
+import { sendOrderConfirmation, sendStatusUpdateEmail, sendBatchStatusUpdateEmail, sendSupportNotification } from '../utils/email.js';
 
 const router = express.Router();
 
@@ -657,6 +657,16 @@ router.patch('/:id/status', authenticate, requireAdmin, async (req, res) => {
 
     const order = result.rows[0];
 
+    // Send email notification to buyer (only for pending, completed, cancelled - not cart items)
+    if (order.user_email && ['pending', 'completed', 'cancelled'].includes(status)) {
+      try {
+        await sendStatusUpdateEmail(order.user_email, order, status, notes);
+      } catch (emailError) {
+        console.error('Failed to send status update email:', emailError);
+        // Don't fail the request if email fails
+      }
+    }
+
     res.json(order);
   } catch (error) {
     console.error('Error updating order status:', error);
@@ -688,9 +698,21 @@ router.patch('/batch/:batchNumber/status', authenticate, requireAdmin, async (re
       return res.status(404).json({ error: 'Batch not found' });
     }
 
+    const orders = result.rows;
+
+    // Send email notification to buyer (only for pending, completed, cancelled - not cart items)
+    if (orders.length > 0 && orders[0].user_email && ['pending', 'completed', 'cancelled'].includes(status)) {
+      try {
+        await sendBatchStatusUpdateEmail(orders[0].user_email, batchNumber, orders, status, notes);
+      } catch (emailError) {
+        console.error('Failed to send batch status update email:', emailError);
+        // Don't fail the request if email fails
+      }
+    }
+
     res.json({
       message: 'Batch status updated successfully',
-      orders: result.rows
+      orders: orders
     });
   } catch (error) {
     console.error('Error updating batch status:', error);
