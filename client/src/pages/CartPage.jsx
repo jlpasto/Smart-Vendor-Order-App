@@ -797,7 +797,7 @@ const CartPage = () => {
               onClick={() => navigate('/products')}
               className="btn-secondary w-full"
             >
-              Continue Shopping
+              Add More Products
             </button>
 
             <div className="mt-6 p-4 bg-blue-50 border-2 border-blue-200 rounded-lg">
