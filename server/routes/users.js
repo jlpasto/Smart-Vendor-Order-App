@@ -254,12 +254,16 @@ router.get('/admins', authenticate, requireSuperAdmin, async (req, res) => {
 // Create admin user (Superadmin only)
 router.post('/admin', authenticate, requireSuperAdmin, async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, role } = req.body;
 
     // Validate required fields
     if (!email) {
       return res.status(400).json({ error: 'Username is required' });
     }
+
+    // Validate role if provided (only admin or superadmin allowed)
+    const validRoles = ['admin', 'superadmin'];
+    const finalRole = role && validRoles.includes(role) ? role : 'admin';
 
     // Check if username already exists (case-insensitive)
     const existingUser = await query('SELECT id FROM users WHERE LOWER(email) = LOWER($1)', [email]);
@@ -277,7 +281,7 @@ router.post('/admin', authenticate, requireSuperAdmin, async (req, res) => {
       `INSERT INTO users (email, password, role)
        VALUES ($1, $2, $3)
        RETURNING id, email, role, created_at`,
-      [email, hashedPassword, 'admin']
+      [email, hashedPassword, finalRole]
     );
 
     // Return the created admin user with the PLAINTEXT password (only in response, not stored)
