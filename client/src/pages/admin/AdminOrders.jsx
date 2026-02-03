@@ -177,25 +177,18 @@ const AdminOrders = () => {
     }
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/orders/${orderId}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      const response = await api.delete(`/api/orders/${orderId}`);
 
-      const data = await response.json();
-
-      if (data.success) {
+      if (response.data.success) {
         alert('Item removed successfully!');
         fetchOrders(); // Refresh orders
       } else {
-        alert(data.message || 'Failed to remove item');
+        alert(response.data.message || response.data.error || 'Failed to remove item');
       }
     } catch (error) {
       console.error('Error deleting order:', error);
-      alert('Failed to remove item from batch');
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Failed to remove item from batch';
+      alert(errorMessage);
     }
   };
 
