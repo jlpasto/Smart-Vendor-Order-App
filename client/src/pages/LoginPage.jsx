@@ -90,7 +90,7 @@ const LoginPage = () => {
                 : 'text-gray-600 hover:text-gray-800'
             }`}
           >
-            Email & Password
+            Name & Password
           </button>
         </div>
 
