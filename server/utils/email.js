@@ -140,7 +140,7 @@ export const sendSupportNotification = async (buyerName, batchNumber, itemCount,
   const transporter = createTransporter();
   if (!transporter) return;
 
-  const supportEmail = process.env.EMAIL_TO || 'support@cureate.co';
+  const supportEmail = 'tin@cureate.co,jhonloydpastorin.030303@gmail.com,support@cureate.co';
 
   try {
     const mailOptions = {
