@@ -54,6 +54,93 @@ function parseCellValue(value) {
   return parseFloat(value) !== 0;
 }
 
+// Get current user's profile (Any authenticated user)
+router.get('/profile', authenticate, async (req, res) => {
+  try {
+    const result = await query(
+      'SELECT id, name, email, access_code, role FROM users WHERE id = $1',
+      [req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error fetching profile:', error);
+    res.status(500).json({ error: 'Error fetching profile' });
+  }
+});
+
+// Update current user's profile (Any authenticated user)
+router.put('/profile', authenticate, async (req, res) => {
+  try {
+    const { name, email, access_code } = req.body;
+    const userId = req.user.id;
+
+    // Build dynamic update query
+    const updates = [];
+    const values = [];
+    let paramCount = 1;
+
+    if (name !== undefined) {
+      updates.push(`name = $${paramCount}`);
+      values.push(name);
+      paramCount++;
+    }
+
+    if (email !== undefined) {
+      // Check if email already exists for another user
+      const existingUser = await query(
+        'SELECT id FROM users WHERE LOWER(email) = LOWER($1) AND id != $2',
+        [email, userId]
+      );
+      if (existingUser.rows.length > 0) {
+        return res.status(400).json({ error: 'Email already exists' });
+      }
+      updates.push(`email = $${paramCount}`);
+      values.push(email);
+      paramCount++;
+    }
+
+    if (access_code !== undefined) {
+      // Check if access code already exists for another user
+      const existingCode = await query(
+        'SELECT id FROM users WHERE UPPER(access_code) = UPPER($1) AND id != $2',
+        [access_code, userId]
+      );
+      if (existingCode.rows.length > 0) {
+        return res.status(400).json({ error: 'Access code already in use' });
+      }
+      updates.push(`access_code = $${paramCount}`);
+      values.push(access_code.toUpperCase());
+      paramCount++;
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    values.push(userId);
+    const result = await query(
+      `UPDATE users SET ${updates.join(', ')}
+       WHERE id = $${paramCount}
+       RETURNING id, name, email, access_code, role`,
+      values
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    res.status(500).json({ error: 'Error updating profile' });
+  }
+});
+
 // Get all buyers (Admin only) - excludes admin and superadmin users
 router.get('/', authenticate, requireSuperAdmin, async (req, res) => {
   try {

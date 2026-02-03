@@ -1,15 +1,18 @@
+import { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useSearch } from '../context/SearchContext';
 import { useSidebar } from '../context/SidebarContext';
 import DemoUserSwitcher from './DemoUserSwitcher';
+import BuyerProfileModal from './BuyerProfileModal';
 
 const Layout = () => {
   const { user, logout, isAdmin, isSuperAdmin } = useAuth();
   const { getCartCount } = useCart();
   const { globalSearchTerm, setGlobalSearchTerm } = useSearch();
   const { sidebarOpen, setSidebarOpen } = useSidebar();
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const cartCount = getCartCount();
@@ -220,9 +223,13 @@ const Layout = () => {
 
                 {/* User Avatar */}
                 <div className="flex items-center space-x-2">
-                  <div className="w-10 h-10 bg-primary-600 rounded-full flex items-center justify-center text-white font-semibold">
+                  <button
+                    onClick={() => setProfileModalOpen(true)}
+                    className="w-10 h-10 bg-primary-600 rounded-full flex items-center justify-center text-white font-semibold hover:bg-primary-700 transition-colors cursor-pointer"
+                    aria-label="Open profile"
+                  >
                     {user?.email?.[0]?.toUpperCase() || 'U'}
-                  </div>
+                  </button>
                   {user && (
                     <button
                       onClick={handleLogout}
@@ -242,6 +249,12 @@ const Layout = () => {
           <Outlet />
         </main>
       </div>
+
+      {/* Profile Modal */}
+      <BuyerProfileModal
+        isOpen={profileModalOpen}
+        onClose={() => setProfileModalOpen(false)}
+      />
     </div>
   );
 };
