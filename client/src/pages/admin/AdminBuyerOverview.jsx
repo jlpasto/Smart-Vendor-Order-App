@@ -239,7 +239,7 @@ export default function AdminBuyerOverview() {
                   onClick={() => toggleSort('name')}
                 >
                   <div className="flex items-center gap-2">
-                    BUYER NAME/EMAIL
+                    BUYER NAME
                     {sortBy === 'name' && (
                       <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
                     )}
@@ -286,12 +286,11 @@ export default function AdminBuyerOverview() {
                           : 'bg-gray-50 hover:bg-gray-100'
                       }`}
                     >
-                      {/* Buyer Name/Email */}
+                      {/* Buyer Name */}
                       <td className="py-3 px-4">
                         <div className="font-medium text-gray-900">
                           {buyer.user_name || buyer.user_email.split('@')[0]}
                         </div>
-                        <div className="text-sm text-gray-500">{buyer.user_email}</div>
                       </td>
 
                       {/* In Cart */}
@@ -362,7 +361,6 @@ export default function AdminBuyerOverview() {
                   <h3 className="font-medium text-gray-900">
                     {buyer.user_name || buyer.user_email.split('@')[0]}
                   </h3>
-                  <p className="text-sm text-gray-500">{buyer.user_email}</p>
                 </div>
 
                 {/* Status Badges */}

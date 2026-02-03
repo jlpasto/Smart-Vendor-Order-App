@@ -130,7 +130,7 @@ const AdminDashboard = () => {
                   <tr key={order.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="py-3 px-4 font-mono text-sm">{order.batch_order_number}</td>
                     <td className="py-3 px-4">{order.product_name}</td>
-                    <td className="py-3 px-4">{order.user_email}</td>
+                    <td className="py-3 px-4">{order.user_name || order.user_email?.split('@')[0] || 'N/A'}</td>
                     <td className="py-3 px-4 font-semibold">${parseFloat(order.amount).toFixed(2)}</td>
                     <td className="py-3 px-4">
                       <span className={`badge ${

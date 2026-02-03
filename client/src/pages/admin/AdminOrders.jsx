@@ -267,7 +267,7 @@ const AdminOrders = () => {
       {filters.userEmail && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
           <p className="text-blue-800 text-xs">
-            <strong>📊 Filtered by buyer:</strong> {filters.userName || filters.userEmail.split('@')[0]} ({filters.userEmail})
+            <strong>📊 Filtered by buyer:</strong> {filters.userName || filters.userEmail.split('@')[0]}
             {filters.startDate && filters.endDate && (
               <span> | <strong>Date range:</strong> {filters.startDate} to {filters.endDate}</span>
             )}
@@ -398,7 +398,7 @@ const AdminOrders = () => {
                         )}
                       </div>
                       <div className="flex flex-wrap gap-2 text-xs text-gray-600">
-                        <span>👤 {customerEmail}</span>
+                        <span>👤 {customerName || customerEmail.split('@')[0]}</span>
                         <span>📅 {batchDate ? new Date(batchDate).toLocaleDateString() : 'N/A'}</span>
                         <span>📦 {batchOrders.length} items</span>
                         <span className="font-semibold text-primary-600">💰 ${batchTotal.toFixed(2)}</span>
@@ -578,7 +578,7 @@ const AdminOrders = () => {
                   <strong>Batch:</strong> {editingOrder.batch_order_number}
                 </p>
                 <p className="text-gray-600 text-sm">
-                  <strong>Customer:</strong> {editingOrder.user_email}
+                  <strong>Customer:</strong> {editingOrder.user_name || editingOrder.user_email?.split('@')[0] || 'N/A'}
                 </p>
               </div>
 
