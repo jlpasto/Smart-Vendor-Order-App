@@ -1044,12 +1044,6 @@ router.delete('/:id', authenticate, requireAdmin, async (req, res) => {
 
     const order = orderResult.rows[0];
 
-    // Check if this is the last item in batch
-    const batchCount = await query('SELECT COUNT(*) as count FROM orders WHERE batch_order_number = $1', [order.batch_order_number]);
-    if (parseInt(batchCount.rows[0].count) === 1) {
-      return res.status(400).json({ error: 'Cannot remove the last item from a batch. Cancel the entire batch instead.' });
-    }
-
     // Log removal before deleting
     await logOrderChange(
       id,
