@@ -932,17 +932,6 @@ const AdminProducts = () => {
               </div>
 
               <div>
-                <label className="block text-lg font-semibold text-gray-700 mb-2">Seasonal and Featured</label>
-                <input
-                  type="text"
-                  value={formData.seasonal_featured || ''}
-                  onChange={(e) => handleInputChange('seasonal_featured', e.target.value)}
-                  className="input"
-                  placeholder="Featured, Seasonal"
-                />
-              </div>
-
-              <div>
                 <label className="block text-lg font-semibold text-gray-700 mb-2">Size</label>
                 <input
                   type="text"
