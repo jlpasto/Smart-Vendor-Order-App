@@ -15,7 +15,7 @@ const FilterFieldList = ({ onSelectField, onClearAll }) => {
     { key: 'sub_categories', label: 'Sub-Category', icon: '📁', type: 'checkbox' },
     { key: 'allergens', label: 'Allergens', icon: '⚠️', type: 'checkbox' },
     { key: 'dietary_preferences', label: 'Dietary Preferences', icon: '🥗', type: 'checkbox' },
-    { key: 'cuisine_type', label: 'Cuisine Type', icon: '🍽️', type: 'dropdown' },
+    { key: 'cuisine_type', label: 'Cuisine Type', icon: '🍽️', type: 'checkbox' },
     { key: 'seasonal_featured', label: 'Seasonal and Featured', icon: '⭐', type: 'dropdown' },
     { key: 'size', label: 'Size', icon: '📏', type: 'text' },
     { key: 'case_pack', label: 'Case Pack', icon: '📦', type: 'range' },

@@ -25,7 +25,6 @@ export const FilterProvider = ({ children }) => {
 
     // Dropdown filters
     state: '',
-    cuisine_type: '',
     seasonal_featured: '',
 
     // Multi-select filters
@@ -34,6 +33,7 @@ export const FilterProvider = ({ children }) => {
     sub_categories: [],
     allergens: [],
     dietary_preferences: [],
+    cuisine_type: [],
 
     // Range filters
     case_pack_min: '',
@@ -86,13 +86,13 @@ export const FilterProvider = ({ children }) => {
       delivery_info: '',
       notes: '',
       state: '',
-      cuisine_type: '',
       seasonal_featured: '',
       vendor: [],
       main_categories: [],
       sub_categories: [],
       allergens: [],
       dietary_preferences: [],
+      cuisine_type: [],
       case_pack_min: '',
       case_pack_max: '',
       price_min: '',

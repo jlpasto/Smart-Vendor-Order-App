@@ -531,9 +531,11 @@ const AdminProducts = () => {
     if (filters.main_categories?.length > 0 && !filters.main_categories.includes(product.main_category)) return false;
     if (filters.sub_categories?.length > 0 && !filters.sub_categories.includes(product.sub_category)) return false;
 
+    // Multi-select filter
+    if (filters.cuisine_type?.length > 0 && !filters.cuisine_type.includes(product.cuisine_type)) return false;
+
     // Dropdown filters
     if (filters.state && product.state !== filters.state) return false;
-    if (filters.cuisine_type && product.cuisine_type !== filters.cuisine_type) return false;
     if (filters.seasonal_featured && product.seasonal_featured !== filters.seasonal_featured) return false;
 
     if (filters.allergens?.length > 0) {

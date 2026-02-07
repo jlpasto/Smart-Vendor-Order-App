@@ -166,9 +166,18 @@ router.get('/export', authenticate, requireSuperAdmin, async (req, res) => {
     }
 
     if (cuisine_type) {
-      queryText += ` AND cuisine_type = $${paramCount}`;
-      queryParams.push(cuisine_type);
-      paramCount++;
+      try {
+        const cuisineArray = JSON.parse(cuisine_type);
+        if (Array.isArray(cuisineArray) && cuisineArray.length > 0) {
+          queryText += ` AND cuisine_type = ANY($${paramCount})`;
+          queryParams.push(cuisineArray);
+          paramCount++;
+        }
+      } catch (e) {
+        queryText += ` AND cuisine_type = $${paramCount}`;
+        queryParams.push(cuisine_type);
+        paramCount++;
+      }
     }
 
     if (seasonal_featured) {
@@ -510,9 +519,18 @@ router.get('/', authenticate, async (req, res) => {
     }
 
     if (cuisine_type) {
-      queryText += ` AND p.cuisine_type = $${paramCount}`;
-      queryParams.push(cuisine_type);
-      paramCount++;
+      try {
+        const cuisineArray = JSON.parse(cuisine_type);
+        if (Array.isArray(cuisineArray) && cuisineArray.length > 0) {
+          queryText += ` AND p.cuisine_type = ANY($${paramCount})`;
+          queryParams.push(cuisineArray);
+          paramCount++;
+        }
+      } catch (e) {
+        queryText += ` AND p.cuisine_type = $${paramCount}`;
+        queryParams.push(cuisine_type);
+        paramCount++;
+      }
     }
 
     if (seasonal_featured) {
@@ -828,9 +846,18 @@ router.get('/ids', authenticate, requireSuperAdmin, async (req, res) => {
     }
 
     if (cuisine_type) {
-      queryText += ` AND cuisine_type = $${paramCount}`;
-      queryParams.push(cuisine_type);
-      paramCount++;
+      try {
+        const cuisineArray = JSON.parse(cuisine_type);
+        if (Array.isArray(cuisineArray) && cuisineArray.length > 0) {
+          queryText += ` AND cuisine_type = ANY($${paramCount})`;
+          queryParams.push(cuisineArray);
+          paramCount++;
+        }
+      } catch (e) {
+        queryText += ` AND cuisine_type = $${paramCount}`;
+        queryParams.push(cuisine_type);
+        paramCount++;
+      }
     }
 
     if (seasonal_featured) {
