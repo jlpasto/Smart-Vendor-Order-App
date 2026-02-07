@@ -757,7 +757,7 @@ const AdminProducts = () => {
                 <td className="py-3 px-4">{product.main_category || product.category || '-'}</td>
                 <td className="py-3 px-4">
                   <p className="font-semibold">${parseFloat(product.wholesale_case_price || 0).toFixed(2)}</p>
-                  <p className="text-sm text-gray-600">GM: {parseFloat(product.gm_percent || 0).toFixed(1)}%</p>
+                  <p className="text-sm text-gray-600">GM: {parseFloat(product.wholesale_unit_price) > 0 ? (((parseFloat(product.retail_unit_price || 0) - parseFloat(product.wholesale_unit_price)) / parseFloat(product.wholesale_unit_price)) * 100).toFixed(1) : '0.0'}%</p>
                 </td>
                 <td className="py-3 px-4">
                   <span className={product.stock_level > 100 ? 'text-green-600' : 'text-amber-600'}>
@@ -967,14 +967,16 @@ const AdminProducts = () => {
               </div>
 
               <div>
-                <label className="block text-lg font-semibold text-gray-700 mb-2">GM%</label>
+                <label className="block text-lg font-semibold text-gray-700 mb-2">GM% <span className="text-sm font-normal text-gray-500">(auto-calculated)</span></label>
                 <input
-                  type="number"
-                  step="0.01"
-                  value={formData.gm_percent || ''}
-                  onChange={(e) => handleInputChange('gm_percent', e.target.value)}
-                  className="input"
-                  placeholder="Calculated automatically"
+                  type="text"
+                  value={
+                    parseFloat(formData.wholesale_unit_price) > 0
+                      ? `${(((parseFloat(formData.retail_unit_price || 0) - parseFloat(formData.wholesale_unit_price)) / parseFloat(formData.wholesale_unit_price)) * 100).toFixed(2)}%`
+                      : '0.00%'
+                  }
+                  readOnly
+                  className="input bg-gray-100 cursor-not-allowed"
                 />
               </div>
 

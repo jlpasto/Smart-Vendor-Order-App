@@ -454,7 +454,7 @@ const ProductsPage = () => {
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-500">GM:</span>
-                          <span className="font-semibold text-green-600">{parseFloat(product.gm_percent || 0).toFixed(1)}%</span>
+                          <span className="font-semibold text-green-600">{parseFloat(product.wholesale_unit_price) > 0 ? (((parseFloat(product.retail_unit_price || 0) - parseFloat(product.wholesale_unit_price)) / parseFloat(product.wholesale_unit_price)) * 100).toFixed(1) : '0.0'}%</span>
                         </div>
                       </div>
 
@@ -549,7 +549,7 @@ const ProductsPage = () => {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">GM:</span>
-                    <span className="font-semibold text-green-600">{parseFloat(product.gm_percent || 0).toFixed(1)}%</span>
+                    <span className="font-semibold text-green-600">{parseFloat(product.wholesale_unit_price) > 0 ? (((parseFloat(product.retail_unit_price || 0) - parseFloat(product.wholesale_unit_price)) / parseFloat(product.wholesale_unit_price)) * 100).toFixed(1) : '0.0'}%</span>
                   </div>
                 </div>
 

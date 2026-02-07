@@ -186,6 +186,27 @@ export const initDatabase = async () => {
       END $$;
     `);
 
+    // Migration: Fix gm_percent to be a proper generated column
+    await query(`
+      DO $$
+      BEGIN
+        -- Check if gm_percent exists but is NOT a generated column
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name='products' AND column_name='gm_percent' AND is_generated = 'NEVER'
+        ) THEN
+          ALTER TABLE products DROP COLUMN gm_percent;
+          ALTER TABLE products ADD COLUMN gm_percent DECIMAL(5, 2) GENERATED ALWAYS AS (
+            CASE
+              WHEN wholesale_unit_price > 0 THEN
+                ((retail_unit_price - wholesale_unit_price) / wholesale_unit_price * 100)
+              ELSE 0
+            END
+          ) STORED;
+        END IF;
+      END $$;
+    `);
+
     // Create Orders table
     await query(`
       CREATE TABLE IF NOT EXISTS orders (
