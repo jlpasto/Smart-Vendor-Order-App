@@ -124,12 +124,13 @@ const AdminOrders = () => {
 
     setUpdating(true);
     try {
-      await api.patch(`/api/orders/${editingOrder.id}/status`, {
+      // Update all orders in the batch, not just the single item
+      await api.patch(`/api/orders/batch/${editingOrder.batch_order_number}/status`, {
         status: newStatus,
         notes: adminNotes
       });
 
-      alert('Order status updated successfully!');
+      alert('Batch status updated successfully!');
       closeEditModal();
       fetchOrders();
     } catch (error) {

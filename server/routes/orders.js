@@ -90,7 +90,13 @@ router.get('/my-batches', authenticate, async (req, res) => {
       SELECT
         batch_order_number,
         MIN(date_submitted) as date_submitted,
-        MAX(status) as status,
+        CASE
+          WHEN COUNT(CASE WHEN status = 'cancelled' THEN 1 END) = COUNT(*) THEN 'cancelled'
+          WHEN COUNT(CASE WHEN status = 'completed' THEN 1 END) = COUNT(*) THEN 'completed'
+          WHEN COUNT(CASE WHEN status = 'in_cart' THEN 1 END) = COUNT(*) THEN 'in_cart'
+          WHEN COUNT(CASE WHEN status = 'completed' THEN 1 END) > 0 THEN 'completed'
+          ELSE 'pending'
+        END as status,
         MAX(notes) as notes,
         SUM(amount) as total_amount,
         COUNT(*) as item_count
