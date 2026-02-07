@@ -8,6 +8,7 @@ import { useFilter } from '../../context/FilterContext';
 import FilterIcon from '../../components/FilterIcon';
 import FilterModal from '../../components/FilterModal';
 import FilterDetailPanel from '../../components/FilterDetailPanel';
+import ComboBoxInput from '../../components/ComboBoxInput';
 
 const AdminProducts = () => {
   const [products, setProducts] = useState([]);
@@ -43,8 +44,39 @@ const AdminProducts = () => {
   const [sortField, setSortField] = useState('vendor_name');
   const [sortOrder, setSortOrder] = useState('asc');
 
+  // Dropdown options for combobox fields
+  const [dropdownOptions, setDropdownOptions] = useState({
+    main_category: [],
+    sub_category: [],
+    allergens: [],
+    dietary_preferences: [],
+    cuisine_type: [],
+  });
+
+  const fetchDropdownOptions = async () => {
+    try {
+      const [categories, subCategories, allergensList, dietaryList, cuisineList] = await Promise.all([
+        api.get('/api/products/filters/main-categories'),
+        api.get('/api/products/filters/sub-categories'),
+        api.get('/api/products/filters/allergens'),
+        api.get('/api/products/filters/dietary-preferences'),
+        api.get('/api/products/filters/cuisine-types'),
+      ]);
+      setDropdownOptions({
+        main_category: categories.data || [],
+        sub_category: subCategories.data || [],
+        allergens: allergensList.data || [],
+        dietary_preferences: dietaryList.data || [],
+        cuisine_type: cuisineList.data || [],
+      });
+    } catch (error) {
+      console.error('Error fetching dropdown options:', error);
+    }
+  };
+
   useEffect(() => {
     fetchProducts();
+    fetchDropdownOptions();
   }, [sortField, sortOrder]);
 
   // Reset to first page when search term or filters change
@@ -849,54 +881,53 @@ const AdminProducts = () => {
 
               <div>
                 <label className="block text-lg font-semibold text-gray-700 mb-2">Main Category</label>
-                <input
-                  type="text"
+                <ComboBoxInput
                   value={formData.main_category || ''}
-                  onChange={(e) => handleInputChange('main_category', e.target.value)}
-                  className="input"
+                  onChange={(val) => handleInputChange('main_category', val)}
+                  options={dropdownOptions.main_category}
+                  placeholder="Select or type a category..."
                 />
               </div>
 
               <div>
                 <label className="block text-lg font-semibold text-gray-700 mb-2">Sub-Category</label>
-                <input
-                  type="text"
+                <ComboBoxInput
                   value={formData.sub_category || ''}
-                  onChange={(e) => handleInputChange('sub_category', e.target.value)}
-                  className="input"
+                  onChange={(val) => handleInputChange('sub_category', val)}
+                  options={dropdownOptions.sub_category}
+                  placeholder="Select or type a sub-category..."
                 />
               </div>
 
               <div>
                 <label className="block text-lg font-semibold text-gray-700 mb-2">Allergens</label>
-                <input
-                  type="text"
+                <ComboBoxInput
                   value={formData.allergens || ''}
-                  onChange={(e) => handleInputChange('allergens', e.target.value)}
-                  className="input"
-                  placeholder="Dairy-Free, Gluten-Free"
+                  onChange={(val) => handleInputChange('allergens', val)}
+                  options={dropdownOptions.allergens}
+                  placeholder="Select or type allergens..."
+                  multi
                 />
               </div>
 
               <div>
                 <label className="block text-lg font-semibold text-gray-700 mb-2">Dietary Preferences</label>
-                <input
-                  type="text"
+                <ComboBoxInput
                   value={formData.dietary_preferences || ''}
-                  onChange={(e) => handleInputChange('dietary_preferences', e.target.value)}
-                  className="input"
-                  placeholder="Paleo, Low-Fat"
+                  onChange={(val) => handleInputChange('dietary_preferences', val)}
+                  options={dropdownOptions.dietary_preferences}
+                  placeholder="Select or type preferences..."
+                  multi
                 />
               </div>
 
               <div>
                 <label className="block text-lg font-semibold text-gray-700 mb-2">Cuisine Type</label>
-                <input
-                  type="text"
+                <ComboBoxInput
                   value={formData.cuisine_type || ''}
-                  onChange={(e) => handleInputChange('cuisine_type', e.target.value)}
-                  className="input"
-                  placeholder="American"
+                  onChange={(val) => handleInputChange('cuisine_type', val)}
+                  options={dropdownOptions.cuisine_type}
+                  placeholder="Select or type cuisine type..."
                 />
               </div>
 

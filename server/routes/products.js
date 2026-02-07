@@ -1278,6 +1278,7 @@ router.post('/', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     const {
       product_connect_id,
+      vendor_connect_id,
       vendor_name,
       state,
       product_name,
@@ -1292,8 +1293,19 @@ router.post('/', authenticate, requireSuperAdmin, async (req, res) => {
       stock_level,
       product_image,
       popular,
+      seasonal,
       new: isNew,
       category,
+      main_category,
+      sub_category,
+      allergens,
+      dietary_preferences,
+      cuisine_type,
+      seasonal_featured,
+      case_minimum,
+      shelf_life,
+      delivery_info,
+      notes,
       is_split_case,
       minimum_units,
       minimum_cost
@@ -1301,17 +1313,21 @@ router.post('/', authenticate, requireSuperAdmin, async (req, res) => {
 
     const result = await query(
       `INSERT INTO products (
-        product_connect_id, vendor_name, state, product_name, product_description, size, case_pack,
+        product_connect_id, vendor_connect_id, vendor_name, state, product_name, product_description, size, case_pack,
         upc, wholesale_case_price, wholesale_unit_price, retail_unit_price,
-        order_qty, stock_level, product_image, popular, new, category,
+        order_qty, stock_level, product_image, popular, seasonal, new, category,
+        main_category, sub_category, allergens, dietary_preferences, cuisine_type, seasonal_and_featured,
+        case_minimum, shelf_life, delivery_info, notes,
         is_split_case, minimum_units, minimum_cost
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32)
       RETURNING *`,
       [
-        product_connect_id || null, vendor_name, state, product_name, product_description, size, case_pack || null,
+        product_connect_id || null, vendor_connect_id || null, vendor_name, state, product_name, product_description, size, case_pack || null,
         upc, wholesale_case_price, wholesale_unit_price, retail_unit_price,
         order_qty || 0, stock_level || 0, product_image, popular || false,
-        isNew || false, category,
+        seasonal || false, isNew || false, category,
+        main_category || null, sub_category || null, allergens || null, dietary_preferences || null, cuisine_type || null, seasonal_featured || null,
+        case_minimum || null, shelf_life || null, delivery_info || null, notes || null,
         is_split_case !== undefined ? is_split_case : false,
         minimum_units || null,
         minimum_cost || null
@@ -1331,6 +1347,7 @@ router.put('/:id', authenticate, requireSuperAdmin, async (req, res) => {
     const { id } = req.params;
     const {
       product_connect_id,
+      vendor_connect_id,
       vendor_name,
       state,
       product_name,
@@ -1345,8 +1362,19 @@ router.put('/:id', authenticate, requireSuperAdmin, async (req, res) => {
       stock_level,
       product_image,
       popular,
+      seasonal,
       new: isNew,
       category,
+      main_category,
+      sub_category,
+      allergens,
+      dietary_preferences,
+      cuisine_type,
+      seasonal_featured,
+      case_minimum,
+      shelf_life,
+      delivery_info,
+      notes,
       is_split_case,
       minimum_units,
       minimum_cost
@@ -1354,18 +1382,23 @@ router.put('/:id', authenticate, requireSuperAdmin, async (req, res) => {
 
     const result = await query(
       `UPDATE products SET
-        product_connect_id = $1, vendor_name = $2, state = $3, product_name = $4, product_description = $5,
-        size = $6, case_pack = $7, upc = $8, wholesale_case_price = $9,
-        wholesale_unit_price = $10, retail_unit_price = $11, order_qty = $12,
-        stock_level = $13, product_image = $14, popular = $15, new = $16,
-        category = $17, is_split_case = $18, minimum_units = $19, minimum_cost = $20,
+        product_connect_id = $1, vendor_connect_id = $2, vendor_name = $3, state = $4, product_name = $5, product_description = $6,
+        size = $7, case_pack = $8, upc = $9, wholesale_case_price = $10,
+        wholesale_unit_price = $11, retail_unit_price = $12, order_qty = $13,
+        stock_level = $14, product_image = $15, popular = $16, seasonal = $17, new = $18,
+        category = $19, main_category = $20, sub_category = $21, allergens = $22,
+        dietary_preferences = $23, cuisine_type = $24, seasonal_and_featured = $25,
+        case_minimum = $26, shelf_life = $27, delivery_info = $28, notes = $29,
+        is_split_case = $30, minimum_units = $31, minimum_cost = $32,
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $21
+      WHERE id = $33
       RETURNING *`,
       [
-        product_connect_id || null, vendor_name, state, product_name, product_description, size, case_pack || null,
+        product_connect_id || null, vendor_connect_id || null, vendor_name, state, product_name, product_description, size, case_pack || null,
         upc, wholesale_case_price, wholesale_unit_price, retail_unit_price,
-        order_qty || 0, stock_level || 0, product_image, popular || false, isNew || false, category,
+        order_qty || 0, stock_level || 0, product_image, popular || false, seasonal || false, isNew || false, category,
+        main_category || null, sub_category || null, allergens || null, dietary_preferences || null, cuisine_type || null, seasonal_featured || null,
+        case_minimum || null, shelf_life || null, delivery_info || null, notes || null,
         is_split_case !== undefined ? is_split_case : false,
         minimum_units || null,
         minimum_cost || null,
