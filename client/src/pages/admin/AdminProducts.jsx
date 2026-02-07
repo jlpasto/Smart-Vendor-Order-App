@@ -121,7 +121,7 @@ const AdminProducts = () => {
       retail_unit_price: '',
       order_qty: 0,
       stock_level: 0,
-      product_image: '',
+      product_image: 'https://connect.cureate.co/assets/layout/product_placeholder-bad273c886e8a66164d91ed147868c9189aa626a1c3960a14adcccbac595afa1.png',
       popular: false,
       seasonal: false,
       new: false,
