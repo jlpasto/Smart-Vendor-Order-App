@@ -29,7 +29,11 @@
       "Bash(tree:*)",
       "Bash(dir \"c:\\\\Users\\\\JL\\\\Documents\\\\Smart Vendor Order App\\\\client\\\\.env*\")",
       "Bash(PGPASSWORD=OSambgLFMzfl4TiOQY0EHlLSd9jHo0QE psql:*)",
-      "Bash(set PGPASSWORD=OSambgLFMzfl4TiOQY0EHlLSd9jHo0QE:*)"
+      "Bash(set PGPASSWORD=OSambgLFMzfl4TiOQY0EHlLSd9jHo0QE:*)",
+      "Bash(ls:*)",
+      "Read(//c/Users/JL/Documents/Smart Vendor Order App/**)",
+      "Bash(powershell -Command \"$word = New-Object -ComObject Word.Application; $word.Visible = $false; $doc = $word.Documents.Open\\(''c:\\\\Users\\\\JL\\\\Documents\\\\Smart Vendor Order App\\\\Order_App_User_Stories.docx''\\); $doc.Content.Text; $doc.Close\\(\\); $word.Quit\\(\\)\")",
+      "Bash(powershell -File - <<'PSEOF'\n$word = New-Object -ComObject Word.Application\n$word.Visible = $false\n$doc = $word.Documents.Open\\(\"c:\\\\Users\\\\JL\\\\Documents\\\\Smart Vendor Order App\\\\Order_App_User_Stories.docx\"\\)\nWrite-Output $doc.Content.Text\n$doc.Close\\(\\)\n$word.Quit\\(\\)\nPSEOF)"
     ],
     "deny": [],
     "ask": []
