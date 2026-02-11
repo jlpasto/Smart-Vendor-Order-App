@@ -337,7 +337,7 @@ const ProductDetailModal = ({ product, isOpen, onClose, onNext, onPrev }) => {
               <div className="flex justify-between items-center">
                 <span className="text-gray-700 font-semibold">Gross Margin (GM%):</span>
                 <span className="text-lg font-bold text-green-600">
-                  {parseFloat(product.wholesale_unit_price) > 0 ? (((parseFloat(product.retail_unit_price || 0) - parseFloat(product.wholesale_unit_price)) / parseFloat(product.wholesale_unit_price)) * 100).toFixed(1) : '0.0'}%
+                  {parseFloat(product.retail_unit_price) > 0 ? (((parseFloat(product.retail_unit_price) - parseFloat(product.wholesale_unit_price || 0)) / parseFloat(product.retail_unit_price)) * 100).toFixed(1) : '0.0'}%
                 </span>
               </div>
             </div>

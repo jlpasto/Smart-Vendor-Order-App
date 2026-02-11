@@ -791,7 +791,7 @@ const AdminProducts = () => {
                 <td className="py-3 px-4">{product.main_category || product.category || '-'}</td>
                 <td className="py-3 px-4">
                   <p className="font-semibold">${parseFloat(product.wholesale_case_price || 0).toFixed(2)}</p>
-                  <p className="text-sm text-gray-600">GM: {parseFloat(product.wholesale_unit_price) > 0 ? (((parseFloat(product.retail_unit_price || 0) - parseFloat(product.wholesale_unit_price)) / parseFloat(product.wholesale_unit_price)) * 100).toFixed(1) : '0.0'}%</p>
+                  <p className="text-sm text-gray-600">GM: {parseFloat(product.retail_unit_price) > 0 ? (((parseFloat(product.retail_unit_price) - parseFloat(product.wholesale_unit_price || 0)) / parseFloat(product.retail_unit_price)) * 100).toFixed(1) : '0.0'}%</p>
                 </td>
                 <td className="py-3 px-4">
                   <span className={product.stock_level > 100 ? 'text-green-600' : 'text-amber-600'}>
@@ -993,8 +993,8 @@ const AdminProducts = () => {
                 <input
                   type="text"
                   value={
-                    parseFloat(formData.wholesale_unit_price) > 0
-                      ? `${(((parseFloat(formData.retail_unit_price || 0) - parseFloat(formData.wholesale_unit_price)) / parseFloat(formData.wholesale_unit_price)) * 100).toFixed(2)}%`
+                    parseFloat(formData.retail_unit_price) > 0
+                      ? `${(((parseFloat(formData.retail_unit_price) - parseFloat(formData.wholesale_unit_price || 0)) / parseFloat(formData.retail_unit_price)) * 100).toFixed(2)}%`
                       : '0.00%'
                   }
                   readOnly
