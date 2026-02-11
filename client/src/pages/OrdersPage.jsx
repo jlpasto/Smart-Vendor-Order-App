@@ -99,7 +99,9 @@ const OrdersPage = () => {
     doc.setFontSize(12);
     doc.text(`Batch Number: ${batch.batch_order_number}`, 14, 35);
     doc.text(`Date: ${new Date(batch.date_submitted).toLocaleDateString()}`, 14, 42);
-    doc.text(`Status: ${batch.status.toUpperCase()}`, 14, 49);
+    if (batch.status === 'completed') {
+      doc.text(`Status: ${batch.status.toUpperCase()}`, 14, 49);
+    }
 
     if (batch.notes) {
       doc.setFontSize(10);
@@ -364,9 +366,11 @@ const OrdersPage = () => {
                       </div>
 
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className={getStatusBadge(batch.status)}>
-                          {batch.status.toUpperCase()}
-                        </span>
+                        {batch.status === 'completed' && (
+                          <span className={getStatusBadge(batch.status)}>
+                            {batch.status.toUpperCase()}
+                          </span>
+                        )}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
