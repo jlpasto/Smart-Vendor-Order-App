@@ -25,7 +25,6 @@ export const FilterProvider = ({ children }) => {
 
     // Dropdown filters
     state: '',
-    seasonal_featured: '',
 
     // Multi-select filters
     vendor: [],
@@ -86,7 +85,6 @@ export const FilterProvider = ({ children }) => {
       delivery_info: '',
       notes: '',
       state: '',
-      seasonal_featured: '',
       vendor: [],
       main_categories: [],
       sub_categories: [],

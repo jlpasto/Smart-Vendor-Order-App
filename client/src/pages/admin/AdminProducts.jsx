@@ -568,7 +568,6 @@ const AdminProducts = () => {
 
     // Dropdown filters
     if (filters.state && product.state !== filters.state) return false;
-    if (filters.seasonal_featured && product.seasonal_featured !== filters.seasonal_featured) return false;
 
     if (filters.allergens?.length > 0) {
       const productAllergens = product.allergens?.split(',').map(a => a.trim()) || [];
