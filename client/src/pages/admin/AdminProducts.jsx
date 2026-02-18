@@ -128,7 +128,10 @@ const AdminProducts = () => {
       category: '',
       is_split_case: false,
       minimum_units: '',
-      minimum_cost: ''
+      minimum_cost: '',
+      active: true,
+      active_start_date: '',
+      active_end_date: ''
     });
     setShowModal(true);
   };
@@ -1120,40 +1123,111 @@ const AdminProducts = () => {
                 />
               </div>
 
-              <div>
-                <label className="flex items-center space-x-3">
-                  <input
-                    type="checkbox"
-                    checked={formData.popular || false}
-                    onChange={(e) => handleInputChange('popular', e.target.checked)}
-                    className="w-6 h-6"
-                  />
-                  <span className="text-lg font-semibold text-gray-700">Mark as Featured</span>
-                </label>
-              </div>
+              <div className="md:col-span-2">
+                <div className="flex items-center gap-6 flex-wrap">
+                  <label className="flex items-center space-x-3">
+                    <input
+                      type="checkbox"
+                      checked={formData.popular || false}
+                      onChange={(e) => {
+                        handleInputChange('popular', e.target.checked);
+                        if (!e.target.checked && !formData.seasonal) {
+                          handleInputChange('active_start_date', '');
+                          handleInputChange('active_end_date', '');
+                          handleInputChange('active', true);
+                        }
+                      }}
+                      className="w-6 h-6"
+                    />
+                    <span className="text-lg font-semibold text-gray-700">Mark as Featured</span>
+                  </label>
 
-              <div>
-                <label className="flex items-center space-x-3">
-                  <input
-                    type="checkbox"
-                    checked={formData.seasonal || false}
-                    onChange={(e) => handleInputChange('seasonal', e.target.checked)}
-                    className="w-6 h-6"
-                  />
-                  <span className="text-lg font-semibold text-gray-700">Mark as Seasonal</span>
-                </label>
-              </div>
+                  <label className="flex items-center space-x-3">
+                    <input
+                      type="checkbox"
+                      checked={formData.seasonal || false}
+                      onChange={(e) => {
+                        handleInputChange('seasonal', e.target.checked);
+                        if (!e.target.checked && !formData.popular) {
+                          handleInputChange('active_start_date', '');
+                          handleInputChange('active_end_date', '');
+                          handleInputChange('active', true);
+                        }
+                      }}
+                      className="w-6 h-6"
+                    />
+                    <span className="text-lg font-semibold text-gray-700">Mark as Seasonal</span>
+                  </label>
 
-              <div>
-                <label className="flex items-center space-x-3">
-                  <input
-                    type="checkbox"
-                    checked={formData.new || false}
-                    onChange={(e) => handleInputChange('new', e.target.checked)}
-                    className="w-6 h-6"
-                  />
-                  <span className="text-lg font-semibold text-gray-700">Mark as New</span>
-                </label>
+                  <label className="flex items-center space-x-3">
+                    <input
+                      type="checkbox"
+                      checked={formData.new || false}
+                      onChange={(e) => handleInputChange('new', e.target.checked)}
+                      className="w-6 h-6"
+                    />
+                    <span className="text-lg font-semibold text-gray-700">Mark as New</span>
+                  </label>
+                </div>
+
+                {(formData.popular || formData.seasonal) && (
+                  <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex items-center gap-4 flex-wrap">
+                      <span className="text-sm font-semibold text-gray-600">Active Date Range:</span>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="date"
+                          value={formData.active_start_date || ''}
+                          onChange={(e) => {
+                            handleInputChange('active_start_date', e.target.value);
+                            // Compute active status
+                            const start = e.target.value;
+                            const end = formData.active_end_date;
+                            if (start && end) {
+                              const today = new Date().toISOString().split('T')[0];
+                              handleInputChange('active', today >= start && today <= end);
+                            }
+                          }}
+                          className="input text-sm"
+                        />
+                        <span className="text-gray-500">to</span>
+                        <input
+                          type="date"
+                          value={formData.active_end_date || ''}
+                          onChange={(e) => {
+                            handleInputChange('active_end_date', e.target.value);
+                            // Compute active status
+                            const start = formData.active_start_date;
+                            const end = e.target.value;
+                            if (start && end) {
+                              const today = new Date().toISOString().split('T')[0];
+                              handleInputChange('active', today >= start && today <= end);
+                            }
+                          }}
+                          className="input text-sm"
+                        />
+                      </div>
+                      {formData.active_start_date && formData.active_end_date && (
+                        <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                          (() => {
+                            const today = new Date().toISOString().split('T')[0];
+                            const isActive = today >= formData.active_start_date && today <= formData.active_end_date;
+                            return isActive
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800';
+                          })()
+                        }`}>
+                          {(() => {
+                            const today = new Date().toISOString().split('T')[0];
+                            return today >= formData.active_start_date && today <= formData.active_end_date
+                              ? 'Active'
+                              : 'Inactive';
+                          })()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

@@ -414,6 +414,18 @@ router.get('/', authenticate, async (req, res) => {
       }
     }
 
+    // For non-admin users (buyers), only show active products
+    // Uses dynamic date check so expired seasonal/featured products are hidden in real-time
+    if (req.user && !isAdminRole) {
+      queryText += ` AND (
+        CASE
+          WHEN p.active_start_date IS NOT NULL AND p.active_end_date IS NOT NULL
+          THEN CURRENT_DATE BETWEEN p.active_start_date AND p.active_end_date
+          ELSE COALESCE(p.active, true)
+        END
+      )`;
+    }
+
     // Decode and apply cursor if provided
     if (cursor) {
       const cursorData = decodeCursor(cursor);
@@ -1308,8 +1320,17 @@ router.post('/', authenticate, requireSuperAdmin, async (req, res) => {
       notes,
       is_split_case,
       minimum_units,
-      minimum_cost
+      minimum_cost,
+      active_start_date,
+      active_end_date
     } = req.body;
+
+    // Compute active status based on date range for seasonal/featured products
+    let active = true;
+    if ((popular || seasonal) && active_start_date && active_end_date) {
+      const today = new Date().toISOString().split('T')[0];
+      active = today >= active_start_date && today <= active_end_date;
+    }
 
     const result = await query(
       `INSERT INTO products (
@@ -1318,8 +1339,9 @@ router.post('/', authenticate, requireSuperAdmin, async (req, res) => {
         order_qty, stock_level, product_image, popular, seasonal, new, category,
         main_category, sub_category, allergens, dietary_preferences, cuisine_type, seasonal_and_featured,
         case_minimum, shelf_life, delivery_info, notes,
-        is_split_case, minimum_units, minimum_cost
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32)
+        is_split_case, minimum_units, minimum_cost,
+        active, active_start_date, active_end_date
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35)
       RETURNING *`,
       [
         product_connect_id || null, vendor_connect_id || null, vendor_name, state, product_name, product_description, size, case_pack || null,
@@ -1330,7 +1352,10 @@ router.post('/', authenticate, requireSuperAdmin, async (req, res) => {
         case_minimum || null, shelf_life || null, delivery_info || null, notes || null,
         is_split_case !== undefined ? is_split_case : false,
         minimum_units || null,
-        minimum_cost || null
+        minimum_cost || null,
+        active,
+        active_start_date || null,
+        active_end_date || null
       ]
     );
 
@@ -1377,8 +1402,17 @@ router.put('/:id', authenticate, requireSuperAdmin, async (req, res) => {
       notes,
       is_split_case,
       minimum_units,
-      minimum_cost
+      minimum_cost,
+      active_start_date,
+      active_end_date
     } = req.body;
+
+    // Compute active status based on date range for seasonal/featured products
+    let active = true;
+    if ((popular || seasonal) && active_start_date && active_end_date) {
+      const today = new Date().toISOString().split('T')[0];
+      active = today >= active_start_date && today <= active_end_date;
+    }
 
     const result = await query(
       `UPDATE products SET
@@ -1390,8 +1424,9 @@ router.put('/:id', authenticate, requireSuperAdmin, async (req, res) => {
         dietary_preferences = $23, cuisine_type = $24, seasonal_and_featured = $25,
         case_minimum = $26, shelf_life = $27, delivery_info = $28, notes = $29,
         is_split_case = $30, minimum_units = $31, minimum_cost = $32,
+        active = $33, active_start_date = $34, active_end_date = $35,
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $33
+      WHERE id = $36
       RETURNING *`,
       [
         product_connect_id || null, vendor_connect_id || null, vendor_name, state, product_name, product_description, size, case_pack || null,
@@ -1402,6 +1437,9 @@ router.put('/:id', authenticate, requireSuperAdmin, async (req, res) => {
         is_split_case !== undefined ? is_split_case : false,
         minimum_units || null,
         minimum_cost || null,
+        active,
+        active_start_date || null,
+        active_end_date || null,
         id
       ]
     );
@@ -1511,7 +1549,10 @@ router.post('/bulk-import', authenticate, requireSuperAdmin, async (req, res) =>
           minimum_cost: product['Minimum Cost'] || product.minimum_cost || null,
           // Legacy fields for backward compatibility
           category: product.category || product['Main Category'] || product.main_category || null,
-          product_description: product.product_description || product['Notes'] || product.notes || null
+          product_description: product.product_description || product['Notes'] || product.notes || null,
+          // Active date range fields
+          active_start_date: product['Active Start Date'] || product.active_start_date || null,
+          active_end_date: product['Active End Date'] || product.active_end_date || null
         };
 
         // Validate required fields
@@ -1537,6 +1578,13 @@ router.post('/bulk-import', authenticate, requireSuperAdmin, async (req, res) =>
         const popular = seasonalFeatured.includes('featured');
         const seasonal = seasonalFeatured.includes('seasonal');
         const isNew = seasonalFeatured.includes('new');
+
+        // Compute active status based on date range for seasonal/featured products
+        let active = true;
+        if ((popular || seasonal) && productData.active_start_date && productData.active_end_date) {
+          const today = new Date().toISOString().split('T')[0];
+          active = today >= productData.active_start_date && today <= productData.active_end_date;
+        }
 
         // Check if product has an ID or product_connect_id (update) or not (create)
         let existingProduct = null;
@@ -1568,8 +1616,9 @@ router.post('/bulk-import', authenticate, requireSuperAdmin, async (req, res) =>
                 allergens, dietary_preferences, cuisine_type, seasonal_and_featured, size, case_pack,
                 wholesale_case_price, wholesale_unit_price, retail_unit_price, case_minimum, shelf_life,
                 upc, state, delivery_info, notes, product_image, popular, seasonal, new, category, product_description,
-                is_split_case, minimum_units, minimum_cost
-              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30)`,
+                is_split_case, minimum_units, minimum_cost,
+                active, active_start_date, active_end_date
+              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33)`,
               [
                 productData.product_connect_id, productData.vendor_connect_id, productData.vendor_name, productData.product_name,
                 productData.main_category, productData.sub_category, productData.allergens, productData.dietary_preferences,
@@ -1578,7 +1627,8 @@ router.post('/bulk-import', authenticate, requireSuperAdmin, async (req, res) =>
                 productData.case_minimum, productData.shelf_life, productData.upc, productData.state,
                 productData.delivery_info, productData.notes, productData.product_image,
                 popular, seasonal, isNew, productData.category, productData.product_description,
-                productData.is_split_case, productData.minimum_units, productData.minimum_cost
+                productData.is_split_case, productData.minimum_units, productData.minimum_cost,
+                active, productData.active_start_date, productData.active_end_date
               ]
             );
             created++;
@@ -1591,8 +1641,9 @@ router.post('/bulk-import', authenticate, requireSuperAdmin, async (req, res) =>
                 wholesale_case_price = $13, wholesale_unit_price = $14, retail_unit_price = $15, case_minimum = $16, shelf_life = $17,
                 upc = $18, state = $19, delivery_info = $20, notes = $21, product_image = $22, popular = $23, seasonal = $24,
                 new = $25, category = $26, product_description = $27, is_split_case = $28, minimum_units = $29, minimum_cost = $30,
+                active = $31, active_start_date = $32, active_end_date = $33,
                 updated_at = CURRENT_TIMESTAMP
-              WHERE id = $31`,
+              WHERE id = $34`,
               [
                 productData.product_connect_id, productData.vendor_connect_id, productData.vendor_name, productData.product_name,
                 productData.main_category, productData.sub_category, productData.allergens, productData.dietary_preferences,
@@ -1602,6 +1653,7 @@ router.post('/bulk-import', authenticate, requireSuperAdmin, async (req, res) =>
                 productData.delivery_info, productData.notes, productData.product_image,
                 popular, seasonal, isNew, productData.category, productData.product_description,
                 productData.is_split_case, productData.minimum_units, productData.minimum_cost,
+                active, productData.active_start_date, productData.active_end_date,
                 existingProduct.id
               ]
             );
@@ -1615,8 +1667,9 @@ router.post('/bulk-import', authenticate, requireSuperAdmin, async (req, res) =>
               allergens, dietary_preferences, cuisine_type, seasonal_and_featured, size, case_pack,
               wholesale_case_price, wholesale_unit_price, retail_unit_price, case_minimum, shelf_life,
               upc, state, delivery_info, notes, product_image, popular, seasonal, new, category, product_description,
-              is_split_case, minimum_units, minimum_cost
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30)`,
+              is_split_case, minimum_units, minimum_cost,
+              active, active_start_date, active_end_date
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33)`,
             [
               productData.product_connect_id, productData.vendor_connect_id, productData.vendor_name, productData.product_name,
               productData.main_category, productData.sub_category, productData.allergens, productData.dietary_preferences,
@@ -1625,7 +1678,8 @@ router.post('/bulk-import', authenticate, requireSuperAdmin, async (req, res) =>
               productData.case_minimum, productData.shelf_life, productData.upc, productData.state,
               productData.delivery_info, productData.notes, productData.product_image,
               popular, seasonal, isNew, productData.category, productData.product_description,
-              productData.is_split_case, productData.minimum_units, productData.minimum_cost
+              productData.is_split_case, productData.minimum_units, productData.minimum_cost,
+              active, productData.active_start_date, productData.active_end_date
             ]
           );
           created++;
