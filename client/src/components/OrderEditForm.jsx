@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../config/api';
 
 const OrderEditForm = ({ order, onSave, onCancel, adminEmail }) => {
   const [formData, setFormData] = useState({
@@ -69,20 +69,14 @@ const OrderEditForm = ({ order, onSave, onCancel, adminEmail }) => {
     setError(null);
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.patch(
-        `http://localhost:5000/api/orders/${order.id}/modify`,
+      const response = await api.patch(
+        `/api/orders/${order.id}/modify`,
         {
           quantity: parseInt(formData.quantity),
           pricing_mode: formData.pricing_mode,
           unit_price: parseFloat(formData.unit_price),
           case_price: parseFloat(formData.case_price),
           admin_notes: formData.admin_notes.trim() || null
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
         }
       );
 

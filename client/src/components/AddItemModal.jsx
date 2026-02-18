@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from 'react';
-import axios from 'axios';
 import api from '../config/api';
 
 const AddItemModal = ({ batchNumber, isOpen, onClose, onItemAdded }) => {
@@ -66,6 +65,7 @@ const AddItemModal = ({ batchNumber, isOpen, onClose, onItemAdded }) => {
   }, [selectedProductsData, itemConfigs]);
 
   const loadBuyerInfo = async () => {
+    setError(null);
     try {
       // Fetch batch details to get buyer email
       const response = await api.get(`/api/orders/batch/${encodeURIComponent(batchNumber)}`);
@@ -299,9 +299,8 @@ const AddItemModal = ({ batchNumber, isOpen, onClose, onItemAdded }) => {
       const config = itemConfigs.get(product.id);
 
       try {
-        const token = localStorage.getItem('token');
-        const response = await axios.post(
-          `http://localhost:5000/api/orders/batch/${encodeURIComponent(batchNumber)}/add-item`,
+        const response = await api.post(
+          `/api/orders/batch/${encodeURIComponent(batchNumber)}/add-item`,
           {
             product_connect_id: product.product_connect_id,
             product_name: product.product_name,
@@ -312,9 +311,6 @@ const AddItemModal = ({ batchNumber, isOpen, onClose, onItemAdded }) => {
             unit_price: parseFloat(product.wholesale_unit_price || 0),
             case_price: parseFloat(product.wholesale_case_price || 0),
             admin_notes: config.admin_notes?.trim() || null
-          },
-          {
-            headers: { Authorization: `Bearer ${token}` }
           }
         );
 

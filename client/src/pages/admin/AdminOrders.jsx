@@ -237,7 +237,6 @@ const AdminOrders = () => {
   };
 
   const handleItemAdded = (newOrder) => {
-    alert('Item added successfully!');
     fetchOrders(); // Refresh orders
   };
 

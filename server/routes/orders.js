@@ -139,7 +139,7 @@ router.get('/batch/:batchNumber', authenticate, async (req, res) => {
     const userRole = req.user.role;
 
     let result;
-    if (userRole === 'admin') {
+    if (userRole === 'admin' || userRole === 'superadmin') {
       // Admins can view any batch
       result = await query(
         'SELECT * FROM orders WHERE batch_order_number = $1 ORDER BY id',
@@ -969,7 +969,7 @@ router.patch('/:id/modify', authenticate, requireAdmin, async (req, res) => {
 router.post('/batch/:batchNumber/add-item', authenticate, requireAdmin, async (req, res) => {
   try {
     const { batchNumber } = req.params;
-    const { product_connect_id, product_name, vendor_name, quantity, pricing_mode, unit_price, case_price, admin_notes } = req.body;
+    const { product_connect_id, product_name, vendor_name, vendor_connect_id, quantity, pricing_mode, unit_price, case_price, admin_notes } = req.body;
 
     // Validate batch exists
     const batchCheck = await query('SELECT user_email, user_id FROM orders WHERE batch_order_number = $1 LIMIT 1', [batchNumber]);
@@ -979,9 +979,18 @@ router.post('/batch/:batchNumber/add-item', authenticate, requireAdmin, async (r
 
     const { user_email, user_id } = batchCheck.rows[0];
 
-    // Get vendor_connect_id
-    let vendorConnectId = null;
-    if (vendor_name) {
+    // Look up the actual product ID (integer) from product_connect_id
+    let productId = null;
+    if (product_connect_id) {
+      const productResult = await query('SELECT id FROM products WHERE product_connect_id = $1 LIMIT 1', [product_connect_id]);
+      if (productResult.rows.length > 0) {
+        productId = productResult.rows[0].id;
+      }
+    }
+
+    // Use vendor_connect_id from the request body, or look it up by vendor name
+    let vendorConnectId = vendor_connect_id || null;
+    if (!vendorConnectId && vendor_name) {
       const vendorResult = await query('SELECT vendor_connect_id FROM vendors WHERE LOWER(name) = LOWER($1) LIMIT 1', [vendor_name]);
       if (vendorResult.rows.length > 0) {
         vendorConnectId = vendorResult.rows[0].vendor_connect_id;
@@ -991,15 +1000,15 @@ router.post('/batch/:batchNumber/add-item', authenticate, requireAdmin, async (r
     // Calculate amount
     const amount = calculateAmount(quantity, pricing_mode, parseFloat(unit_price), parseFloat(case_price));
 
-    // Insert new order
+    // Insert new order (use vendor_connect_id column, not vendor_id, to match normal order flow)
     const result = await query(`
       INSERT INTO orders (
-        batch_order_number, product_id, product_name, vendor_id, vendor_name,
+        batch_order_number, product_id, product_connect_id, product_name, vendor_connect_id, vendor_name,
         quantity, amount, pricing_mode, unit_price, case_price, admin_notes,
         status, user_email, user_id, modified_by_admin, date_submitted
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'pending', $12, $13, TRUE, CURRENT_TIMESTAMP)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'pending', $13, $14, TRUE, CURRENT_TIMESTAMP)
       RETURNING *
-    `, [batchNumber, product_connect_id, product_name, vendorConnectId, vendor_name, quantity, amount, pricing_mode, unit_price, case_price, admin_notes, user_email, user_id]);
+    `, [batchNumber, productId, product_connect_id, product_name, vendorConnectId, vendor_name, quantity, amount, pricing_mode, unit_price, case_price, admin_notes, user_email, user_id]);
 
     const newOrder = result.rows[0];
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../config/api';
 
 const OrderHistoryPanel = ({ orderId, batchNumber, isOpen, onClose }) => {
   const [historyData, setHistoryData] = useState(null);
@@ -28,14 +28,8 @@ const OrderHistoryPanel = ({ orderId, batchNumber, isOpen, onClose }) => {
     setError(null);
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(
-        `http://localhost:5000/api/orders/${orderId}/history`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
+      const response = await api.get(
+        `/api/orders/${orderId}/history`
       );
 
       if (response.data.success) {
@@ -56,14 +50,8 @@ const OrderHistoryPanel = ({ orderId, batchNumber, isOpen, onClose }) => {
     setError(null);
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(
-        `http://localhost:5000/api/orders/batch/${encodeURIComponent(batchNumber)}/history`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
+      const response = await api.get(
+        `/api/orders/batch/${encodeURIComponent(batchNumber)}/history`
       );
 
       if (response.data.success) {
