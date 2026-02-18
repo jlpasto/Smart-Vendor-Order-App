@@ -16,6 +16,7 @@ const AdminProducts = () => {
   const [editingProduct, setEditingProduct] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({});
+  const [formErrors, setFormErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [importFile, setImportFile] = useState(null);
@@ -101,7 +102,11 @@ const AdminProducts = () => {
 
   const openEditModal = (product) => {
     setEditingProduct(product);
-    setFormData(product);
+    setFormData({
+      ...product,
+      active_start_date: product.active_start_date || '',
+      active_end_date: product.active_end_date || '',
+    });
     setShowModal(true);
   };
 
@@ -140,6 +145,7 @@ const AdminProducts = () => {
     setShowModal(false);
     setEditingProduct(null);
     setFormData({});
+    setFormErrors({});
   };
 
   const handleInputChange = (field, value) => {
@@ -147,6 +153,20 @@ const AdminProducts = () => {
   };
 
   const handleSave = async () => {
+    // Validate required fields
+    const errors = {};
+    if (!formData.vendor_name?.trim()) errors.vendor_name = 'Vendor Name is required';
+    if (!formData.product_name?.trim()) errors.product_name = 'Product Name is required';
+    if (!formData.wholesale_case_price && formData.wholesale_case_price !== 0) errors.wholesale_case_price = 'Wholesale Case Price is required';
+    if (!formData.wholesale_unit_price && formData.wholesale_unit_price !== 0) errors.wholesale_unit_price = 'Wholesale Unit Price is required';
+    if (!formData.retail_unit_price && formData.retail_unit_price !== 0) errors.retail_unit_price = 'Retail Unit Price is required';
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      setSaving(false);
+      return;
+    }
+    setFormErrors({});
     setSaving(true);
     try {
       if (editingProduct) {
@@ -864,10 +884,11 @@ const AdminProducts = () => {
                 <input
                   type="text"
                   value={formData.vendor_name || ''}
-                  onChange={(e) => handleInputChange('vendor_name', e.target.value)}
-                  className="input"
+                  onChange={(e) => { handleInputChange('vendor_name', e.target.value); setFormErrors(prev => ({ ...prev, vendor_name: undefined })); }}
+                  className={`input ${formErrors.vendor_name ? 'border-red-500 border-2' : ''}`}
                   required
                 />
+                {formErrors.vendor_name && <p className="text-red-500 text-sm mt-1">{formErrors.vendor_name}</p>}
               </div>
 
               <div className="md:col-span-2">
@@ -875,10 +896,11 @@ const AdminProducts = () => {
                 <input
                   type="text"
                   value={formData.product_name || ''}
-                  onChange={(e) => handleInputChange('product_name', e.target.value)}
-                  className="input"
+                  onChange={(e) => { handleInputChange('product_name', e.target.value); setFormErrors(prev => ({ ...prev, product_name: undefined })); }}
+                  className={`input ${formErrors.product_name ? 'border-red-500 border-2' : ''}`}
                   required
                 />
+                {formErrors.product_name && <p className="text-red-500 text-sm mt-1">{formErrors.product_name}</p>}
               </div>
 
               <div>
@@ -960,10 +982,11 @@ const AdminProducts = () => {
                   type="number"
                   step="0.01"
                   value={formData.wholesale_case_price || ''}
-                  onChange={(e) => handleInputChange('wholesale_case_price', e.target.value)}
-                  className="input"
+                  onChange={(e) => { handleInputChange('wholesale_case_price', e.target.value); setFormErrors(prev => ({ ...prev, wholesale_case_price: undefined })); }}
+                  className={`input ${formErrors.wholesale_case_price ? 'border-red-500 border-2' : ''}`}
                   required
                 />
+                {formErrors.wholesale_case_price && <p className="text-red-500 text-sm mt-1">{formErrors.wholesale_case_price}</p>}
               </div>
 
               <div>
@@ -972,10 +995,11 @@ const AdminProducts = () => {
                   type="number"
                   step="0.01"
                   value={formData.wholesale_unit_price || ''}
-                  onChange={(e) => handleInputChange('wholesale_unit_price', e.target.value)}
-                  className="input"
+                  onChange={(e) => { handleInputChange('wholesale_unit_price', e.target.value); setFormErrors(prev => ({ ...prev, wholesale_unit_price: undefined })); }}
+                  className={`input ${formErrors.wholesale_unit_price ? 'border-red-500 border-2' : ''}`}
                   required
                 />
+                {formErrors.wholesale_unit_price && <p className="text-red-500 text-sm mt-1">{formErrors.wholesale_unit_price}</p>}
               </div>
 
               <div>
@@ -984,10 +1008,11 @@ const AdminProducts = () => {
                   type="number"
                   step="0.01"
                   value={formData.retail_unit_price || ''}
-                  onChange={(e) => handleInputChange('retail_unit_price', e.target.value)}
-                  className="input"
+                  onChange={(e) => { handleInputChange('retail_unit_price', e.target.value); setFormErrors(prev => ({ ...prev, retail_unit_price: undefined })); }}
+                  className={`input ${formErrors.retail_unit_price ? 'border-red-500 border-2' : ''}`}
                   required
                 />
+                {formErrors.retail_unit_price && <p className="text-red-500 text-sm mt-1">{formErrors.retail_unit_price}</p>}
               </div>
 
               <div>
@@ -1130,11 +1155,11 @@ const AdminProducts = () => {
                       type="checkbox"
                       checked={formData.popular || false}
                       onChange={(e) => {
-                        handleInputChange('popular', e.target.checked);
-                        if (!e.target.checked && !formData.seasonal) {
-                          handleInputChange('active_start_date', '');
-                          handleInputChange('active_end_date', '');
-                          handleInputChange('active', true);
+                        const newPopular = e.target.checked;
+                        if (!newPopular && !formData.seasonal) {
+                          setFormData(prev => ({ ...prev, popular: false, active_start_date: '', active_end_date: '', active: true }));
+                        } else {
+                          setFormData(prev => ({ ...prev, popular: newPopular }));
                         }
                       }}
                       className="w-6 h-6"
@@ -1147,11 +1172,11 @@ const AdminProducts = () => {
                       type="checkbox"
                       checked={formData.seasonal || false}
                       onChange={(e) => {
-                        handleInputChange('seasonal', e.target.checked);
-                        if (!e.target.checked && !formData.popular) {
-                          handleInputChange('active_start_date', '');
-                          handleInputChange('active_end_date', '');
-                          handleInputChange('active', true);
+                        const newSeasonal = e.target.checked;
+                        if (!newSeasonal && !formData.popular) {
+                          setFormData(prev => ({ ...prev, seasonal: false, active_start_date: '', active_end_date: '', active: true }));
+                        } else {
+                          setFormData(prev => ({ ...prev, seasonal: newSeasonal }));
                         }
                       }}
                       className="w-6 h-6"
@@ -1179,14 +1204,11 @@ const AdminProducts = () => {
                           type="date"
                           value={formData.active_start_date || ''}
                           onChange={(e) => {
-                            handleInputChange('active_start_date', e.target.value);
-                            // Compute active status
                             const start = e.target.value;
                             const end = formData.active_end_date;
-                            if (start && end) {
-                              const today = new Date().toISOString().split('T')[0];
-                              handleInputChange('active', today >= start && today <= end);
-                            }
+                            const today = new Date().toISOString().split('T')[0];
+                            const active = (start && end) ? (today >= start && today <= end) : true;
+                            setFormData(prev => ({ ...prev, active_start_date: start, active }));
                           }}
                           className="input text-sm"
                         />
@@ -1195,14 +1217,11 @@ const AdminProducts = () => {
                           type="date"
                           value={formData.active_end_date || ''}
                           onChange={(e) => {
-                            handleInputChange('active_end_date', e.target.value);
-                            // Compute active status
                             const start = formData.active_start_date;
                             const end = e.target.value;
-                            if (start && end) {
-                              const today = new Date().toISOString().split('T')[0];
-                              handleInputChange('active', today >= start && today <= end);
-                            }
+                            const today = new Date().toISOString().split('T')[0];
+                            const active = (start && end) ? (today >= start && today <= end) : true;
+                            setFormData(prev => ({ ...prev, active_end_date: end, active }));
                           }}
                           className="input text-sm"
                         />

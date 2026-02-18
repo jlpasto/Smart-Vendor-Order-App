@@ -5,6 +5,10 @@ dotenv.config();
 
 const { Pool } = pg;
 
+// Return DATE columns as plain strings (YYYY-MM-DD) instead of JS Date objects
+// This prevents timezone-related date shifts
+pg.types.setTypeParser(1082, (val) => val);
+
 // PostgreSQL connection pool
 const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',
