@@ -69,6 +69,24 @@ const OrdersPage = () => {
     }
   };
 
+  // Helper: load image and convert to base64 PNG (needed because jsPDF doesn't support webp)
+  const loadImageAsBase64 = (url) => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        resolve({ dataUrl: canvas.toDataURL('image/png'), width: img.naturalWidth, height: img.naturalHeight });
+      };
+      img.onerror = reject;
+      img.src = url;
+    });
+  };
+
   const downloadPDF = async (batch) => {
     // Ensure batch details are loaded
     let orders = batchOrders[batch.batch_order_number];
@@ -77,7 +95,6 @@ const OrdersPage = () => {
       try {
         const response = await api.get(`/api/orders/batch/${encodeURIComponent(batch.batch_order_number)}`);
         orders = response.data;
-        // Update state for future use
         setBatchOrders(prevOrders => ({
           ...prevOrders,
           [batch.batch_order_number]: orders
@@ -90,25 +107,100 @@ const OrdersPage = () => {
     }
 
     const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const brandGreen = [3, 82, 87];
 
-    // Title
+    // --- HEADER BAR ---
+    const headerHeight = 44;
+    doc.setFillColor(...brandGreen);
+    doc.rect(0, 0, pageWidth, headerHeight, 'F');
+
+    // Load and place logo
+    try {
+      const logo = await loadImageAsBase64('/images/logo.webp');
+      // Scale logo to fit nicely in the header (max height ~30px in PDF units)
+      const logoMaxH = 30;
+      const aspect = logo.width / logo.height;
+      const logoH = logoMaxH;
+      const logoW = logoH * aspect;
+      const logoX = 14;
+      const logoY = (headerHeight - logoH) / 2;
+      doc.addImage(logo.dataUrl, 'PNG', logoX, logoY, logoW, logoH);
+    } catch {
+      // Fallback: text branding if logo fails to load
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(22);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Cureate', 14, 28);
+    }
+
+    // "Order Receipt" title on the right side of header
+    doc.setTextColor(255, 255, 255);
     doc.setFontSize(20);
-    doc.text('Order Receipt', 14, 20);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Order Receipt', pageWidth - 14, 20, { align: 'right' });
 
-    // Batch Info
-    doc.setFontSize(12);
-    doc.text(`Batch Number: ${batch.batch_order_number}`, 14, 35);
-    doc.text(`Date: ${new Date(batch.date_submitted).toLocaleDateString()}`, 14, 42);
+    // Batch number subtitle in header
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`#${batch.batch_order_number}`, pageWidth - 14, 30, { align: 'right' });
+
+    // --- Thin accent line under header ---
+    doc.setDrawColor(...brandGreen);
+    doc.setLineWidth(0.5);
+    doc.line(0, headerHeight + 1, pageWidth, headerHeight + 1);
+
+    // --- ORDER INFO SECTION ---
+    let yPos = headerHeight + 12;
+    doc.setTextColor(60, 60, 60);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+
+    // Two-column order info
+    const leftX = 14;
+    const rightX = pageWidth / 2 + 10;
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Order Number:', leftX, yPos);
+    doc.setFont('helvetica', 'normal');
+    doc.text(batch.batch_order_number, leftX + 32, yPos);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Date:', rightX, yPos);
+    doc.setFont('helvetica', 'normal');
+    doc.text(new Date(batch.date_submitted).toLocaleDateString('en-US', {
+      year: 'numeric', month: 'long', day: 'numeric'
+    }), rightX + 14, yPos);
+
+    yPos += 7;
+
     if (batch.status === 'completed') {
-      doc.text(`Status: ${batch.status.toUpperCase()}`, 14, 49);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Status:', leftX, yPos);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...brandGreen);
+      doc.text(batch.status.toUpperCase(), leftX + 16, yPos);
+      doc.setTextColor(60, 60, 60);
+      yPos += 7;
     }
 
     if (batch.notes) {
-      doc.setFontSize(10);
-      doc.text(`Admin Note: ${batch.notes}`, 14, 56);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Note:', leftX, yPos);
+      doc.setFont('helvetica', 'normal');
+      const noteLines = doc.splitTextToSize(batch.notes, pageWidth - 44);
+      doc.text(noteLines, leftX + 14, yPos);
+      yPos += noteLines.length * 5 + 4;
     }
 
-    // Orders table with vendor column
+    // --- Divider before table ---
+    yPos += 2;
+    doc.setDrawColor(220, 220, 220);
+    doc.setLineWidth(0.3);
+    doc.line(14, yPos, pageWidth - 14, yPos);
+    yPos += 6;
+
+    // --- ITEMS TABLE ---
     const tableData = orders.map(order => [
       order.product_name,
       order.vendor_name || 'N/A',
@@ -117,19 +209,63 @@ const OrdersPage = () => {
     ]);
 
     doc.autoTable({
-      startY: batch.notes ? 62 : 55,
-      head: [['Product', 'Vendor', 'Quantity', 'Amount']],
+      startY: yPos,
+      head: [['Product', 'Vendor', 'Qty', 'Amount']],
       body: tableData,
       foot: [[
-        'Total',
+        { content: 'TOTAL', styles: { fontStyle: 'bold' } },
         '',
-        orders.reduce((sum, o) => sum + o.quantity, 0).toString(),
-        `$${parseFloat(batch.total_amount).toFixed(2)}`
+        { content: orders.reduce((sum, o) => sum + o.quantity, 0).toString(), styles: { fontStyle: 'bold' } },
+        { content: `$${parseFloat(batch.total_amount).toFixed(2)}`, styles: { fontStyle: 'bold' } }
       ]],
       theme: 'striped',
-      headStyles: { fillColor: [30, 64, 175] },
-      footStyles: { fillColor: [243, 244, 246], textColor: [0, 0, 0], fontStyle: 'bold' }
+      headStyles: {
+        fillColor: brandGreen,
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 10
+      },
+      bodyStyles: {
+        fontSize: 9,
+        textColor: [50, 50, 50]
+      },
+      footStyles: {
+        fillColor: [235, 245, 245],
+        textColor: brandGreen,
+        fontStyle: 'bold',
+        fontSize: 10
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 250]
+      },
+      columnStyles: {
+        0: { cellWidth: 'auto' },
+        1: { cellWidth: 'auto' },
+        2: { halign: 'center', cellWidth: 22 },
+        3: { halign: 'right', cellWidth: 28 }
+      },
+      margin: { left: 14, right: 14 },
+      styles: {
+        cellPadding: 4,
+        lineColor: [220, 220, 220],
+        lineWidth: 0.1
+      }
     });
+
+    // --- FOOTER ---
+    const finalY = doc.lastAutoTable.finalY + 16;
+    doc.setDrawColor(...brandGreen);
+    doc.setLineWidth(0.5);
+    doc.line(14, finalY, pageWidth - 14, finalY);
+
+    doc.setFontSize(9);
+    doc.setTextColor(120, 120, 120);
+    doc.setFont('helvetica', 'italic');
+    doc.text('Thank you for your order!', pageWidth / 2, finalY + 8, { align: 'center' });
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.text('Cureate — Curated products for your business', pageWidth / 2, finalY + 14, { align: 'center' });
 
     // Save PDF
     doc.save(`order-${batch.batch_order_number}.pdf`);
