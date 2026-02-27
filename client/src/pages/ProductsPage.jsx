@@ -7,6 +7,8 @@ import { useAuth } from '../context/AuthContext';
 import ProductDetailModal from '../components/ProductDetailModal';
 import AddToOrderModal from '../components/AddToOrderModal';
 import BrowseFilterBar from '../components/BrowseFilterBar';
+import FilterModal from '../components/FilterModal';
+import FilterDetailPanel from '../components/FilterDetailPanel';
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 
 const ProductsPage = () => {
@@ -26,6 +28,11 @@ const ProductsPage = () => {
   // Add to Order Modal state
   const [showAddToOrderModal, setShowAddToOrderModal] = useState(false);
   const [productToAdd, setProductToAdd] = useState(null);
+
+  // Advanced filter panel state
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [selectedFilterField, setSelectedFilterField] = useState(null);
 
   // Vendor info modal state
   const [showVendorModal, setShowVendorModal] = useState(false);
@@ -164,6 +171,19 @@ const ProductsPage = () => {
     setSortOrder(order);
   };
 
+  // Advanced filter handlers
+  const handleSelectField = (field) => {
+    setSelectedFilterField(field);
+    setShowFilterModal(false);
+    setShowFilterPanel(true);
+  };
+
+  const handleBackToFilterModal = () => {
+    setShowFilterPanel(false);
+    setShowFilterModal(true);
+    setSelectedFilterField(null);
+  };
+
   const handleAddToCart = (product, quantity = 1, pricingMode = 'case', unavailableAction = 'curate', replacementProductId = null, replacementProductName = null) => {
     addToCart(product, quantity, pricingMode, unavailableAction, replacementProductId, replacementProductName);
     setAddedToCart({ ...addedToCart, [product.id]: true });
@@ -258,6 +278,17 @@ const ProductsPage = () => {
       <div className="px-4 sm:px-6 py-6">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-2xl font-bold">Products</h1>
+            {/* Advanced Filter Icon */}
+            <button
+              onClick={() => setShowFilterModal(true)}
+              className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Advanced filters"
+              aria-label="Advanced filters"
+            >
+              <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              </svg>
+            </button>
           </div>
 
           {/* Browse Filter Bar */}
@@ -666,6 +697,18 @@ const ProductsPage = () => {
       )}
 
       </div>
+
+      {/* Advanced Filter Modal (slide-out panel) */}
+      <FilterModal
+        isOpen={showFilterModal}
+        onClose={() => setShowFilterModal(false)}
+        onSelectField={handleSelectField}
+      />
+      <FilterDetailPanel
+        field={selectedFilterField}
+        isOpen={showFilterPanel}
+        onBack={handleBackToFilterModal}
+      />
 
       {/* Add to Order Modal */}
       <AddToOrderModal
