@@ -1272,6 +1272,23 @@ router.get('/filters/cuisine-types', async (req, res) => {
   }
 });
 
+// Get price range (min/max wholesale_case_price)
+router.get('/filters/price-range', async (req, res) => {
+  try {
+    const result = await query(
+      'SELECT COALESCE(MIN(wholesale_case_price), 0) as min_price, COALESCE(MAX(wholesale_case_price), 0) as max_price FROM products WHERE wholesale_case_price IS NOT NULL AND wholesale_case_price > 0'
+    );
+    const row = result.rows[0];
+    res.json({
+      min: parseFloat(row.min_price),
+      max: parseFloat(row.max_price)
+    });
+  } catch (error) {
+    console.error('Error fetching price range:', error);
+    res.status(500).json({ error: 'Error fetching price range' });
+  }
+});
+
 // Get unique seasonal/featured values
 router.get('/filters/seasonal-featured', async (req, res) => {
   try {

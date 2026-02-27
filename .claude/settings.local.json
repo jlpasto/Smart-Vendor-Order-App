@@ -33,7 +33,8 @@
       "Bash(ls:*)",
       "Read(//c/Users/JL/Documents/Smart Vendor Order App/**)",
       "Bash(powershell -Command \"$word = New-Object -ComObject Word.Application; $word.Visible = $false; $doc = $word.Documents.Open\\(''c:\\\\Users\\\\JL\\\\Documents\\\\Smart Vendor Order App\\\\Order_App_User_Stories.docx''\\); $doc.Content.Text; $doc.Close\\(\\); $word.Quit\\(\\)\")",
-      "Bash(powershell -File - <<'PSEOF'\n$word = New-Object -ComObject Word.Application\n$word.Visible = $false\n$doc = $word.Documents.Open\\(\"c:\\\\Users\\\\JL\\\\Documents\\\\Smart Vendor Order App\\\\Order_App_User_Stories.docx\"\\)\nWrite-Output $doc.Content.Text\n$doc.Close\\(\\)\n$word.Quit\\(\\)\nPSEOF)"
+      "Bash(powershell -File - <<'PSEOF'\n$word = New-Object -ComObject Word.Application\n$word.Visible = $false\n$doc = $word.Documents.Open\\(\"c:\\\\Users\\\\JL\\\\Documents\\\\Smart Vendor Order App\\\\Order_App_User_Stories.docx\"\\)\nWrite-Output $doc.Content.Text\n$doc.Close\\(\\)\n$word.Quit\\(\\)\nPSEOF)",
+      "Bash(npx vite build)"
     ],
     "deny": [],
     "ask": []

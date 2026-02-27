@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import api from '../config/api';
 import { useCart } from '../context/CartContext';
 import { useSearch } from '../context/SearchContext';
@@ -6,10 +6,7 @@ import { useFilter } from '../context/FilterContext';
 import { useAuth } from '../context/AuthContext';
 import ProductDetailModal from '../components/ProductDetailModal';
 import AddToOrderModal from '../components/AddToOrderModal';
-import FilterIcon from '../components/FilterIcon';
-import FilterModal from '../components/FilterModal';
-import FilterDetailPanel from '../components/FilterDetailPanel';
-import FilterSidebar from '../components/FilterSidebar';
+import BrowseFilterBar from '../components/BrowseFilterBar';
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 
 const ProductsPage = () => {
@@ -30,10 +27,7 @@ const ProductsPage = () => {
   const [showAddToOrderModal, setShowAddToOrderModal] = useState(false);
   const [productToAdd, setProductToAdd] = useState(null);
 
-  // Filter modal state
-  const [showFilterModal, setShowFilterModal] = useState(false);
-  const [showFilterPanel, setShowFilterPanel] = useState(false);
-  const [selectedFilterField, setSelectedFilterField] = useState(null);
+  // Vendor info modal state
   const [showVendorModal, setShowVendorModal] = useState(false);
   const [selectedVendorInfo, setSelectedVendorInfo] = useState(null);
 
@@ -45,9 +39,20 @@ const ProductsPage = () => {
   const { addToCart } = useCart();
   const [addedToCart, setAddedToCart] = useState({});
 
-  // Sorting state
-  const [sortField, setSortField] = useState('vendor_name');
+  // Sorting state - default to A-Z
+  const [sortField, setSortField] = useState('product_name');
   const [sortOrder, setSortOrder] = useState('asc');
+
+  // Track filter changes to auto-reset sort to A-Z
+  const prevFiltersRef = useRef(filters);
+  useEffect(() => {
+    const prev = prevFiltersRef.current;
+    if (prev !== filters) {
+      setSortField('product_name');
+      setSortOrder('asc');
+      prevFiltersRef.current = filters;
+    }
+  }, [filters]);
 
   // Infinite scroll hook
   const observerTarget = useInfiniteScroll({
@@ -154,20 +159,9 @@ const ProductsPage = () => {
     localStorage.setItem('favorites', JSON.stringify(newFavorites));
   };
 
-  const handleFilterIconClick = () => {
-    setShowFilterModal(true);
-  };
-
-  const handleSelectField = (field) => {
-    setSelectedFilterField(field);
-    setShowFilterModal(false);
-    setShowFilterPanel(true);
-  };
-
-  const handleBackToFilterModal = () => {
-    setShowFilterPanel(false);
-    setShowFilterModal(true);
-    setSelectedFilterField(null);
+  const handleSortChange = (field, order) => {
+    setSortField(field);
+    setSortOrder(order);
   };
 
   const handleAddToCart = (product, quantity = 1, pricingMode = 'case', unavailableAction = 'curate', replacementProductId = null, replacementProductName = null) => {
@@ -260,73 +254,18 @@ const ProductsPage = () => {
 
   return (
     <>
-      {/* Filter Sidebar - Large screens only */}
-      <FilterSidebar className="hidden lg:block" />
-
       {/* Main Content Area */}
-      <div className="px-4 sm:px-6 py-6 lg:ml-80">
-          <div className="flex items-center justify-between mb-6">
+      <div className="px-4 sm:px-6 py-6">
+          <div className="flex items-center justify-between mb-4">
             <h1 className="text-2xl font-bold">Products</h1>
-            <div className="flex items-center gap-3">
-              {/* Sort Buttons */}
-              <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
-                <span className="text-sm font-medium text-gray-700 px-2">Sort:</span>
-
-                {/* Product Name Sort */}
-                <button
-                  onClick={() => {
-                    if (sortField === 'product_name') {
-                      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-                    } else {
-                      setSortField('product_name');
-                      setSortOrder('asc');
-                    }
-                  }}
-                  className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                    sortField === 'product_name'
-                      ? 'bg-white text-primary-700 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                  title={`Sort by Product Name ${sortField === 'product_name' ? (sortOrder === 'asc' ? '(A-Z)' : '(Z-A)') : ''}`}
-                >
-                  Product
-                  {sortField === 'product_name' && (
-                    <span className="text-lg">
-                      {sortOrder === 'asc' ? '↑' : '↓'}
-                    </span>
-                  )}
-                </button>
-
-                {/* Vendor Name Sort */}
-                <button
-                  onClick={() => {
-                    if (sortField === 'vendor_name') {
-                      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-                    } else {
-                      setSortField('vendor_name');
-                      setSortOrder('asc');
-                    }
-                  }}
-                  className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                    sortField === 'vendor_name'
-                      ? 'bg-white text-primary-700 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                  title={`Sort by Vendor Name ${sortField === 'vendor_name' ? (sortOrder === 'asc' ? '(A-Z)' : '(Z-A)') : ''}`}
-                >
-                  Vendor
-                  {sortField === 'vendor_name' && (
-                    <span className="text-lg">
-                      {sortOrder === 'asc' ? '↑' : '↓'}
-                    </span>
-                  )}
-                </button>
-              </div>
-
-              {/* Filter Icon - Small screens only */}
-              <FilterIcon onClick={handleFilterIconClick} className="lg:hidden" />
-            </div>
           </div>
+
+          {/* Browse Filter Bar */}
+          <BrowseFilterBar
+            sortField={sortField}
+            sortOrder={sortOrder}
+            onSortChange={handleSortChange}
+          />
 
       {/* No results */}
       {filteredProducts.length === 0 && !loading && (
@@ -726,22 +665,6 @@ const ProductsPage = () => {
         </div>
       )}
 
-      </div>
-
-      {/* Filter Modal - Small screens only */}
-      <div className="lg:hidden">
-        <FilterModal
-          isOpen={showFilterModal}
-          onClose={() => setShowFilterModal(false)}
-          onSelectField={handleSelectField}
-        />
-
-        {/* Filter Detail Panel */}
-        <FilterDetailPanel
-          field={selectedFilterField}
-          isOpen={showFilterPanel}
-          onBack={handleBackToFilterModal}
-        />
       </div>
 
       {/* Add to Order Modal */}
