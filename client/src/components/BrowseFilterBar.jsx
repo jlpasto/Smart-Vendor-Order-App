@@ -164,7 +164,7 @@ const BrowseFilterBar = ({ sortField, sortOrder, onSortChange, showFavorites, on
       filters.main_categories.forEach(cat => {
         chips.push({
           key: `cat-${cat}`,
-          label: cat,
+          label: `Category: ${cat}`,
           onRemove: () => updateFilter('main_categories', filters.main_categories.filter(c => c !== cat))
         });
       });
@@ -173,7 +173,7 @@ const BrowseFilterBar = ({ sortField, sortOrder, onSortChange, showFavorites, on
       filters.sub_categories.forEach(sub => {
         chips.push({
           key: `sub-${sub}`,
-          label: sub,
+          label: `Sub Category: ${sub}`,
           onRemove: () => updateFilter('sub_categories', filters.sub_categories.filter(s => s !== sub))
         });
       });
@@ -182,7 +182,7 @@ const BrowseFilterBar = ({ sortField, sortOrder, onSortChange, showFavorites, on
       filters.vendor.forEach(v => {
         chips.push({
           key: `vendor-${v}`,
-          label: v,
+          label: `Vendor: ${v}`,
           onRemove: () => updateFilter('vendor', filters.vendor.filter(vn => vn !== v))
         });
       });
@@ -191,7 +191,7 @@ const BrowseFilterBar = ({ sortField, sortOrder, onSortChange, showFavorites, on
       filters.state.forEach(s => {
         chips.push({
           key: `state-${s}`,
-          label: s,
+          label: `State: ${s}`,
           onRemove: () => updateFilter('state', filters.state.filter(st => st !== s))
         });
       });
@@ -334,18 +334,27 @@ const BrowseFilterBar = ({ sortField, sortOrder, onSortChange, showFavorites, on
       {/* Active Filter Chips (removable) */}
       {activeChips.length > 0 && (
         <div className="flex items-center gap-2 flex-wrap mt-2">
-          {activeChips.map((chip) => (
+          {activeChips.map((chip) => {
+            const colonIdx = chip.label.indexOf(':');
+            const hasPrefix = colonIdx > 0;
+            return (
             <button
               key={chip.key}
               onClick={chip.onRemove}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-primary-400 text-primary-700 rounded-full text-xs font-medium hover:bg-primary-50 transition-colors"
             >
-              {chip.label}
+              {hasPrefix ? (
+                <>
+                  <span className="text-gray-500">{chip.label.slice(0, colonIdx + 1)}</span>
+                  {chip.label.slice(colonIdx + 1)}
+                </>
+              ) : chip.label}
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-          ))}
+          );
+          })}
           {activeChips.length > 1 && (
             <button
               onClick={clearAllFilters}
