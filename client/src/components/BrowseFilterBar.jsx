@@ -151,6 +151,7 @@ const BrowseFilterBar = ({ sortField, sortOrder, onSortChange, showFavorites, on
   const getActiveChips = () => {
     const chips = [];
 
+    // Boolean toggles
     if (filters.new) {
       chips.push({ key: 'new', label: 'New', onRemove: () => clearFilter('new') });
     }
@@ -160,50 +161,81 @@ const BrowseFilterBar = ({ sortField, sortOrder, onSortChange, showFavorites, on
     if (filters.seasonal) {
       chips.push({ key: 'seasonal', label: 'Seasonal', onRemove: () => clearFilter('seasonal') });
     }
-    if (filters.main_categories?.length > 0) {
-      filters.main_categories.forEach(cat => {
-        chips.push({
-          key: `cat-${cat}`,
-          label: `Category: ${cat}`,
-          onRemove: () => updateFilter('main_categories', filters.main_categories.filter(c => c !== cat))
+    if (filters.favorites_only) {
+      chips.push({ key: 'favorites_only', label: 'Favorites', onRemove: () => clearFilter('favorites_only') });
+    }
+
+    // Multi-select array filters
+    const arrayFilters = [
+      { key: 'main_categories', prefix: 'Category' },
+      { key: 'sub_categories', prefix: 'Sub Category' },
+      { key: 'vendor', prefix: 'Vendor' },
+      { key: 'state', prefix: 'State' },
+      { key: 'allergens', prefix: 'Allergen' },
+      { key: 'dietary_preferences', prefix: 'Diet' },
+      { key: 'cuisine_type', prefix: 'Cuisine' },
+    ];
+    arrayFilters.forEach(({ key, prefix }) => {
+      if (filters[key]?.length > 0) {
+        filters[key].forEach(val => {
+          chips.push({
+            key: `${key}-${val}`,
+            label: `${prefix}: ${val}`,
+            onRemove: () => updateFilter(key, filters[key].filter(v => v !== val))
+          });
         });
-      });
-    }
-    if (filters.sub_categories?.length > 0) {
-      filters.sub_categories.forEach(sub => {
+      }
+    });
+
+    // Text filters
+    const textFilters = [
+      { key: 'id', prefix: 'ID' },
+      { key: 'vendor_connect_id', prefix: 'Vendor ID' },
+      { key: 'product_name', prefix: 'Product' },
+      { key: 'size', prefix: 'Size' },
+      { key: 'upc', prefix: 'UPC' },
+      { key: 'shelf_life', prefix: 'Shelf Life' },
+      { key: 'delivery_info', prefix: 'Delivery' },
+      { key: 'notes', prefix: 'Notes' },
+    ];
+    textFilters.forEach(({ key, prefix }) => {
+      if (filters[key] && filters[key] !== '') {
         chips.push({
-          key: `sub-${sub}`,
-          label: `Sub Category: ${sub}`,
-          onRemove: () => updateFilter('sub_categories', filters.sub_categories.filter(s => s !== sub))
+          key,
+          label: `${prefix}: ${filters[key]}`,
+          onRemove: () => clearFilter(key)
         });
-      });
-    }
-    if (filters.vendor?.length > 0) {
-      filters.vendor.forEach(v => {
+      }
+    });
+
+    // Range filters
+    const rangeFilters = [
+      { minKey: 'price_min', maxKey: 'price_max', prefix: 'Case Price', symbol: '$' },
+      { minKey: 'unit_price_min', maxKey: 'unit_price_max', prefix: 'Unit Price', symbol: '$' },
+      { minKey: 'msrp_min', maxKey: 'msrp_max', prefix: 'MSRP', symbol: '$' },
+      { minKey: 'gm_min', maxKey: 'gm_max', prefix: 'GM%', symbol: '' },
+      { minKey: 'case_pack_min', maxKey: 'case_pack_max', prefix: 'Case Pack', symbol: '' },
+      { minKey: 'case_minimum_min', maxKey: 'case_minimum_max', prefix: 'Case Min', symbol: '' },
+    ];
+    rangeFilters.forEach(({ minKey, maxKey, prefix, symbol }) => {
+      const hasMin = filters[minKey] !== '' && filters[minKey] !== undefined;
+      const hasMax = filters[maxKey] !== '' && filters[maxKey] !== undefined;
+      if (hasMin || hasMax) {
+        let label;
+        if (hasMin && hasMax) {
+          label = `${prefix}: ${symbol}${filters[minKey]} - ${symbol}${filters[maxKey]}`;
+        } else if (hasMin) {
+          label = `${prefix}: ${symbol}${filters[minKey]}+`;
+        } else {
+          label = `${prefix}: up to ${symbol}${filters[maxKey]}`;
+        }
         chips.push({
-          key: `vendor-${v}`,
-          label: `Vendor: ${v}`,
-          onRemove: () => updateFilter('vendor', filters.vendor.filter(vn => vn !== v))
+          key: `${minKey}-${maxKey}`,
+          label,
+          onRemove: () => { clearFilter(minKey); clearFilter(maxKey); }
         });
-      });
-    }
-    if (filters.state?.length > 0) {
-      filters.state.forEach(s => {
-        chips.push({
-          key: `state-${s}`,
-          label: `State: ${s}`,
-          onRemove: () => updateFilter('state', filters.state.filter(st => st !== s))
-        });
-      });
-    }
-    if (filters.price_min || filters.price_max) {
-      const label = `$${filters.price_min || priceRange.min} - $${filters.price_max || priceRange.max}`;
-      chips.push({
-        key: 'price',
-        label: `Price: ${label}`,
-        onRemove: () => { clearFilter('price_min'); clearFilter('price_max'); }
-      });
-    }
+      }
+    });
 
     return chips;
   };
