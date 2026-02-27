@@ -54,6 +54,10 @@ const AdminProducts = () => {
     cuisine_type: [],
   });
 
+  // Season type options (admin-configurable)
+  const [seasonTypeOptions, setSeasonTypeOptions] = useState([]);
+  const [newSeasonType, setNewSeasonType] = useState('');
+
   const fetchDropdownOptions = async () => {
     try {
       const [categories, subCategories, allergensList, dietaryList, cuisineList] = await Promise.all([
@@ -75,9 +79,38 @@ const AdminProducts = () => {
     }
   };
 
+  const fetchSeasonTypeOptions = async () => {
+    try {
+      const res = await api.get('/api/products/season-type-options');
+      setSeasonTypeOptions(res.data || []);
+    } catch (error) {
+      console.error('Error fetching season type options:', error);
+    }
+  };
+
+  const addSeasonTypeOption = async (name) => {
+    if (!name || !name.trim()) return;
+    try {
+      await api.post('/api/products/season-type-options', { name: name.trim() });
+      await fetchSeasonTypeOptions();
+    } catch (error) {
+      console.error('Error adding season type option:', error);
+    }
+  };
+
+  const deleteSeasonTypeOption = async (id) => {
+    try {
+      await api.delete(`/api/products/season-type-options/${id}`);
+      await fetchSeasonTypeOptions();
+    } catch (error) {
+      console.error('Error deleting season type option:', error);
+    }
+  };
+
   useEffect(() => {
     fetchProducts();
     fetchDropdownOptions();
+    fetchSeasonTypeOptions();
   }, [sortField, sortOrder]);
 
   // Reset to first page when search term or filters change
@@ -1194,55 +1227,84 @@ const AdminProducts = () => {
                 <div className="mt-4">
                   <label className="block text-lg font-semibold text-gray-700 mb-2">Season Types</label>
                   <div className="flex flex-wrap gap-2 mb-2">
-                    {['Spring', 'Summer', 'Fall', 'Winter', 'Halloween', 'Super Bowl', 'Holiday', 'Valentines', 'Easter'].map(type => {
+                    {seasonTypeOptions.map(opt => {
                       const currentTypes = (formData.season_types || '').split(',').map(t => t.trim()).filter(t => t);
-                      const isSelected = currentTypes.includes(type);
+                      const isSelected = currentTypes.includes(opt.name);
                       return (
-                        <button
-                          key={type}
-                          type="button"
-                          onClick={() => {
-                            let newTypes;
-                            if (isSelected) {
-                              newTypes = currentTypes.filter(t => t !== type);
-                            } else {
-                              newTypes = [...currentTypes, type];
-                            }
-                            const newSeasonTypes = newTypes.join(', ');
-                            const hasSeasonal = newTypes.length > 0;
-                            setFormData(prev => ({
-                              ...prev,
-                              season_types: newSeasonTypes,
-                              seasonal: hasSeasonal,
-                              ...((!hasSeasonal && !prev.popular) ? { active_start_date: '', active_end_date: '', active: true } : {})
-                            }));
-                          }}
-                          className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                            isSelected
-                              ? 'bg-orange-100 border-orange-500 text-orange-700'
-                              : 'bg-white border-gray-300 text-gray-600 hover:border-gray-400'
-                          }`}
-                        >
-                          {isSelected && '✓ '}{type}
-                        </button>
+                        <div key={opt.id} className="relative group inline-flex">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              let newTypes;
+                              if (isSelected) {
+                                newTypes = currentTypes.filter(t => t !== opt.name);
+                              } else {
+                                newTypes = [...currentTypes, opt.name];
+                              }
+                              const newSeasonTypes = newTypes.join(', ');
+                              const hasSeasonal = newTypes.length > 0;
+                              setFormData(prev => ({
+                                ...prev,
+                                season_types: newSeasonTypes,
+                                seasonal: hasSeasonal,
+                                ...((!hasSeasonal && !prev.popular) ? { active_start_date: '', active_end_date: '', active: true } : {})
+                              }));
+                            }}
+                            className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                              isSelected
+                                ? 'bg-orange-100 border-orange-500 text-orange-700'
+                                : 'bg-white border-gray-300 text-gray-600 hover:border-gray-400'
+                            }`}
+                          >
+                            {isSelected && '✓ '}{opt.name}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (window.confirm(`Remove "${opt.name}" from season type options?`)) {
+                                deleteSeasonTypeOption(opt.id);
+                              }
+                            }}
+                            className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-xs leading-none items-center justify-center hidden group-hover:flex"
+                            title="Remove option"
+                          >
+                            ×
+                          </button>
+                        </div>
                       );
                     })}
+                    {/* Add new season type */}
+                    <div className="inline-flex items-center gap-1">
+                      <input
+                        type="text"
+                        value={newSeasonType}
+                        onChange={(e) => setNewSeasonType(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (newSeasonType.trim()) {
+                              addSeasonTypeOption(newSeasonType);
+                              setNewSeasonType('');
+                            }
+                          }
+                        }}
+                        className="w-32 px-2 py-1.5 text-sm border border-dashed border-gray-400 rounded-full focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+                        placeholder="+ Add type"
+                      />
+                      {newSeasonType.trim() && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            addSeasonTypeOption(newSeasonType);
+                            setNewSeasonType('');
+                          }}
+                          className="px-2 py-1.5 bg-orange-500 text-white text-sm rounded-full font-medium hover:bg-orange-600"
+                        >
+                          Add
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <input
-                    type="text"
-                    value={formData.season_types || ''}
-                    onChange={(e) => {
-                      const newVal = e.target.value;
-                      const hasSeasonal = newVal.trim() !== '';
-                      setFormData(prev => ({
-                        ...prev,
-                        season_types: newVal,
-                        seasonal: hasSeasonal,
-                      }));
-                    }}
-                    className="input text-sm"
-                    placeholder="Or type custom season types (comma-separated)"
-                  />
                 </div>
 
                 {/* Year-Round Orderable Toggle */}

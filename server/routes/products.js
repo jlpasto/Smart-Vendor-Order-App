@@ -1384,21 +1384,72 @@ router.get('/filters/seasonal-featured', async (req, res) => {
   }
 });
 
-// Get unique season types (parse comma-separated values)
+// Get all season type options (from options table + any in-use types from products)
 router.get('/filters/season-types', async (req, res) => {
   try {
-    const result = await query(
+    // Get options from the managed list
+    const optionsResult = await query('SELECT name FROM season_type_options ORDER BY name');
+    const optionNames = new Set(optionsResult.rows.map(r => r.name));
+
+    // Also include any types currently in use on products (in case they were added before the options table)
+    const productsResult = await query(
       "SELECT DISTINCT season_types FROM products WHERE season_types IS NOT NULL AND season_types != ''"
     );
-    const seasonTypesSet = new Set();
-    result.rows.forEach(row => {
-      const types = row.season_types.split(',').map(t => t.trim()).filter(t => t);
-      types.forEach(t => seasonTypesSet.add(t));
+    productsResult.rows.forEach(row => {
+      row.season_types.split(',').map(t => t.trim()).filter(t => t).forEach(t => optionNames.add(t));
     });
-    res.json(Array.from(seasonTypesSet).sort());
+
+    res.json(Array.from(optionNames).sort());
   } catch (error) {
     console.error('Error fetching season types:', error);
     res.status(500).json({ error: 'Error fetching season types' });
+  }
+});
+
+// Get season type options (admin management)
+router.get('/season-type-options', authenticate, async (req, res) => {
+  try {
+    const result = await query('SELECT * FROM season_type_options ORDER BY name');
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching season type options:', error);
+    res.status(500).json({ error: 'Error fetching season type options' });
+  }
+});
+
+// Add a new season type option (SuperAdmin only)
+router.post('/season-type-options', authenticate, requireSuperAdmin, async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Season type name is required' });
+    }
+    const result = await query(
+      'INSERT INTO season_type_options (name) VALUES ($1) ON CONFLICT (name) DO NOTHING RETURNING *',
+      [name.trim()]
+    );
+    if (result.rows.length === 0) {
+      return res.status(409).json({ error: 'Season type already exists' });
+    }
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Error adding season type option:', error);
+    res.status(500).json({ error: 'Error adding season type option' });
+  }
+});
+
+// Delete a season type option (SuperAdmin only)
+router.delete('/season-type-options/:id', authenticate, requireSuperAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await query('DELETE FROM season_type_options WHERE id = $1 RETURNING *', [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Season type option not found' });
+    }
+    res.json({ message: 'Season type option deleted' });
+  } catch (error) {
+    console.error('Error deleting season type option:', error);
+    res.status(500).json({ error: 'Error deleting season type option' });
   }
 });
 
