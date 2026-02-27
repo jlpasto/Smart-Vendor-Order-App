@@ -11,18 +11,21 @@ const BrowseFilterBar = ({ sortField, sortOrder, onSortChange, showFavorites, on
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showSubCategoryModal, setShowSubCategoryModal] = useState(false);
   const [showVendorModal, setShowVendorModal] = useState(false);
+  const [showStateModal, setShowStateModal] = useState(false);
   const [showPriceModal, setShowPriceModal] = useState(false);
 
   // Filter options from API
   const [categories, setCategories] = useState([]);
   const [subCategories, setSubCategories] = useState([]);
   const [vendors, setVendors] = useState([]);
+  const [states, setStates] = useState([]);
   const [priceRange, setPriceRange] = useState({ min: 0, max: 1000 });
 
   // Loading states
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [loadingSubCategories, setLoadingSubCategories] = useState(false);
   const [loadingVendors, setLoadingVendors] = useState(false);
+  const [loadingStates, setLoadingStates] = useState(false);
 
   // Fetch filter options on mount
   useEffect(() => {
@@ -68,6 +71,19 @@ const BrowseFilterBar = ({ sortField, sortOrder, onSortChange, showFavorites, on
     }
   };
 
+  const fetchStates = async () => {
+    if (states.length > 0) return;
+    setLoadingStates(true);
+    try {
+      const res = await api.get('/api/products/filters/states');
+      setStates(res.data.filter(Boolean));
+    } catch (err) {
+      console.error('Error fetching states:', err);
+    } finally {
+      setLoadingStates(false);
+    }
+  };
+
   const fetchPriceRange = async () => {
     try {
       const res = await api.get('/api/products/filters/price-range');
@@ -90,6 +106,7 @@ const BrowseFilterBar = ({ sortField, sortOrder, onSortChange, showFavorites, on
     (filters.main_categories?.length > 0) ||
     (filters.sub_categories?.length > 0) ||
     (filters.vendor?.length > 0) ||
+    (filters.state?.length > 0) ||
     (filters.price_min !== '' && filters.price_min !== undefined) ||
     (filters.price_max !== '' && filters.price_max !== undefined)
   );
@@ -99,6 +116,7 @@ const BrowseFilterBar = ({ sortField, sortOrder, onSortChange, showFavorites, on
     clearFilter('main_categories');
     clearFilter('sub_categories');
     clearFilter('vendor');
+    clearFilter('state');
     clearFilter('price_min');
     clearFilter('price_max');
   };
@@ -116,6 +134,11 @@ const BrowseFilterBar = ({ sortField, sortOrder, onSortChange, showFavorites, on
   // Handle vendor apply
   const handleVendorApply = (selected) => {
     updateFilter('vendor', selected);
+  };
+
+  // Handle state apply
+  const handleStateApply = (selected) => {
+    updateFilter('state', selected);
   };
 
   // Handle price range apply
@@ -161,6 +184,15 @@ const BrowseFilterBar = ({ sortField, sortOrder, onSortChange, showFavorites, on
           key: `vendor-${v}`,
           label: v,
           onRemove: () => updateFilter('vendor', filters.vendor.filter(vn => vn !== v))
+        });
+      });
+    }
+    if (filters.state?.length > 0) {
+      filters.state.forEach(s => {
+        chips.push({
+          key: `state-${s}`,
+          label: s,
+          onRemove: () => updateFilter('state', filters.state.filter(st => st !== s))
         });
       });
     }
@@ -290,6 +322,13 @@ const BrowseFilterBar = ({ sortField, sortOrder, onSortChange, showFavorites, on
           count={filters.vendor?.length}
           onClick={() => { fetchVendors(); setShowVendorModal(true); }}
         />
+        <FilterChip
+          label="State"
+          hasDropdown
+          active={filters.state?.length > 0}
+          count={filters.state?.length}
+          onClick={() => { fetchStates(); setShowStateModal(true); }}
+        />
       </div>
 
       {/* Active Filter Chips (removable) */}
@@ -347,6 +386,16 @@ const BrowseFilterBar = ({ sortField, sortOrder, onSortChange, showFavorites, on
         selected={filters.vendor || []}
         onApply={handleVendorApply}
         loading={loadingVendors}
+      />
+
+      <CheckboxFilterModal
+        isOpen={showStateModal}
+        onClose={() => setShowStateModal(false)}
+        title="State Filter"
+        options={states}
+        selected={filters.state || []}
+        onApply={handleStateApply}
+        loading={loadingStates}
       />
 
       <PriceRangeModal

@@ -535,9 +535,19 @@ router.get('/', authenticate, async (req, res) => {
     }
 
     if (state) {
-      queryText += ` AND p.state = $${paramCount}`;
-      queryParams.push(state);
-      paramCount++;
+      try {
+        const stateArr = JSON.parse(state);
+        if (Array.isArray(stateArr) && stateArr.length > 0) {
+          queryText += ` AND p.state = ANY($${paramCount})`;
+          queryParams.push(stateArr);
+          paramCount++;
+        }
+      } catch (e) {
+        // Single value (backward compatibility)
+        queryText += ` AND p.state = $${paramCount}`;
+        queryParams.push(state);
+        paramCount++;
+      }
     }
 
     if (category) {

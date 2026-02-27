@@ -23,10 +23,8 @@ export const FilterProvider = ({ children }) => {
     delivery_info: '',
     notes: '',
 
-    // Dropdown filters
-    state: '',
-
     // Multi-select filters
+    state: [],
     vendor: [],
     main_categories: [],
     sub_categories: [],
@@ -84,7 +82,7 @@ export const FilterProvider = ({ children }) => {
       shelf_life: '',
       delivery_info: '',
       notes: '',
-      state: '',
+      state: [],
       vendor: [],
       main_categories: [],
       sub_categories: [],

@@ -25,7 +25,7 @@ const FilterFieldList = ({ onSelectField, onClearAll }) => {
     { key: 'case_minimum', label: 'Case Minimum', icon: '📉', type: 'range' },
     { key: 'shelf_life', label: 'Shelf Life', icon: '⏳', type: 'text' },
     { key: 'upc', label: 'UPC', icon: '🔢', type: 'text' },
-    { key: 'state', label: 'State', icon: '📍', type: 'dropdown' },
+    { key: 'state', label: 'State', icon: '📍', type: 'checkbox' },
     { key: 'delivery_info', label: 'Delivery Info', icon: '🚚', type: 'text' },
     { key: 'notes', label: 'Notes', icon: '📝', type: 'text' },
     { key: 'popular', label: 'Featured', icon: '⭐', type: 'toggle' },
