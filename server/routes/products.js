@@ -357,6 +357,8 @@ router.get('/', authenticate, async (req, res) => {
       // Cursor-based pagination
       cursor,
       limit,
+      // Favorites filter (JSON array of product IDs)
+      favorite_ids,
       // Admin-only filter to fetch products for a specific buyer
       buyerEmail
     } = req.query;
@@ -449,6 +451,20 @@ router.get('/', authenticate, async (req, res) => {
       queryText += ` AND (p.product_name ILIKE $${paramCount} OR p.product_description ILIKE $${paramCount} OR p.vendor_name ILIKE $${paramCount})`;
       queryParams.push(`%${search}%`);
       paramCount++;
+    }
+
+    // Favorite IDs filter
+    if (favorite_ids) {
+      try {
+        const ids = JSON.parse(favorite_ids);
+        if (Array.isArray(ids) && ids.length > 0) {
+          queryText += ` AND p.id = ANY($${paramCount}::int[])`;
+          queryParams.push(ids);
+          paramCount++;
+        }
+      } catch (e) {
+        // ignore invalid JSON
+      }
     }
 
     // Text exact match filters

@@ -20,6 +20,7 @@ const ProductsPage = () => {
   const [cursor, setCursor] = useState(null);
   const [hasMore, setHasMore] = useState(true);
   const [favorites, setFavorites] = useState([]);
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
   // Modal state
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -69,10 +70,10 @@ const ProductsPage = () => {
     rootMargin: '100px'
   });
 
-  // Reset and load products when filters or sort changes
+  // Reset and load products when filters, sort, or favorites mode changes
   useEffect(() => {
     resetAndLoadProducts();
-  }, [sortField, sortOrder, globalSearchTerm, filters]);
+  }, [sortField, sortOrder, globalSearchTerm, filters, showFavoritesOnly]);
 
   // Load favorites on mount
   useEffect(() => {
@@ -80,6 +81,15 @@ const ProductsPage = () => {
   }, []);
 
   const resetAndLoadProducts = useCallback(async () => {
+    // In favorites mode with no favorites, skip API call
+    if (showFavoritesOnly && favorites.length === 0) {
+      setProducts([]);
+      setCursor(null);
+      setHasMore(false);
+      setLoading(false);
+      return;
+    }
+
     setProducts([]);
     setCursor(null);
     setHasMore(true);
@@ -93,7 +103,7 @@ const ProductsPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [sortField, sortOrder, globalSearchTerm, filters]);
+  }, [sortField, sortOrder, globalSearchTerm, filters, showFavoritesOnly, favorites]);
 
   const fetchProducts = async (currentCursor) => {
     // Serialize array filters as JSON strings
@@ -105,6 +115,11 @@ const ProductsPage = () => {
         serializedFilters[key] = value;
       }
     });
+
+    // Add favorite IDs filter when in favorites mode
+    if (showFavoritesOnly && favorites.length > 0) {
+      serializedFilters.favorite_ids = JSON.stringify(favorites);
+    }
 
     const params = {
       cursor: currentCursor,
@@ -171,6 +186,10 @@ const ProductsPage = () => {
     setSortOrder(order);
   };
 
+  const handleToggleFavorites = () => {
+    setShowFavoritesOnly(prev => !prev);
+  };
+
   // Advanced filter handlers
   const handleSelectField = (field) => {
     setSelectedFilterField(field);
@@ -226,13 +245,8 @@ const ProductsPage = () => {
     }
   };
 
-  // Filter products by favorites if favorites_only filter is active
-  const filteredProducts = useMemo(() => {
-    if (filters.favorites_only && !isAdmin()) {
-      return products.filter(product => favorites.includes(product.id));
-    }
-    return products;
-  }, [products, filters.favorites_only, favorites, isAdmin]);
+  // filteredProducts - now favorites are handled server-side
+  const filteredProducts = products;
 
   // Group products by vendor (memoized for performance)
   // Only group when sorting by vendor_name, otherwise return null for flat list
@@ -296,13 +310,16 @@ const ProductsPage = () => {
             sortField={sortField}
             sortOrder={sortOrder}
             onSortChange={handleSortChange}
+            showFavorites={showFavoritesOnly}
+            onToggleFavorites={!isAdmin() ? handleToggleFavorites : undefined}
+            favoriteCount={favorites.length}
           />
 
       {/* No results */}
       {filteredProducts.length === 0 && !loading && (
         <div className="bg-white rounded-lg shadow-sm text-center py-12">
           <p className="text-xl text-gray-600">
-            {filters.favorites_only ? 'No favorite products found' : 'No products found matching your filters'}
+            {showFavoritesOnly ? 'No favorite products yet. Tap the heart on products to add them.' : 'No products found matching your filters'}
           </p>
         </div>
       )}
