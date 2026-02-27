@@ -41,6 +41,7 @@ router.get('/export', authenticate, requireSuperAdmin, async (req, res) => {
       dietary_preferences,
       cuisine_type,
       seasonal_featured,
+      season_types,
       size,
       upc,
       case_pack_min,
@@ -184,6 +185,24 @@ router.get('/export', authenticate, requireSuperAdmin, async (req, res) => {
       queryText += ` AND seasonal_and_featured = $${paramCount}`;
       queryParams.push(seasonal_featured);
       paramCount++;
+    }
+
+    // Season types multi-select filter (comma-separated field, match any)
+    if (season_types) {
+      try {
+        const seasonTypesArray = JSON.parse(season_types);
+        if (Array.isArray(seasonTypesArray) && seasonTypesArray.length > 0) {
+          const seasonConditions = seasonTypesArray.map(() => {
+            const condition = `season_types ILIKE $${paramCount}`;
+            paramCount++;
+            return condition;
+          });
+          queryText += ` AND (${seasonConditions.join(' OR ')})`;
+          seasonTypesArray.forEach(s => {
+            queryParams.push(`%${s}%`);
+          });
+        }
+      } catch (e) {}
     }
 
     // Allergens and dietary preferences (comma-separated fields)
@@ -334,6 +353,7 @@ router.get('/', authenticate, async (req, res) => {
       dietary_preferences, // JSON array
       cuisine_type,
       seasonal_featured,
+      season_types,
       size,
       upc,
       case_pack_min,
@@ -722,6 +742,24 @@ router.get('/', authenticate, async (req, res) => {
       queryText += ` AND p.seasonal = true`;
     }
 
+    // Season types multi-select filter (comma-separated field, match any)
+    if (season_types) {
+      try {
+        const seasonTypesArray = JSON.parse(season_types);
+        if (Array.isArray(seasonTypesArray) && seasonTypesArray.length > 0) {
+          const seasonConditions = seasonTypesArray.map(() => {
+            const condition = `p.season_types ILIKE $${paramCount}`;
+            paramCount++;
+            return condition;
+          });
+          queryText += ` AND (${seasonConditions.join(' OR ')})`;
+          seasonTypesArray.forEach(s => {
+            queryParams.push(`%${s}%`);
+          });
+        }
+      } catch (e) {}
+    }
+
     if (isNew === 'true') {
       queryText += ` AND p.new = true`;
     }
@@ -796,7 +834,7 @@ router.get('/ids', authenticate, requireSuperAdmin, async (req, res) => {
       new: isNew,
       id, vendor_connect_id, product_name, upc, size,
       main_categories, sub_categories, allergens, dietary_preferences,
-      cuisine_type, seasonal_featured,
+      cuisine_type, seasonal_featured, season_types,
       case_pack_min, case_pack_max, price_min, price_max,
       unit_price_min, unit_price_max, msrp_min, msrp_max,
       gm_min, gm_max, case_minimum_min, case_minimum_max,
@@ -911,6 +949,24 @@ router.get('/ids', authenticate, requireSuperAdmin, async (req, res) => {
 
     if (seasonal === 'true') {
       queryText += ` AND p.seasonal = true`;
+    }
+
+    // Season types multi-select filter (comma-separated field, match any)
+    if (season_types) {
+      try {
+        const seasonTypesArray = JSON.parse(season_types);
+        if (Array.isArray(seasonTypesArray) && seasonTypesArray.length > 0) {
+          const seasonConditions = seasonTypesArray.map(() => {
+            const condition = `p.season_types ILIKE $${paramCount}`;
+            paramCount++;
+            return condition;
+          });
+          queryText += ` AND (${seasonConditions.join(' OR ')})`;
+          seasonTypesArray.forEach(s => {
+            queryParams.push(`%${s}%`);
+          });
+        }
+      } catch (e) {}
     }
 
     if (isNew === 'true') {
@@ -1328,6 +1384,24 @@ router.get('/filters/seasonal-featured', async (req, res) => {
   }
 });
 
+// Get unique season types (parse comma-separated values)
+router.get('/filters/season-types', async (req, res) => {
+  try {
+    const result = await query(
+      "SELECT DISTINCT season_types FROM products WHERE season_types IS NOT NULL AND season_types != ''"
+    );
+    const seasonTypesSet = new Set();
+    result.rows.forEach(row => {
+      const types = row.season_types.split(',').map(t => t.trim()).filter(t => t);
+      types.forEach(t => seasonTypesSet.add(t));
+    });
+    res.json(Array.from(seasonTypesSet).sort());
+  } catch (error) {
+    console.error('Error fetching season types:', error);
+    res.status(500).json({ error: 'Error fetching season types' });
+  }
+});
+
 // Create product (Admin only)
 router.post('/', authenticate, requireSuperAdmin, async (req, res) => {
   try {
@@ -1357,6 +1431,8 @@ router.post('/', authenticate, requireSuperAdmin, async (req, res) => {
       dietary_preferences,
       cuisine_type,
       seasonal_featured,
+      season_types,
+      year_round_orderable,
       case_minimum,
       shelf_life,
       delivery_info,
@@ -1368,9 +1444,12 @@ router.post('/', authenticate, requireSuperAdmin, async (req, res) => {
       active_end_date
     } = req.body;
 
+    // Compute seasonal boolean from season_types for backward compatibility
+    const computedSeasonal = (season_types && season_types.trim() !== '') ? true : (seasonal || false);
+
     // Compute active status based on date range for seasonal/featured products
     let active = true;
-    if ((popular || seasonal) && active_start_date && active_end_date) {
+    if ((popular || computedSeasonal) && !year_round_orderable && active_start_date && active_end_date) {
       const today = new Date().toISOString().split('T')[0];
       active = today >= active_start_date && today <= active_end_date;
     }
@@ -1383,14 +1462,15 @@ router.post('/', authenticate, requireSuperAdmin, async (req, res) => {
         main_category, sub_category, allergens, dietary_preferences, cuisine_type, seasonal_and_featured,
         case_minimum, shelf_life, delivery_info, notes,
         is_split_case, minimum_units, minimum_cost,
-        active, active_start_date, active_end_date
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35)
+        active, active_start_date, active_end_date,
+        season_types, year_round_orderable
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37)
       RETURNING *`,
       [
         product_connect_id || null, vendor_connect_id || null, vendor_name, state, product_name, product_description, size, case_pack || null,
         upc, wholesale_case_price, wholesale_unit_price, retail_unit_price,
         order_qty || 0, stock_level || 0, product_image, popular || false,
-        seasonal || false, isNew || false, category,
+        computedSeasonal, isNew || false, category,
         main_category || null, sub_category || null, allergens || null, dietary_preferences || null, cuisine_type || null, seasonal_featured || null,
         case_minimum || null, shelf_life || null, delivery_info || null, notes || null,
         is_split_case !== undefined ? is_split_case : false,
@@ -1398,7 +1478,9 @@ router.post('/', authenticate, requireSuperAdmin, async (req, res) => {
         minimum_cost || null,
         active,
         active_start_date || null,
-        active_end_date || null
+        active_end_date || null,
+        season_types || null,
+        year_round_orderable !== undefined ? year_round_orderable : true
       ]
     );
 
@@ -1439,6 +1521,8 @@ router.put('/:id', authenticate, requireSuperAdmin, async (req, res) => {
       dietary_preferences,
       cuisine_type,
       seasonal_featured,
+      season_types,
+      year_round_orderable,
       case_minimum,
       shelf_life,
       delivery_info,
@@ -1450,9 +1534,12 @@ router.put('/:id', authenticate, requireSuperAdmin, async (req, res) => {
       active_end_date
     } = req.body;
 
+    // Compute seasonal boolean from season_types for backward compatibility
+    const computedSeasonal = (season_types && season_types.trim() !== '') ? true : (seasonal || false);
+
     // Compute active status based on date range for seasonal/featured products
     let active = true;
-    if ((popular || seasonal) && active_start_date && active_end_date) {
+    if ((popular || computedSeasonal) && !year_round_orderable && active_start_date && active_end_date) {
       const today = new Date().toISOString().split('T')[0];
       active = today >= active_start_date && today <= active_end_date;
     }
@@ -1468,13 +1555,14 @@ router.put('/:id', authenticate, requireSuperAdmin, async (req, res) => {
         case_minimum = $26, shelf_life = $27, delivery_info = $28, notes = $29,
         is_split_case = $30, minimum_units = $31, minimum_cost = $32,
         active = $33, active_start_date = $34, active_end_date = $35,
+        season_types = $36, year_round_orderable = $37,
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $36
+      WHERE id = $38
       RETURNING *`,
       [
         product_connect_id || null, vendor_connect_id || null, vendor_name, state, product_name, product_description, size, case_pack || null,
         upc, wholesale_case_price, wholesale_unit_price, retail_unit_price,
-        order_qty || 0, stock_level || 0, product_image, popular || false, seasonal || false, isNew || false, category,
+        order_qty || 0, stock_level || 0, product_image, popular || false, computedSeasonal, isNew || false, category,
         main_category || null, sub_category || null, allergens || null, dietary_preferences || null, cuisine_type || null, seasonal_featured || null,
         case_minimum || null, shelf_life || null, delivery_info || null, notes || null,
         is_split_case !== undefined ? is_split_case : false,
@@ -1483,6 +1571,8 @@ router.put('/:id', authenticate, requireSuperAdmin, async (req, res) => {
         active,
         active_start_date || null,
         active_end_date || null,
+        season_types || null,
+        year_round_orderable !== undefined ? year_round_orderable : true,
         id
       ]
     );
@@ -1595,7 +1685,10 @@ router.post('/bulk-import', authenticate, requireSuperAdmin, async (req, res) =>
           product_description: product.product_description || product['Notes'] || product.notes || null,
           // Active date range fields
           active_start_date: product['Active Start Date'] || product.active_start_date || null,
-          active_end_date: product['Active End Date'] || product.active_end_date || null
+          active_end_date: product['Active End Date'] || product.active_end_date || null,
+          // Season types
+          season_types: product['Season Types'] || product.season_types || null,
+          year_round_orderable: product['Year Round Orderable'] !== undefined ? product['Year Round Orderable'] : (product.year_round_orderable !== undefined ? product.year_round_orderable : true)
         };
 
         // Validate required fields
@@ -1619,12 +1712,15 @@ router.post('/bulk-import', authenticate, requireSuperAdmin, async (req, res) =>
         // Map "Seasonal and Featured" column to boolean flags
         const seasonalFeatured = (productData.seasonal_and_featured || '').toLowerCase();
         const popular = seasonalFeatured.includes('featured');
-        const seasonal = seasonalFeatured.includes('seasonal');
         const isNew = seasonalFeatured.includes('new');
+
+        // Compute seasonal from season_types or legacy field
+        const seasonal = (productData.season_types && productData.season_types.trim() !== '') ? true : seasonalFeatured.includes('seasonal');
+        const yearRoundOrderable = productData.year_round_orderable !== false && productData.year_round_orderable !== 'No' && productData.year_round_orderable !== 'false';
 
         // Compute active status based on date range for seasonal/featured products
         let active = true;
-        if ((popular || seasonal) && productData.active_start_date && productData.active_end_date) {
+        if ((popular || seasonal) && !yearRoundOrderable && productData.active_start_date && productData.active_end_date) {
           const today = new Date().toISOString().split('T')[0];
           active = today >= productData.active_start_date && today <= productData.active_end_date;
         }
@@ -1660,8 +1756,9 @@ router.post('/bulk-import', authenticate, requireSuperAdmin, async (req, res) =>
                 wholesale_case_price, wholesale_unit_price, retail_unit_price, case_minimum, shelf_life,
                 upc, state, delivery_info, notes, product_image, popular, seasonal, new, category, product_description,
                 is_split_case, minimum_units, minimum_cost,
-                active, active_start_date, active_end_date
-              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33)`,
+                active, active_start_date, active_end_date,
+                season_types, year_round_orderable
+              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35)`,
               [
                 productData.product_connect_id, productData.vendor_connect_id, productData.vendor_name, productData.product_name,
                 productData.main_category, productData.sub_category, productData.allergens, productData.dietary_preferences,
@@ -1671,7 +1768,8 @@ router.post('/bulk-import', authenticate, requireSuperAdmin, async (req, res) =>
                 productData.delivery_info, productData.notes, productData.product_image,
                 popular, seasonal, isNew, productData.category, productData.product_description,
                 productData.is_split_case, productData.minimum_units, productData.minimum_cost,
-                active, productData.active_start_date, productData.active_end_date
+                active, productData.active_start_date, productData.active_end_date,
+                productData.season_types, yearRoundOrderable
               ]
             );
             created++;
@@ -1685,8 +1783,9 @@ router.post('/bulk-import', authenticate, requireSuperAdmin, async (req, res) =>
                 upc = $18, state = $19, delivery_info = $20, notes = $21, product_image = $22, popular = $23, seasonal = $24,
                 new = $25, category = $26, product_description = $27, is_split_case = $28, minimum_units = $29, minimum_cost = $30,
                 active = $31, active_start_date = $32, active_end_date = $33,
+                season_types = $34, year_round_orderable = $35,
                 updated_at = CURRENT_TIMESTAMP
-              WHERE id = $34`,
+              WHERE id = $36`,
               [
                 productData.product_connect_id, productData.vendor_connect_id, productData.vendor_name, productData.product_name,
                 productData.main_category, productData.sub_category, productData.allergens, productData.dietary_preferences,
@@ -1697,6 +1796,7 @@ router.post('/bulk-import', authenticate, requireSuperAdmin, async (req, res) =>
                 popular, seasonal, isNew, productData.category, productData.product_description,
                 productData.is_split_case, productData.minimum_units, productData.minimum_cost,
                 active, productData.active_start_date, productData.active_end_date,
+                productData.season_types, yearRoundOrderable,
                 existingProduct.id
               ]
             );
@@ -1711,8 +1811,9 @@ router.post('/bulk-import', authenticate, requireSuperAdmin, async (req, res) =>
               wholesale_case_price, wholesale_unit_price, retail_unit_price, case_minimum, shelf_life,
               upc, state, delivery_info, notes, product_image, popular, seasonal, new, category, product_description,
               is_split_case, minimum_units, minimum_cost,
-              active, active_start_date, active_end_date
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33)`,
+              active, active_start_date, active_end_date,
+              season_types, year_round_orderable
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35)`,
             [
               productData.product_connect_id, productData.vendor_connect_id, productData.vendor_name, productData.product_name,
               productData.main_category, productData.sub_category, productData.allergens, productData.dietary_preferences,
@@ -1722,7 +1823,8 @@ router.post('/bulk-import', authenticate, requireSuperAdmin, async (req, res) =>
               productData.delivery_info, productData.notes, productData.product_image,
               popular, seasonal, isNew, productData.category, productData.product_description,
               productData.is_split_case, productData.minimum_units, productData.minimum_cost,
-              active, productData.active_start_date, productData.active_end_date
+              active, productData.active_start_date, productData.active_end_date,
+              productData.season_types, yearRoundOrderable
             ]
           );
           created++;

@@ -61,6 +61,9 @@ const FilterFieldDetail = ({ field, onApply, onClear, onBack }) => {
         case 'cuisine_type':
           endpoint = '/api/products/filters/cuisine-types';
           break;
+        case 'season_types':
+          endpoint = '/api/products/filters/season-types';
+          break;
         default:
           break;
       }

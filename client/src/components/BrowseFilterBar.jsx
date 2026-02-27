@@ -13,12 +13,14 @@ const BrowseFilterBar = ({ sortField, sortOrder, onSortChange, showFavorites, on
   const [showVendorModal, setShowVendorModal] = useState(false);
   const [showStateModal, setShowStateModal] = useState(false);
   const [showPriceModal, setShowPriceModal] = useState(false);
+  const [showSeasonTypeModal, setShowSeasonTypeModal] = useState(false);
 
   // Filter options from API
   const [categories, setCategories] = useState([]);
   const [subCategories, setSubCategories] = useState([]);
   const [vendors, setVendors] = useState([]);
   const [states, setStates] = useState([]);
+  const [seasonTypes, setSeasonTypes] = useState([]);
   const [priceRange, setPriceRange] = useState({ min: 0, max: 1000 });
 
   // Loading states
@@ -26,6 +28,7 @@ const BrowseFilterBar = ({ sortField, sortOrder, onSortChange, showFavorites, on
   const [loadingSubCategories, setLoadingSubCategories] = useState(false);
   const [loadingVendors, setLoadingVendors] = useState(false);
   const [loadingStates, setLoadingStates] = useState(false);
+  const [loadingSeasonTypes, setLoadingSeasonTypes] = useState(false);
 
   // Fetch filter options on mount
   useEffect(() => {
@@ -84,6 +87,19 @@ const BrowseFilterBar = ({ sortField, sortOrder, onSortChange, showFavorites, on
     }
   };
 
+  const fetchSeasonTypes = async () => {
+    if (seasonTypes.length > 0) return;
+    setLoadingSeasonTypes(true);
+    try {
+      const res = await api.get('/api/products/filters/season-types');
+      setSeasonTypes(res.data.filter(Boolean));
+    } catch (err) {
+      console.error('Error fetching season types:', err);
+    } finally {
+      setLoadingSeasonTypes(false);
+    }
+  };
+
   const fetchPriceRange = async () => {
     try {
       const res = await api.get('/api/products/filters/price-range');
@@ -107,6 +123,7 @@ const BrowseFilterBar = ({ sortField, sortOrder, onSortChange, showFavorites, on
     (filters.sub_categories?.length > 0) ||
     (filters.vendor?.length > 0) ||
     (filters.state?.length > 0) ||
+    (filters.season_types?.length > 0) ||
     (filters.price_min !== '' && filters.price_min !== undefined) ||
     (filters.price_max !== '' && filters.price_max !== undefined)
   );
@@ -117,6 +134,7 @@ const BrowseFilterBar = ({ sortField, sortOrder, onSortChange, showFavorites, on
     clearFilter('sub_categories');
     clearFilter('vendor');
     clearFilter('state');
+    clearFilter('season_types');
     clearFilter('price_min');
     clearFilter('price_max');
   };
@@ -141,6 +159,11 @@ const BrowseFilterBar = ({ sortField, sortOrder, onSortChange, showFavorites, on
     updateFilter('state', selected);
   };
 
+  // Handle season type apply
+  const handleSeasonTypeApply = (selected) => {
+    updateFilter('season_types', selected);
+  };
+
   // Handle price range apply
   const handlePriceApply = (min, max) => {
     updateFilter('price_min', min === '' ? '' : String(min));
@@ -158,9 +181,6 @@ const BrowseFilterBar = ({ sortField, sortOrder, onSortChange, showFavorites, on
     if (filters.popular) {
       chips.push({ key: 'popular', label: 'Featured', onRemove: () => clearFilter('popular') });
     }
-    if (filters.seasonal) {
-      chips.push({ key: 'seasonal', label: 'Seasonal', onRemove: () => clearFilter('seasonal') });
-    }
     if (filters.favorites_only) {
       chips.push({ key: 'favorites_only', label: 'Favorites', onRemove: () => clearFilter('favorites_only') });
     }
@@ -171,6 +191,7 @@ const BrowseFilterBar = ({ sortField, sortOrder, onSortChange, showFavorites, on
       { key: 'sub_categories', prefix: 'Sub Category' },
       { key: 'vendor', prefix: 'Vendor' },
       { key: 'state', prefix: 'State' },
+      { key: 'season_types', prefix: 'Season' },
       { key: 'allergens', prefix: 'Allergen' },
       { key: 'dietary_preferences', prefix: 'Diet' },
       { key: 'cuisine_type', prefix: 'Cuisine' },
@@ -313,9 +334,11 @@ const BrowseFilterBar = ({ sortField, sortOrder, onSortChange, showFavorites, on
           onClick={() => toggleBoolean('popular')}
         />
         <FilterChip
-          label="Seasonal"
-          active={filters.seasonal}
-          onClick={() => toggleBoolean('seasonal')}
+          label="Season"
+          hasDropdown
+          active={filters.season_types?.length > 0}
+          count={filters.season_types?.length}
+          onClick={() => { fetchSeasonTypes(); setShowSeasonTypeModal(true); }}
         />
 
         {/* Dropdown Chips */}
@@ -437,6 +460,16 @@ const BrowseFilterBar = ({ sortField, sortOrder, onSortChange, showFavorites, on
         selected={filters.state || []}
         onApply={handleStateApply}
         loading={loadingStates}
+      />
+
+      <CheckboxFilterModal
+        isOpen={showSeasonTypeModal}
+        onClose={() => setShowSeasonTypeModal(false)}
+        title="Season Type Filter"
+        options={seasonTypes}
+        selected={filters.season_types || []}
+        onApply={handleSeasonTypeApply}
+        loading={loadingSeasonTypes}
       />
 
       <PriceRangeModal

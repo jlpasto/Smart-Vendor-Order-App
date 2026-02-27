@@ -106,6 +106,8 @@ const AdminProducts = () => {
       ...product,
       active_start_date: product.active_start_date || '',
       active_end_date: product.active_end_date || '',
+      season_types: product.season_types || '',
+      year_round_orderable: product.year_round_orderable !== undefined ? product.year_round_orderable : true,
     });
     setShowModal(true);
   };
@@ -130,6 +132,8 @@ const AdminProducts = () => {
       popular: false,
       seasonal: false,
       new: false,
+      season_types: '',
+      year_round_orderable: true,
       category: '',
       is_split_case: false,
       minimum_units: '',
@@ -496,6 +500,8 @@ const AdminProducts = () => {
         'Dietary Preferences': product.dietary_preferences || '',
         'Cuisine Type': product.cuisine_type || '',
         'Seasonal and Featured': product.seasonal_and_featured || '',
+        'Season Types': product.season_types || '',
+        'Year Round Orderable': product.year_round_orderable !== false ? 'Yes' : 'No',
         'Size': product.size || '',
         'Case Pack': product.case_pack || '',
         'Wholesale Case Price': product.wholesale_case_price || '',
@@ -620,6 +626,12 @@ const AdminProducts = () => {
     if (filters.popular && !product.popular) return false;
     if (filters.seasonal && !product.seasonal) return false;
     if (filters.new && !product.new) return false;
+
+    // Season types filter
+    if (filters.season_types?.length > 0) {
+      const productSeasonTypes = (product.season_types || '').split(',').map(t => t.trim()).filter(t => t);
+      if (!filters.season_types.some(st => productSeasonTypes.includes(st))) return false;
+    }
 
     return true;
   });
@@ -1170,23 +1182,6 @@ const AdminProducts = () => {
                   <label className="flex items-center space-x-3">
                     <input
                       type="checkbox"
-                      checked={formData.seasonal || false}
-                      onChange={(e) => {
-                        const newSeasonal = e.target.checked;
-                        if (!newSeasonal && !formData.popular) {
-                          setFormData(prev => ({ ...prev, seasonal: false, active_start_date: '', active_end_date: '', active: true }));
-                        } else {
-                          setFormData(prev => ({ ...prev, seasonal: newSeasonal }));
-                        }
-                      }}
-                      className="w-6 h-6"
-                    />
-                    <span className="text-lg font-semibold text-gray-700">Mark as Seasonal</span>
-                  </label>
-
-                  <label className="flex items-center space-x-3">
-                    <input
-                      type="checkbox"
                       checked={formData.new || false}
                       onChange={(e) => handleInputChange('new', e.target.checked)}
                       className="w-6 h-6"
@@ -1195,10 +1190,95 @@ const AdminProducts = () => {
                   </label>
                 </div>
 
-                {(formData.popular || formData.seasonal) && (
+                {/* Season Types Tag Picker */}
+                <div className="mt-4">
+                  <label className="block text-lg font-semibold text-gray-700 mb-2">Season Types</label>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {['Spring', 'Summer', 'Fall', 'Winter', 'Halloween', 'Super Bowl', 'Holiday', 'Valentines', 'Easter'].map(type => {
+                      const currentTypes = (formData.season_types || '').split(',').map(t => t.trim()).filter(t => t);
+                      const isSelected = currentTypes.includes(type);
+                      return (
+                        <button
+                          key={type}
+                          type="button"
+                          onClick={() => {
+                            let newTypes;
+                            if (isSelected) {
+                              newTypes = currentTypes.filter(t => t !== type);
+                            } else {
+                              newTypes = [...currentTypes, type];
+                            }
+                            const newSeasonTypes = newTypes.join(', ');
+                            const hasSeasonal = newTypes.length > 0;
+                            setFormData(prev => ({
+                              ...prev,
+                              season_types: newSeasonTypes,
+                              seasonal: hasSeasonal,
+                              ...((!hasSeasonal && !prev.popular) ? { active_start_date: '', active_end_date: '', active: true } : {})
+                            }));
+                          }}
+                          className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                            isSelected
+                              ? 'bg-orange-100 border-orange-500 text-orange-700'
+                              : 'bg-white border-gray-300 text-gray-600 hover:border-gray-400'
+                          }`}
+                        >
+                          {isSelected && '✓ '}{type}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <input
+                    type="text"
+                    value={formData.season_types || ''}
+                    onChange={(e) => {
+                      const newVal = e.target.value;
+                      const hasSeasonal = newVal.trim() !== '';
+                      setFormData(prev => ({
+                        ...prev,
+                        season_types: newVal,
+                        seasonal: hasSeasonal,
+                      }));
+                    }}
+                    className="input text-sm"
+                    placeholder="Or type custom season types (comma-separated)"
+                  />
+                </div>
+
+                {/* Year-Round Orderable Toggle */}
+                {(formData.season_types && formData.season_types.trim() !== '') && (
+                  <div className="mt-4">
+                    <label className="flex items-center space-x-3">
+                      <input
+                        type="checkbox"
+                        checked={formData.year_round_orderable !== false}
+                        onChange={(e) => {
+                          const yearRound = e.target.checked;
+                          setFormData(prev => ({
+                            ...prev,
+                            year_round_orderable: yearRound,
+                            ...(yearRound ? { active: true } : {})
+                          }));
+                        }}
+                        className="w-6 h-6"
+                      />
+                      <span className="text-lg font-semibold text-gray-700">Available Year-Round</span>
+                    </label>
+                    <p className="text-sm text-gray-500 mt-1 ml-9">
+                      {formData.year_round_orderable !== false
+                        ? 'This product can be ordered at any time (seasonal tag is for display only)'
+                        : 'This product can only be ordered during the ordering window below'}
+                    </p>
+                  </div>
+                )}
+
+                {/* Active Date Range - show for Featured, or for Seasonal when NOT year-round */}
+                {(formData.popular || (formData.seasonal && formData.year_round_orderable === false)) && (
                   <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
                     <div className="flex items-center gap-4 flex-wrap">
-                      <span className="text-sm font-semibold text-gray-600">Active Date Range:</span>
+                      <span className="text-sm font-semibold text-gray-600">
+                        {formData.seasonal && formData.year_round_orderable === false ? 'Ordering Window:' : 'Active Date Range:'}
+                      </span>
                       <div className="flex items-center gap-2">
                         <input
                           type="date"

@@ -166,16 +166,26 @@ const ProductDetailModal = ({ product, isOpen, onClose, onNext, onPrev }) => {
               className="w-full h-64 object-cover rounded-lg shadow-md"
             />
             {/* Badges */}
-            <div className="flex gap-2 mt-4">
+            <div className="flex gap-2 mt-4 flex-wrap">
               {product.popular && (
                 <span className="px-3 py-1 bg-amber-500 text-white text-sm rounded-full font-semibold">
                   ⭐ Featured
                 </span>
               )}
               {product.seasonal && (
-                <span className="px-3 py-1 bg-orange-500 text-white text-sm rounded-full font-semibold">
-                  🍂 Seasonal
-                </span>
+                <>
+                  {(product.season_types && product.season_types.trim()) ? (
+                    product.season_types.split(',').map(t => t.trim()).filter(t => t).map(type => (
+                      <span key={type} className="px-3 py-1 bg-orange-500 text-white text-sm rounded-full font-semibold">
+                        🍂 {type}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="px-3 py-1 bg-orange-500 text-white text-sm rounded-full font-semibold">
+                      🍂 Seasonal
+                    </span>
+                  )}
+                </>
               )}
               {product.new && (
                 <span className="px-3 py-1 bg-green-500 text-white text-sm rounded-full font-semibold">
@@ -183,6 +193,32 @@ const ProductDetailModal = ({ product, isOpen, onClose, onNext, onPrev }) => {
                 </span>
               )}
             </div>
+
+            {/* Seasonal Availability Indicator */}
+            {product.seasonal && (
+              <div className="mt-3">
+                {product.year_round_orderable !== false ? (
+                  <span className="inline-block text-sm text-green-700 font-medium bg-green-50 px-3 py-1.5 rounded-lg">
+                    Seasonal Tag – Available Year-Round
+                  </span>
+                ) : (
+                  <div className="inline-block text-sm font-medium bg-amber-50 px-3 py-2 rounded-lg">
+                    <span className="text-amber-800">Ordering Window: </span>
+                    <span className="text-amber-900">
+                      {product.active_start_date
+                        ? new Date(product.active_start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                        : 'TBD'
+                      }
+                      {' – '}
+                      {product.active_end_date
+                        ? new Date(product.active_end_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                        : 'TBD'
+                      }
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Product Details */}
@@ -281,8 +317,22 @@ const ProductDetailModal = ({ product, isOpen, onClose, onNext, onPrev }) => {
               </div>
             )}
 
-            {/* Seasonal and Featured */}
-            {product.seasonal_featured && (
+            {/* Season Types */}
+            {product.season_types && (
+              <div className="border-b border-gray-200 pb-4">
+                <label className="block text-sm font-semibold text-gray-500 mb-1">Season Types</label>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {product.season_types.split(',').map(t => t.trim()).filter(t => t).map(type => (
+                    <span key={type} className="px-2 py-1 bg-orange-100 text-orange-800 text-sm rounded-full font-medium">
+                      {type}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Seasonal and Featured (legacy) */}
+            {product.seasonal_featured && !product.season_types && (
               <div className="border-b border-gray-200 pb-4">
                 <label className="block text-sm font-semibold text-gray-500 mb-1">Seasonal and Featured</label>
                 <p className="text-lg text-gray-900">{product.seasonal_featured}</p>

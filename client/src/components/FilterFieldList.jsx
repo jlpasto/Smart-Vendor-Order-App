@@ -29,7 +29,7 @@ const FilterFieldList = ({ onSelectField, onClearAll }) => {
     { key: 'delivery_info', label: 'Delivery Info', icon: '🚚', type: 'text' },
     { key: 'notes', label: 'Notes', icon: '📝', type: 'text' },
     { key: 'popular', label: 'Featured', icon: '⭐', type: 'toggle' },
-    { key: 'seasonal', label: 'Seasonal', icon: '🍂', type: 'toggle' },
+    { key: 'season_types', label: 'Season Type', icon: '🍂', type: 'checkbox' },
     { key: 'new', label: 'New', icon: '🆕', type: 'toggle' },
   ];
 

@@ -31,6 +31,7 @@ export const FilterProvider = ({ children }) => {
     allergens: [],
     dietary_preferences: [],
     cuisine_type: [],
+    season_types: [],
 
     // Range filters
     case_pack_min: '',
@@ -89,6 +90,7 @@ export const FilterProvider = ({ children }) => {
       allergens: [],
       dietary_preferences: [],
       cuisine_type: [],
+      season_types: [],
       case_pack_min: '',
       case_pack_max: '',
       price_min: '',
