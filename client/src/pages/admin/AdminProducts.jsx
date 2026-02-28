@@ -628,8 +628,8 @@ const AdminProducts = () => {
     // Multi-select filter
     if (filters.cuisine_type?.length > 0 && !filters.cuisine_type.includes(product.cuisine_type)) return false;
 
-    // Dropdown filters
-    if (filters.state && product.state !== filters.state) return false;
+    // State multi-select filter
+    if (filters.state?.length > 0 && !filters.state.includes(product.state)) return false;
 
     if (filters.allergens?.length > 0) {
       const productAllergens = product.allergens?.split(',').map(a => a.trim()) || [];

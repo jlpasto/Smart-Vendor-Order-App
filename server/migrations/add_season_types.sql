@@ -6,7 +6,5 @@ ALTER TABLE products ADD COLUMN IF NOT EXISTS season_types TEXT;
 -- Add year_round_orderable column (boolean, defaults to true)
 ALTER TABLE products ADD COLUMN IF NOT EXISTS year_round_orderable BOOLEAN DEFAULT true;
 
--- Backfill: set season_types for existing products where seasonal = true
-UPDATE products
-SET season_types = 'Seasonal'
-WHERE seasonal = true AND (season_types IS NULL OR season_types = '');
+-- Note: No backfill needed. Existing seasonal=true products should be assigned
+-- proper season types (Spring, Summer, etc.) by an admin via the UI.

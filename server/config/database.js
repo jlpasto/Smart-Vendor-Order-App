@@ -309,6 +309,67 @@ export const initDatabase = async () => {
       CREATE INDEX IF NOT EXISTS idx_products_gm_id ON products(gm_percent, id);
     `);
 
+    // Migration: Add product columns that may be missing
+    await query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='main_category') THEN
+          ALTER TABLE products ADD COLUMN main_category VARCHAR(255);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='sub_category') THEN
+          ALTER TABLE products ADD COLUMN sub_category VARCHAR(255);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='allergens') THEN
+          ALTER TABLE products ADD COLUMN allergens TEXT;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='dietary_preferences') THEN
+          ALTER TABLE products ADD COLUMN dietary_preferences TEXT;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='cuisine_type') THEN
+          ALTER TABLE products ADD COLUMN cuisine_type VARCHAR(255);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='seasonal_and_featured') THEN
+          ALTER TABLE products ADD COLUMN seasonal_and_featured VARCHAR(255);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='shelf_life') THEN
+          ALTER TABLE products ADD COLUMN shelf_life VARCHAR(255);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='delivery_info') THEN
+          ALTER TABLE products ADD COLUMN delivery_info TEXT;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='notes') THEN
+          ALTER TABLE products ADD COLUMN notes TEXT;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='case_minimum') THEN
+          ALTER TABLE products ADD COLUMN case_minimum INTEGER;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='active') THEN
+          ALTER TABLE products ADD COLUMN active BOOLEAN DEFAULT true;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='active_start_date') THEN
+          ALTER TABLE products ADD COLUMN active_start_date DATE;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='active_end_date') THEN
+          ALTER TABLE products ADD COLUMN active_end_date DATE;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='season_types') THEN
+          ALTER TABLE products ADD COLUMN season_types TEXT;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='year_round_orderable') THEN
+          ALTER TABLE products ADD COLUMN year_round_orderable BOOLEAN DEFAULT true;
+        END IF;
+      END $$;
+    `);
+
+    // Create season_type_options table
+    await query(`
+      CREATE TABLE IF NOT EXISTS season_type_options (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) UNIQUE NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
     // Create indexes for user assignments
     await query(`
       CREATE INDEX IF NOT EXISTS idx_users_assigned_vendor_ids ON users USING GIN(assigned_vendor_ids);
