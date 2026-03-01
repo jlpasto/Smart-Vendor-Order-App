@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import api from '../../config/api';
-import OrderEditForm from '../../components/OrderEditForm';
 import OrderHistoryPanel from '../../components/OrderHistoryPanel';
 import AddItemModal from '../../components/AddItemModal';
 
@@ -22,9 +21,6 @@ const AdminOrders = () => {
   const [adminNotes, setAdminNotes] = useState('');
   const [updating, setUpdating] = useState(false);
 
-  // New states for edit mode
-  const [editModeBatch, setEditModeBatch] = useState(null); // Which batch is in edit mode
-  const [editingOrderId, setEditingOrderId] = useState(null); // Which order item is being edited
 
   // History panel state
   const [showHistoryPanel, setShowHistoryPanel] = useState(false);
@@ -140,37 +136,6 @@ const AdminOrders = () => {
     }
   };
 
-  // Edit mode handlers
-  const toggleEditMode = (batchNumber) => {
-    if (editModeBatch === batchNumber) {
-      // Exit edit mode
-      setEditModeBatch(null);
-      setEditingOrderId(null);
-    } else {
-      // Enter edit mode
-      setEditModeBatch(batchNumber);
-      setEditingOrderId(null);
-    }
-  };
-
-  const handleEditOrder = (orderId) => {
-    setEditingOrderId(orderId);
-  };
-
-  const handleCancelEdit = () => {
-    setEditingOrderId(null);
-  };
-
-  const handleSaveOrder = (updatedOrder) => {
-    // Update the order in the state
-    setOrders((prevOrders) =>
-      prevOrders.map((order) =>
-        order.id === updatedOrder.id ? updatedOrder : order
-      )
-    );
-    setEditingOrderId(null);
-    alert('Order updated successfully!');
-  };
 
   const handleDeleteOrder = async (orderId) => {
     if (!confirm('Are you sure you want to remove this item from the batch?')) {
@@ -356,7 +321,6 @@ const AdminOrders = () => {
             const batchNotes = batchOrders[0].notes;
             const hasModifications = batchOrders.some(order => order.modified_by_admin);
             const totalModifications = batchOrders.reduce((sum, order) => sum + (order.modification_count || 0), 0);
-            const isInEditMode = editModeBatch === batchNumber;
             const isExpanded = expandedBatches.has(batchNumber);
 
             // Display name for the batch
@@ -426,19 +390,9 @@ const AdminOrders = () => {
                   <>
                     <div className="space-y-2 mb-4">
                       {batchOrders.map(order => {
-                    const isEditing = isInEditMode && editingOrderId === order.id;
-
                     return (
                       <div key={order.id}>
-                        {isEditing ? (
-                          <OrderEditForm
-                            order={order}
-                            onSave={handleSaveOrder}
-                            onCancel={handleCancelEdit}
-                            adminEmail={localStorage.getItem('userEmail')}
-                          />
-                        ) : (
-                          <div className={`flex justify-between items-center bg-gray-50 p-3 rounded-lg ${
+                        <div className={`flex justify-between items-center bg-gray-50 p-3 rounded-lg ${
                             order.modified_by_admin ? 'border-2 border-yellow-300' : ''
                           }`}>
                             <div className="flex-1">
@@ -467,17 +421,7 @@ const AdminOrders = () => {
                                 ${parseFloat(order.amount).toFixed(2)}
                               </p>
 
-                              {isInEditMode && (
-                                <div className="flex gap-1.5">
-                                  <button
-                                    onClick={() => handleEditOrder(order.id)}
-                                    className="p-1.5 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-                                    title="Edit item"
-                                  >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                    </svg>
-                                  </button>
+                              <div className="flex gap-1.5">
                                   <button
                                     onClick={() => handleViewOrderHistory(order.id)}
                                     className="p-1.5 bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors"
@@ -497,10 +441,8 @@ const AdminOrders = () => {
                                     </svg>
                                   </button>
                                 </div>
-                              )}
                             </div>
                           </div>
-                        )}
                       </div>
                     );
                       })}
@@ -526,30 +468,26 @@ const AdminOrders = () => {
                       </div>
                     ) : (
                       <div className="flex flex-wrap gap-2">
-                        <button
-                          onClick={() => toggleEditMode(batchNumber)}
-                          className={`btn-primary px-3 py-1.5 text-sm ${isInEditMode ? 'bg-gray-600 hover:bg-gray-700' : ''}`}
+                        <a
+                          href={`/admin/orders/batch/${encodeURIComponent(batchNumber)}/edit`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn-primary px-3 py-1.5 text-sm inline-flex items-center"
                         >
-                          {isInEditMode ? '✓ Exit Edit Mode' : '✏️ Edit Order'}
+                          ✏️ Edit Order
+                        </a>
+                        <button
+                          onClick={() => handleOpenAddItem(batchNumber)}
+                          className="btn-primary px-3 py-1.5 text-sm bg-green-600 hover:bg-green-700"
+                        >
+                          ➕ Add Item
                         </button>
-
-                        {isInEditMode && (
-                          <>
-                            <button
-                              onClick={() => handleOpenAddItem(batchNumber)}
-                              className="btn-primary px-3 py-1.5 text-sm bg-green-600 hover:bg-green-700"
-                            >
-                              ➕ Add Item
-                            </button>
-                            <button
-                              onClick={() => handleViewBatchHistory(batchNumber)}
-                              className="btn-primary px-3 py-1.5 text-sm bg-purple-600 hover:bg-purple-700"
-                            >
-                              📜 View Order History
-                            </button>
-                          </>
-                        )}
-
+                        <button
+                          onClick={() => handleViewBatchHistory(batchNumber)}
+                          className="btn-primary px-3 py-1.5 text-sm bg-purple-600 hover:bg-purple-700"
+                        >
+                          📜 View Order History
+                        </button>
                         <button
                           onClick={() => openEditModal(batchOrders[0])}
                           className="btn-secondary px-3 py-1.5 text-sm"

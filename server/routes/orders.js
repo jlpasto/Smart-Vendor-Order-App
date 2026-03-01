@@ -131,6 +131,24 @@ router.get('/my-batches', authenticate, async (req, res) => {
   }
 });
 
+// Get orders by batch number via query param (handles batch numbers with slashes/special chars)
+router.get('/batch-by-number', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { batchNumber } = req.query;
+    if (!batchNumber) {
+      return res.status(400).json({ error: 'batchNumber query parameter required' });
+    }
+    const result = await query(
+      'SELECT * FROM orders WHERE batch_order_number = $1 ORDER BY id',
+      [batchNumber]
+    );
+    res.json({ orders: result.rows });
+  } catch (error) {
+    console.error('Error fetching batch orders:', error);
+    res.status(500).json({ error: 'Error fetching batch orders' });
+  }
+});
+
 // Get orders by batch number
 router.get('/batch/:batchNumber', authenticate, async (req, res) => {
   try {

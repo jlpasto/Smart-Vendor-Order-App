@@ -22,8 +22,16 @@ import AdminVendors from './pages/admin/AdminVendors';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminBuyerOverview from './pages/admin/AdminBuyerOverview';
 import ManageAdmin from './pages/admin/ManageAdmin';
+import OrderEditPage from './pages/admin/OrderEditPage';
 
 function App() {
+  // Render the standalone order edit page before the Router so the catch-all
+  // route inside the Layout group never intercepts this URL.
+  const orderEditMatch = window.location.pathname.match(/^\/admin\/orders\/batch\/(.+)\/edit$/);
+  if (orderEditMatch) {
+    return <OrderEditPage batchNumber={decodeURIComponent(orderEditMatch[1])} />;
+  }
+
   return (
     <Router>
       <AuthProvider>
