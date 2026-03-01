@@ -272,6 +272,11 @@ export const initDatabase = async () => {
       );
     `);
 
+    // Add confirmation_status column if it doesn't exist
+    await query(`
+      ALTER TABLE orders ADD COLUMN IF NOT EXISTS confirmation_status VARCHAR(20) DEFAULT 'outstanding';
+    `);
+
     // Create indexes for better performance
     await query(`
       CREATE INDEX IF NOT EXISTS idx_products_product_connect_id ON products(product_connect_id);

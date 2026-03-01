@@ -102,6 +102,22 @@
     @apply bg-red-100 text-red-800;
   }
 
+  .badge-outstanding {
+    @apply bg-gray-100 text-gray-700;
+  }
+
+  .badge-confirmed-item {
+    @apply bg-green-100 text-green-800;
+  }
+
+  .badge-awaiting {
+    @apply bg-gray-100 text-gray-600;
+  }
+
+  .badge-partial {
+    @apply bg-yellow-100 text-yellow-800;
+  }
+
   /* Page heading */
   .page-title {
     @apply text-3xl md:text-4xl font-display font-bold text-gray-900 mb-2;

@@ -149,6 +149,120 @@ router.get('/batch-by-number', authenticate, requireAdmin, async (req, res) => {
   }
 });
 
+// Confirm a single line item (Admin only)
+router.patch('/:id/confirm', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await query(
+      `UPDATE orders SET confirmation_status = 'confirmed' WHERE id = $1 RETURNING *`,
+      [id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+    await logOrderChange(
+      id,
+      result.rows[0].batch_order_number,
+      'item_confirmed',
+      'confirmation_status',
+      'outstanding',
+      'confirmed',
+      null,
+      req.user.id,
+      req.user.email
+    );
+    res.json({ success: true, order: result.rows[0] });
+  } catch (error) {
+    console.error('Error confirming order item:', error);
+    res.status(500).json({ error: 'Error confirming order item' });
+  }
+});
+
+// Unconfirm a single line item (Admin only)
+router.patch('/:id/unconfirm', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await query(
+      `UPDATE orders SET confirmation_status = 'outstanding' WHERE id = $1 RETURNING *`,
+      [id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+    await logOrderChange(
+      id,
+      result.rows[0].batch_order_number,
+      'item_unconfirmed',
+      'confirmation_status',
+      'confirmed',
+      'outstanding',
+      null,
+      req.user.id,
+      req.user.email
+    );
+    res.json({ success: true, order: result.rows[0] });
+  } catch (error) {
+    console.error('Error unconfirming order item:', error);
+    res.status(500).json({ error: 'Error unconfirming order item' });
+  }
+});
+
+// Confirm all items for a vendor in a batch (Admin only)
+router.patch('/vendor-confirm', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { batchNumber, vendorName } = req.body;
+    if (!batchNumber || !vendorName) {
+      return res.status(400).json({ error: 'batchNumber and vendorName are required' });
+    }
+    const result = await query(
+      `UPDATE orders SET confirmation_status = 'confirmed'
+       WHERE batch_order_number = $1 AND vendor_name = $2
+       RETURNING *`,
+      [batchNumber, vendorName]
+    );
+    res.json({ success: true, updatedCount: result.rows.length, orders: result.rows });
+  } catch (error) {
+    console.error('Error confirming vendor orders:', error);
+    res.status(500).json({ error: 'Error confirming vendor orders' });
+  }
+});
+
+// Finalize a batch — sets status to completed (Admin only)
+router.patch('/batch-finalize', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { batchNumber } = req.body;
+    if (!batchNumber) {
+      return res.status(400).json({ error: 'batchNumber is required' });
+    }
+    // Check that all items in the batch are confirmed
+    const checkResult = await query(
+      `SELECT COUNT(*) AS total,
+              SUM(CASE WHEN confirmation_status = 'confirmed' THEN 1 ELSE 0 END) AS confirmed
+       FROM orders WHERE batch_order_number = $1`,
+      [batchNumber]
+    );
+    const { total, confirmed } = checkResult.rows[0];
+    if (parseInt(total) === 0) {
+      return res.status(404).json({ error: 'Batch not found' });
+    }
+    if (parseInt(confirmed) < parseInt(total)) {
+      return res.status(400).json({
+        error: 'Not all items confirmed',
+        confirmed: parseInt(confirmed),
+        total: parseInt(total)
+      });
+    }
+    await query(
+      `UPDATE orders SET status = 'completed' WHERE batch_order_number = $1`,
+      [batchNumber]
+    );
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error finalizing batch:', error);
+    res.status(500).json({ error: 'Error finalizing batch' });
+  }
+});
+
 // Get orders by batch number
 router.get('/batch/:batchNumber', authenticate, async (req, res) => {
   try {
