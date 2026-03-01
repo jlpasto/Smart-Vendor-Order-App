@@ -488,12 +488,6 @@ const AdminOrders = () => {
                         >
                           📜 View Order History
                         </button>
-                        <button
-                          onClick={() => openEditModal(batchOrders[0])}
-                          className="btn-secondary px-3 py-1.5 text-sm"
-                        >
-                          Update Status & Add Note
-                        </button>
                       </div>
                     )}
                   </>
