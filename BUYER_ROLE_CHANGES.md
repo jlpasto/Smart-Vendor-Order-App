@@ -4,7 +4,6 @@
 Replaced the generic "user" role with "buyer" throughout the application for better clarity and terminology consistency.
 
 ## Changes Made
-
 ### 1. Database Migration Created
 **File**: [server/migrations/update_user_role_to_buyer.sql](server/migrations/update_user_role_to_buyer.sql)
 
